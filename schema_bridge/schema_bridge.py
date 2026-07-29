@@ -93,7 +93,7 @@ log = get_logger(__name__)
 # Set FINANCE_DB_PATH in config/settings.py:
 #   FINANCE_DB_PATH = Path("C:/Users/hp/Downloads/Fund/database/Ai_Hedge_Fund.db")
 # ─────────────────────────────────────────────────────────────────────────────
-from config.settings import DB_PATH, FINANCE_DB_PATH   # noqa: E402
+from config.settings import FINANCE_DB_PATH   # noqa: E402
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Table metadata: which column holds the date/period, and which holds symbol
