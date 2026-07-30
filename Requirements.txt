@@ -18,3 +18,4 @@ numpy>=1.24.0
 qdrant-client
 minio
 mysql-connector-python
+optimum[onnxruntime]
