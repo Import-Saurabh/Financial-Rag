@@ -52,7 +52,7 @@ LOG_DIR  = BASE_DIR / "logs"
 # MySQL  (metadata store: companies, documents, chunks, ingestion_log)
 # ─────────────────────────────────────────────
 DB_HOST     = os.getenv("DB_HOST",     "localhost")
-DB_PORT     = int(os.getenv("DB_PORT", "3306"))
+DB_PORT     = int(os.getenv("DB_PORT", "3307"))
 DB_NAME     = os.getenv("DB_NAME",     "ai_hedge_fund")
 DB_USER     = os.getenv("DB_USER",     "quant_user")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "quant_password")

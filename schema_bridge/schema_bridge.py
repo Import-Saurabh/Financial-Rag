@@ -54,6 +54,10 @@ Design principles
 
 from __future__ import annotations
 
+import decimal   # [FIX] used in _execute_sql_atom but was never imported ->
+                  # NameError on every row containing a DECIMAL column, i.e.
+                  # almost every real query. This was silently killing SQL
+                  # results even for correctly-mapped tables.
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -69,6 +73,7 @@ from decomposer.atomic_decomposer import (
     NeedType,
     TimeHorizon,
     SUBTYPE_TABLE_MAP,
+    ORPHANED_SUBTYPES,   # [FIX] sub_types with no backing table/column anywhere
 )
 from pipeline.retrieval.retriever import (
     RetrievedChunk,
@@ -119,6 +124,11 @@ _TABLE_META: Dict[str, Tuple[str, bool, bool]] = {
     # Growth & estimates
     "growth_metrics":        ("as_of_date", True,  False),
     "eps_trend":             ("snapshot_date", True, False),
+    # [FIX] "stocks" was missing -> market_cap (stocks.market_cap_cr) had
+    # nowhere to resolve to and would hit the same "Unknown table" error.
+    # It's a static, symbol-keyed table with no period_end; updated_at is
+    # the closest thing to a date column, and there's no period_type.
+    "stocks":                ("updated_at", True,  False),
     # Macro / market tables — no symbol column
     "rbi_rates":             ("effective_date", False, False),
     "market_indices":        ("snapshot_date",  False, False),
@@ -199,6 +209,16 @@ def _build_sql(atom: AtomicNeed) -> Tuple[str, tuple]:
     if not table or table.startswith("chromadb:"):
         raise ValueError(f"Atom sub_type={atom.sub_type!r} is vector-backed; "
                          f"use vector channel instead.")
+
+    # [FIX] Sub-types with no real column anywhere in the schema (see
+    # ORPHANED_SUBTYPES in atomic_decomposer.py) must never reach SQL build --
+    # they'd either raise or build a query selecting nothing but symbol/date.
+    # Fail with a distinct, expected message instead of a scary stack trace.
+    if atom.sub_type in ORPHANED_SUBTYPES:
+        raise ValueError(
+            f"sub_type={atom.sub_type!r} has no backing column in the current "
+            f"schema (mysql_schema_v2.sql) — not a bug, just not tracked yet."
+        )
 
     meta = _TABLE_META.get(table)
     if meta is None:

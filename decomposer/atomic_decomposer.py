@@ -348,6 +348,13 @@ _RULES: List[tuple] = [
      NeedType.QUANTITATIVE, "net_profit", "Net Profit", None),
     (r"\b(quarterly\s+profit|quarterly\s+pat|quarterly\s+net\s+profit)\b",
      NeedType.QUANTITATIVE, "net_profit_q", "Quarterly Net Profit", None),
+    # [FIX] bare "profit" (e.g. "what is the profit this quarter") never
+    # matched anything above -> decompose() returned 0 atoms. This is a
+    # deliberately loose fallback, so it excludes phrases already owned by a
+    # more specific rule (operating profit, gross profit, profit before tax,
+    # profit cagr/margin/estimate) to avoid double-firing both atoms.
+    (r"(?<!operating\s)(?<!gross\s)\bprofit\b(?!\s*(before\s+tax|margin|cagr|estimate|surprise|revision))",
+     NeedType.QUANTITATIVE, "net_profit", "Net Profit", None),
     (r"\b(pbt|profit\s+before\s+tax)\b",
      NeedType.QUANTITATIVE, "pbt", "PBT", None),
     (r"\b(operating\s+profit|ebit(?!da)|earnings\s+before\s+interest\s+and\s+tax)\b",
@@ -590,25 +597,41 @@ def _rule_based_decompose(query: str, symbol: Optional[str] = None) -> List[Atom
         else TimeHorizon.HISTORICAL if years else TimeHorizon.CURRENT
     )
 
+    # [FIX] period_type was hardcoded to "annual" below regardless of query
+    # content -> "what is the profit THIS QUARTER" would silently fetch
+    # annual data. Detect quarter-phrasing here and (a) set period_type so
+    # tables that support it (profit_loss/cash_flow/balance_sheet) filter
+    # correctly, and (b) remap sub_types that have a dedicated quarterly
+    # table (revenue->revenue_q, net_profit->net_profit_q, eps->eps_q).
+    is_quarterly = bool(re.search(
+        r"\b(this\s+quarter|last\s+quarter|latest\s+quarter|current\s+quarter|"
+        r"quarterly|q[1-4]\s*fy?\s*\d{0,4}|qoq)\b", q_lower))
+    _QUARTERLY_REMAP = {"revenue": "revenue_q", "net_profit": "net_profit_q", "eps": "eps_q"}
+
     seen:  set          = set()
     atoms: List[AtomicNeed] = []
 
     for compiled_pat, need_type, sub_type, metric, time_hint in _COMPILED_RULES:
         if not compiled_pat.search(query):
             continue
-        if sub_type in seen:
+
+        effective_sub_type = sub_type
+        if is_quarterly and sub_type in _QUARTERLY_REMAP:
+            effective_sub_type = _QUARTERLY_REMAP[sub_type]
+
+        if effective_sub_type in seen:
             continue
-        seen.add(sub_type)
+        seen.add(effective_sub_type)
 
         effective_horizon = time_hint if time_hint else horizon
         atom = AtomicNeed(
             need_type    = need_type,
-            sub_type     = sub_type,
+            sub_type     = effective_sub_type,
             metric       = metric,
             symbol       = symbol,
             years        = years,
             time_horizon = effective_horizon,
-            period_type  = "annual",
+            period_type  = "quarterly" if is_quarterly else "annual",
             raw_text     = query[:80],
             source       = "rule",
         )
