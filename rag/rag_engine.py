@@ -719,20 +719,38 @@ def _call_with_retry(system_prompt: str, user_prompt: str,
 # ─────────────────────────────────────────────────────────────────────────────
 # [SYNTHESIS] Lazy-init pipeline singleton
 # One instance is shared for the process lifetime (stateless + thread-safe).
+#
+# Retry-with-cooldown instead of a permanent "unavailable" sentinel: server.py
+# is a long-running process (that's the whole point — see its docstring), so
+# if construction fails once (e.g. MySQL container still starting up when the
+# first query lands), we don't want that to disable the synthesis pipeline
+# until someone manually restarts the server. Retry after a short cooldown
+# instead, so it self-heals once the dependency actually comes up.
 # ─────────────────────────────────────────────────────────────────────────────
 _synthesis_pipeline = None
+_synthesis_pipeline_failed_at: float = 0.0
+_SYNTHESIS_RETRY_COOLDOWN_SEC = 30.0
 
 def _get_synthesis_pipeline():
-    global _synthesis_pipeline
+    global _synthesis_pipeline, _synthesis_pipeline_failed_at
     if _synthesis_pipeline is None:
+        now = time.time()
+        if now - _synthesis_pipeline_failed_at < _SYNTHESIS_RETRY_COOLDOWN_SEC:
+            # Still in cooldown from a recent failure — don't hammer a down
+            # dependency on every single query.
+            return None
         try:
             from synthesis.pipeline import SynthesisPipeline
             _synthesis_pipeline = SynthesisPipeline()
             log.info("[rag_engine] SynthesisPipeline initialised")
         except Exception as exc:
-            log.warning(f"[rag_engine] SynthesisPipeline unavailable: {exc} — using legacy path")
-            _synthesis_pipeline = False   # sentinel: don't retry
-    return _synthesis_pipeline if _synthesis_pipeline is not False else None
+            log.warning(
+                f"[rag_engine] SynthesisPipeline unavailable: {exc} — using legacy path "
+                f"(will retry in {_SYNTHESIS_RETRY_COOLDOWN_SEC:.0f}s)"
+            )
+            _synthesis_pipeline_failed_at = now
+            return None
+    return _synthesis_pipeline
 
 
 # ─────────────────────────────────────────────────────────────────────────────
