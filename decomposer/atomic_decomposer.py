@@ -82,22 +82,28 @@ class TimeHorizon(str, Enum):
 
 SUBTYPE_TABLE_MAP: Dict[str, tuple] = {
     # ── Income statement ──────────────────────────────────────────────────────
-    "revenue":          ("annual_results",    ["sales"]),
+    # [FIX] "annual_results" was never a real table -> it's `profit_loss`
+    # (period_type='annual'|'quarterly'|'ttm' distinguishes the row set).
+    "revenue":          ("profit_loss",       ["sales"]),
     "revenue_q":        ("quarterly_results", ["sales"]),
-    "operating_profit": ("annual_results",    ["operating_profit", "opm_pct"]),
-    "net_profit":       ("annual_results",    ["net_profit", "eps"]),
+    "operating_profit": ("profit_loss",       ["operating_profit", "opm_pct"]),
+    "net_profit":       ("profit_loss",       ["net_profit", "eps"]),
     "net_profit_q":     ("quarterly_results", ["net_profit", "eps"]),
-    "ebitda":           ("fundamentals",      ["ebitda", "ebitda_margin_pct"]),
-    # [BUG-EBITDA-CAGR] proxy via annual_results for per-year EBITDA calculation
-    "ebitda_proxy":     ("annual_results",    ["operating_profit", "depreciation"]),
-    "ebit":             ("fundamentals",      ["ebit_margin_pct"]),
-    "depreciation":     ("annual_results",    ["depreciation"]),
-    "interest":         ("annual_results",    ["interest"]),
-    "pbt":              ("annual_results",    ["profit_before_tax"]),
-    "opm":              ("annual_results",    ["opm_pct"]),
-    "eps":              ("fundamentals",      ["eps_annual", "ttm_eps"]),
+    # [FIX] no `fundamentals` table exists anywhere in mysql_schema_v2.sql, and
+    # there is no stored EBITDA column. Use the operating_profit+depreciation
+    # proxy (same as ebitda_proxy) so the LLM computes EBITDA itself.
+    "ebitda":           ("profit_loss",       ["operating_profit", "depreciation"]),
+    # [BUG-EBITDA-CAGR] proxy via profit_loss for per-year EBITDA calculation
+    "ebitda_proxy":     ("profit_loss",       ["operating_profit", "depreciation"]),
+    "ebit":             ("profit_loss",       []),   # [ORPHANED] see ORPHANED_SUBTYPES
+    "depreciation":     ("profit_loss",       ["depreciation"]),
+    "interest":         ("profit_loss",       ["interest"]),
+    "pbt":              ("profit_loss",       ["profit_before_tax"]),
+    "opm":              ("profit_loss",       ["opm_pct"]),
+    # [FIX] eps_annual/ttm_eps never existed; profit_loss.eps is the real column
+    "eps":              ("profit_loss",       ["eps"]),
     "eps_q":            ("quarterly_results", ["eps"]),
-    "tax":              ("annual_results",    ["tax_pct"]),
+    "tax":              ("profit_loss",       ["tax_pct"]),
 
     # ── Balance sheet ─────────────────────────────────────────────────────────
     "total_assets":     ("balance_sheet",     ["total_assets"]),
@@ -119,51 +125,56 @@ SUBTYPE_TABLE_MAP: Dict[str, tuple] = {
     "capex":            ("cash_flow",         ["capex"]),
     "fcf":              ("cash_flow",         ["free_cash_flow"]),
     "net_cashflow":     ("cash_flow",         ["net_cash_flow"]),
-    "fcf_margin":       ("annual_cashflow_derived", ["fcf_margin_pct", "approx_fcf"]),
+    "fcf_margin":       ("cash_flow",         []),   # [ORPHANED] see ORPHANED_SUBTYPES
 
     # ── Ratios & valuation ────────────────────────────────────────────────────
-    "roe":              ("fundamentals",      ["roe_pct"]),
-    "roce":             ("fundamentals",      ["roce_pct"]),
-    "roa":              ("fundamentals",      ["roa_pct"]),
-    "pe":               ("fundamentals",      ["pe_ratio", "ttm_pe", "forward_pe"]),
-    "pb":               ("fundamentals",      ["pb_ratio"]),
-    "ev_ebitda":        ("fundamentals",      ["ev_ebitda"]),
-    "ev_revenue":       ("fundamentals",      ["ev_revenue"]),
-    "book_value":       ("fundamentals",      ["book_value"]),
-    "graham_number":    ("fundamentals",      ["graham_number"]),
-    "dividend_yield":   ("fundamentals",      ["dividend_yield_pct"]),
-    "dividend_payout":  ("fundamentals",      ["dividend_payout_pct"]),
-    "debt_equity":      ("fundamentals",      ["debt_to_equity"]),
-    "current_ratio":    ("fundamentals",      ["current_ratio"]),
-    "quick_ratio":      ("fundamentals",      ["quick_ratio"]),
-    "interest_coverage":("fundamentals",      ["interest_coverage"]),
-    "market_cap":       ("fundamentals",      ["market_cap"]),
-    "ev":               ("fundamentals",      ["ev"]),
-    "gross_margin":     ("fundamentals",      ["gross_margin_pct"]),
-    "net_margin":       ("fundamentals",      ["net_profit_margin_pct"]),
-    "ebitda_margin":    ("fundamentals",      ["ebitda_margin_pct"]),
+    # [FIX] `fundamentals` does not exist anywhere in mysql_schema_v2.sql -- there
+    # is no dedicated ratios/valuation table at all. Only two of these have a
+    # real home; the rest are flagged in ORPHANED_SUBTYPES instead of pointing
+    # at a table that was never created.
+    "roe":              ("growth_metrics",    ["roe_last"]),   # latest snapshot only
+    "roce":             ("growth_metrics",    []),   # [ORPHANED]
+    "roa":              ("growth_metrics",    []),   # [ORPHANED]
+    "pe":               ("stocks",            []),   # [ORPHANED]
+    "pb":               ("stocks",             []),  # [ORPHANED]
+    "ev_ebitda":        ("stocks",            []),   # [ORPHANED]
+    "ev_revenue":       ("stocks",            []),   # [ORPHANED]
+    "book_value":       ("balance_sheet",     []),   # [ORPHANED]
+    "graham_number":    ("stocks",            []),   # [ORPHANED]
+    "dividend_yield":   ("stocks",            []),   # [ORPHANED]
+    "dividend_payout":  ("profit_loss",       ["dividend_payout_pct"]),  # [FIX] real column
+    "debt_equity":      ("balance_sheet",     []),   # [ORPHANED]
+    "current_ratio":    ("balance_sheet",     []),   # [ORPHANED]
+    "quick_ratio":      ("balance_sheet",     []),   # [ORPHANED]
+    "interest_coverage":("profit_loss",       []),   # [ORPHANED]
+    "market_cap":       ("stocks",            ["market_cap_cr"]),  # [FIX] real column
+    "ev":               ("stocks",            []),   # [ORPHANED]
+    "gross_margin":     ("profit_loss",       []),   # [ORPHANED]
+    "net_margin":       ("profit_loss",       []),   # [ORPHANED]
+    "ebitda_margin":    ("profit_loss",       []),   # [ORPHANED]
 
     # ── Working capital ───────────────────────────────────────────────────────
-    "dso":              ("fundamentals",      ["dso_days"]),
-    "dio":              ("fundamentals",      ["dio_days"]),
-    "dpo":              ("fundamentals",      ["dpo_days"]),
-    "ccc":              ("fundamentals",      ["cash_conversion_cycle"]),
-    "working_capital":  ("fundamentals",      ["working_capital_days"]),
+    # [ORPHANED] no working-capital-days table/columns exist anywhere in v2.
+    "dso":              ("balance_sheet",     []),
+    "dio":              ("balance_sheet",     []),
+    "dpo":              ("balance_sheet",     []),
+    "ccc":              ("balance_sheet",     []),
+    "working_capital":  ("balance_sheet",     []),
 
     # ── Growth metrics ────────────────────────────────────────────────────────
     "revenue_cagr":     ("growth_metrics",    ["sales_cagr_3y", "sales_cagr_5y", "sales_cagr_10y"]),
     "profit_cagr":      ("growth_metrics",    ["profit_cagr_3y", "profit_cagr_5y", "profit_cagr_10y"]),
-    "eps_cagr":         ("growth_metrics",    ["eps_cagr_3y"]),
-    "ebitda_cagr":      ("growth_metrics",    ["ebitda_cagr_3y"]),
-    "fcf_cagr":         ("growth_metrics",    ["fcf_cagr_3y"]),
+    "eps_cagr":         ("growth_metrics",    []),   # [ORPHANED] no eps_cagr_* column
+    "ebitda_cagr":      ("growth_metrics",    []),   # [ORPHANED] no ebitda_cagr_* column
+    "fcf_cagr":         ("growth_metrics",    []),   # [ORPHANED] no fcf_cagr_* column
     "stock_cagr":       ("growth_metrics",    ["stock_cagr_3y", "stock_cagr_5y", "stock_cagr_10y"]),
     "roe_avg":          ("growth_metrics",    ["roe_3y", "roe_5y", "roe_10y"]),
 
     # ── Price & technicals ────────────────────────────────────────────────────
     "price":            ("price_daily",       ["close", "adj_close"]),
-    "price_intraday":   ("price_intraday",    ["close", "open", "high", "low"]),
-    "52w_high":         ("fundamentals",      ["high_52w"]),
-    "52w_low":          ("fundamentals",      ["low_52w"]),
+    "price_intraday":   ("price_daily",       []),   # [ORPHANED] no intraday table
+    "52w_high":         ("price_daily",       []),   # [ORPHANED] no 52w columns
+    "52w_low":          ("price_daily",       []),   # [ORPHANED] no 52w columns
     "rsi":              ("technical_indicators", ["rsi_14"]),
     "macd":             ("technical_indicators", ["macd", "macd_signal", "macd_hist"]),
     "sma":              ("technical_indicators", ["sma_50", "sma_200"]),
@@ -183,11 +194,14 @@ SUBTYPE_TABLE_MAP: Dict[str, tuple] = {
     "market_index":     ("market_indices",    ["last_price", "change_pct"]),
 
     # ── Ownership ─────────────────────────────────────────────────────────────
-    "promoter":         ("ownership_history", ["promoter_pct"]),
-    "fii":              ("ownership",         ["fii_fpi_pct", "fii_net_buy_cr"]),
-    "dii":              ("ownership",         ["dii_pct", "dii_net_buy_cr"]),
-    "institutional":    ("ownership",         ["total_institutional_pct"]),
-    "shareholders":     ("ownership",         ["num_shareholders"]),
+    # [FIX] "ownership"/"ownership_history" were never real tables -> the
+    # actual table is `shareholding`, and its %-columns are named directly
+    # (fii_pct/dii_pct), not fii_fpi_pct/fii_net_buy_cr which don't exist.
+    "promoter":         ("shareholding",      ["promoter_pct"]),
+    "fii":              ("shareholding",      ["fii_pct"]),
+    "dii":              ("shareholding",      ["dii_pct"]),
+    "institutional":    ("shareholding",      ["total_institutional_pct"]),
+    "shareholders":     ("shareholding",      ["num_shareholders"]),
 
     # ── Corporate actions ─────────────────────────────────────────────────────
     "dividend":         ("corporate_actions", ["value"]),
@@ -196,9 +210,11 @@ SUBTYPE_TABLE_MAP: Dict[str, tuple] = {
     "bonus":            ("corporate_actions", ["value", "notes"]),
 
     # ── Earnings estimates ────────────────────────────────────────────────────
-    "eps_estimate":     ("earnings_estimates", ["avg_eps", "growth_pct"]),
-    "eps_surprise":     ("earnings_history",   ["eps_actual", "eps_estimate", "surprise_pct"]),
-    "eps_revision":     ("eps_revisions",      ["up_last_7d", "down_last_7d"]),
+    # [FIX] earnings_estimates/earnings_history/eps_revisions don't exist.
+    # The real table is `eps_trend` (current_est vs N-days-ago snapshots).
+    "eps_estimate":     ("eps_trend",         ["current_est"]),
+    "eps_surprise":     ("eps_trend",         []),   # [ORPHANED] no actual-vs-estimate data
+    "eps_revision":     ("eps_trend",         ["current_est", "seven_days_ago", "thirty_days_ago"]),
 
     # ── Qualitative (vector) ──────────────────────────────────────────────────
     "mda":              ("chromadb:annual_reports", []),
@@ -211,6 +227,19 @@ SUBTYPE_TABLE_MAP: Dict[str, tuple] = {
     "concall_capex":    ("chromadb:concalls",       []),
     "concall_margin":   ("chromadb:concalls",       []),
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# [FIX] Sub-types with no backing table/column anywhere in mysql_schema_v2.sql.
+# There is genuinely nowhere for these to come from until a ratios/valuation
+# table (or equivalent columns) is added to the schema. schema_bridge.py should
+# check this set BEFORE calling _build_sql() and skip straight to "no data
+# available for this metric" instead of raising/looking like a broken query.
+# Any sub_type mapped above with an empty column list is in this set.
+# ─────────────────────────────────────────────────────────────────────────────
+ORPHANED_SUBTYPES = frozenset(
+    sub_type for sub_type, (table, cols) in SUBTYPE_TABLE_MAP.items()
+    if not cols and not table.startswith("chromadb:")
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
