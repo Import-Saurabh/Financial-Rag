@@ -7,7 +7,7 @@ Receives a list of AtomicNeed objects from the decomposer and translates
 each one into a concrete data-fetch operation:
 
   QUANTITATIVE / TECHNICAL / MACRO / OWNERSHIP atoms
-    → parameterized SQLite SELECT (table + columns from SUBTYPE_TABLE_MAP,
+    → parameterized MySQL SELECT (table + columns from SUBTYPE_TABLE_MAP,
       filtered by symbol, fiscal year / date window)
 
   QUALITATIVE atoms
@@ -45,24 +45,25 @@ Design principles
    "current" queries use ORDER BY <date_col> DESC LIMIT 1.
 
 4. Period type routing
-   annual    → annual_results, balance_sheet (period_type='annual'), cash_flow
+   annual    → profit_loss, balance_sheet (period_type='annual'), cash_flow
    quarterly → quarterly_results, balance_sheet (period_type='quarterly')
-   ttm       → fundamentals (has ttm_eps, ttm_pe columns)
+   ttm       → profit_loss, cash_flow (period_type='ttm')
 
-5. Safety — all values are passed as SQL parameters (?), never interpolated.
+5. Safety — all values are passed as SQL parameters (%s), never interpolated.
 """
 
 from __future__ import annotations
 
-import sqlite3
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import date
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import mysql.connector
+from mysql.connector import Error as MySQLError
+
 # ── project imports ──────────────────────────────────────────────────────────
-# Adjust the path prefix if the bridge lives in a different package directory.
 from decomposer.atomic_decomposer import (
     AtomicNeed,
     NeedType,
@@ -78,22 +79,17 @@ from utils.logger import get_logger
 
 log = get_logger(__name__)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# DB paths — two separate SQLite databases
-#
-#   FINANCE_DB_PATH  (Ai_Hedge_Fund.db)
-#     → all structured financial tables: annual_results, fundamentals,
-#       balance_sheet, cash_flow, growth_metrics, technical_indicators, etc.
-#     → this is what SQL atoms query against
-#
-#   DB_PATH  (financial_rag.db)
-#     → RAG metadata only: chunks, documents, companies, ingestion_log
-#     → NOT queried by the bridge; used by the rest of the RAG pipeline
-#
-# Set FINANCE_DB_PATH in config/settings.py:
-#   FINANCE_DB_PATH = Path("C:/Users/hp/Downloads/Fund/database/Ai_Hedge_Fund.db")
-# ─────────────────────────────────────────────────────────────────────────────
-from config.settings import FINANCE_DB_PATH   # noqa: E402
+# ─── MySQL connection defaults (can be overridden via env or constructor) ──
+DEFAULT_MYSQL_CONFIG = {
+    "host": os.getenv("MYSQL_HOST", "localhost"),
+    "port": int(os.getenv("MYSQL_PORT", 3306)),
+    "user": os.getenv("MYSQL_USER", "root"),
+    "password": os.getenv("MYSQL_PASSWORD", ""),
+    "database": os.getenv("MYSQL_DATABASE", "ai_hedge_fund"),
+    "charset": "utf8mb4",
+    "use_unicode": True,
+}
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Table metadata: which column holds the date/period, and which holds symbol
@@ -103,37 +99,37 @@ from config.settings import FINANCE_DB_PATH   # noqa: E402
 #   date_column        — used to filter by fiscal year or ORDER BY for "current"
 #   has_symbol_column  — True when the table has a `symbol` TEXT column
 #   has_period_type    — True when the table has a `period_type` TEXT column
-#                        ('annual' / 'quarterly')
+#                        ('annual' / 'quarterly' / 'ttm')
 _TABLE_META: Dict[str, Tuple[str, bool, bool]] = {
-    "annual_results":          ("period_end",     True,  False),
-    "quarterly_results":       ("period_end",     True,  False),
-    "fundamentals":            ("as_of_date",     True,  False),
-    "balance_sheet":           ("period_end",     True,  True),
-    "cash_flow":               ("period_end",     True,  True),
-    "growth_metrics":          ("as_of_date",     True,  False),
-    "annual_cashflow_derived": ("annual_end",     True,  False),
-    "technical_indicators":    ("date",           True,  False),
-    "price_daily":             ("date",           True,  False),
-    "price_intraday":          ("ts",             True,  False),
-    "corporate_actions":       ("action_date",    True,  False),
-    "ownership":               ("snapshot_date",  True,  False),
-    "ownership_history":       ("period_end",     True,  False),
-    "earnings_history":        ("quarter_end",    True,  False),
-    "earnings_estimates":      ("snapshot_date",  True,  False),
-    "eps_trend":               ("snapshot_date",  True,  False),
-    "eps_revisions":           ("snapshot_date",  True,  False),
+    # Financials – P&L
+    "profit_loss":           ("period_end", True,  True),   # period_type: annual/quarterly/ttm
+    # Balance Sheet
+    "balance_sheet":         ("period_end", True,  True),   # period_type: annual/quarterly
+    # Cash Flow
+    "cash_flow":             ("period_end", True,  True),   # period_type: annual/quarterly/ttm
+    # Quarterly Results (standalone, always quarterly)
+    "quarterly_results":     ("period_end", True,  False),
+    # Market data
+    "price_daily":           ("date",       True,  False),
+    "technical_indicators":  ("date",       True,  False),
+    # Shareholding
+    "shareholding":          ("period_end", True,  False),
+    # Corporate actions
+    "corporate_actions":     ("action_date", True,  False),
+    # Growth & estimates
+    "growth_metrics":        ("as_of_date", True,  False),
+    "eps_trend":             ("snapshot_date", True, False),
     # Macro / market tables — no symbol column
-    "rbi_rates":               ("effective_date", False, False),
-    "forex_commodities":       ("snapshot_date",  False, False),
-    "macro_indicators":        ("snapshot_date",  False, False),
-    "market_indices":          ("snapshot_date",  False, False),
+    "rbi_rates":             ("effective_date", False, False),
+    "market_indices":        ("snapshot_date",  False, False),
+    "forex_commodities":     ("snapshot_date",  False, False),
+    "macro_indicators":      ("snapshot_date",  False, False),
 }
 
 # Columns always fetched in addition to the atom's requested columns.
 # This lets the LLM know what period the data belongs to.
-_ALWAYS_SELECT = ["symbol", "period_end", "as_of_date", "annual_end", "date",
-                  "snapshot_date", "action_date", "effective_date",
-                  "quarter_end", "ts"]
+_ALWAYS_SELECT = ["symbol", "period_end", "as_of_date", "date",
+                  "snapshot_date", "action_date", "effective_date"]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Indian FY → calendar date range helper
@@ -211,7 +207,6 @@ def _build_sql(atom: AtomicNeed) -> Tuple[str, tuple]:
     date_col, has_symbol, has_period_type = meta
 
     # --- SELECT clause -------------------------------------------------------
-    # Always include the date column + symbol (if present) + requested columns.
     select_cols: List[str] = []
     if has_symbol:
         select_cols.append("symbol")
@@ -233,13 +228,18 @@ def _build_sql(atom: AtomicNeed) -> Tuple[str, tuple]:
     # Symbol filter
     symbol = atom.symbol or (atom.symbols[0] if atom.symbols else None)
     if has_symbol and symbol:
-        conditions.append("symbol = ?")
+        conditions.append("symbol = %s")
         params.append(symbol.upper())
 
     # Period type filter (only for tables that support it)
     if has_period_type:
-        period_type_val = "quarterly" if atom.period_type == "quarterly" else "annual"
-        conditions.append("period_type = ?")
+        if atom.period_type == "quarterly":
+            period_type_val = "quarterly"
+        elif atom.period_type == "ttm":
+            period_type_val = "ttm"
+        else:
+            period_type_val = "annual"
+        conditions.append("period_type = %s")
         params.append(period_type_val)
 
     # Date / year filter
@@ -247,14 +247,14 @@ def _build_sql(atom: AtomicNeed) -> Tuple[str, tuple]:
         if len(atom.years) == 1:
             fy = atom.years[0]
             start, end = _fy_date_range(fy)
-            conditions.append(f"{date_col} BETWEEN ? AND ?")
+            conditions.append(f"{date_col} BETWEEN %s AND %s")
             params.extend([start, end])
         else:
             # Multiple years: expand to full range
             min_fy, max_fy = min(atom.years), max(atom.years)
             start, _ = _fy_date_range(min_fy)
             _,   end = _fy_date_range(max_fy)
-            conditions.append(f"{date_col} BETWEEN ? AND ?")
+            conditions.append(f"{date_col} BETWEEN %s AND %s")
             params.extend([start, end])
 
     # Corporate actions: filter by action_type when the sub_type implies it
@@ -266,21 +266,18 @@ def _build_sql(atom: AtomicNeed) -> Tuple[str, tuple]:
             "bonus":    "Bonus",
             "split":    "Split",
         }
-        conditions.append("action_type = ?")
+        conditions.append("action_type = %s")
         params.append(action_type_map[atom.sub_type])
 
     # Macro: filter by indicator_name when sub_type is "macro"
     if table == "macro_indicators" and atom.sub_type == "macro":
-        # The raw_text might contain the indicator name; use it if short enough
         if atom.raw_text and len(atom.raw_text) < 30:
-            conditions.append("LOWER(indicator_name) LIKE ?")
+            conditions.append("LOWER(indicator_name) LIKE %s")
             params.append(f"%{atom.raw_text.lower()}%")
 
     where_str = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
     # --- ORDER BY / LIMIT ----------------------------------------------------
-    # For current / no-year queries: newest row first, cap at 5 rows.
-    # For historical queries with years: order newest first, no cap (user asked for all).
     if atom.time_horizon == TimeHorizon.CURRENT and not atom.years:
         order_limit = f"ORDER BY {date_col} DESC LIMIT 5"
     elif atom.years:
@@ -293,10 +290,12 @@ def _build_sql(atom: AtomicNeed) -> Tuple[str, tuple]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SQL executor
+# SQL executor (MySQL)
 # ─────────────────────────────────────────────────────────────────────────────
-def _execute_sql_atom(atom: AtomicNeed, db_path: Path) -> SqlAtomResult:
-    """Run the SQL for one atom, return SqlAtomResult (never raises)."""
+def _execute_sql_atom(atom: AtomicNeed, db_config: Dict[str, Any]) -> SqlAtomResult:
+    """
+    Run the SQL for one atom against MySQL, return SqlAtomResult (never raises).
+    """
     try:
         sql, params = _build_sql(atom)
     except ValueError as e:
@@ -305,22 +304,36 @@ def _execute_sql_atom(atom: AtomicNeed, db_path: Path) -> SqlAtomResult:
 
     log.debug(f"  [bridge] SQL: {sql} | params={params}")
 
+    conn = None
+    cursor = None
     try:
-        conn = sqlite3.connect(str(db_path))
-        conn.row_factory = sqlite3.Row
-        try:
-            cursor = conn.execute(sql, params)
-            rows = [dict(r) for r in cursor.fetchall()]
-        finally:
-            conn.close()
-
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+        # Convert Decimal and date types to native Python types for JSON serialization
+        for row in rows:
+            for k, v in row.items():
+                if hasattr(v, 'isoformat'):  # date/datetime
+                    row[k] = v.isoformat()
+                elif isinstance(v, decimal.Decimal):
+                    row[k] = float(v) if v is not None else None
         log.info(f"  [bridge] {atom.sub_type}: {len(rows)} row(s) from {atom.sql_table}")
         return SqlAtomResult(atom=atom, rows=rows, sql=sql, params=params)
 
-    except sqlite3.Error as e:
-        msg = f"SQLite error for {atom.sub_type} ({atom.sql_table}): {e}"
+    except MySQLError as e:
+        msg = f"MySQL error for {atom.sub_type} ({atom.sql_table}): {e}"
         log.error(f"  [bridge] {msg}")
         return SqlAtomResult(atom=atom, sql=sql, params=params, error=msg)
+    except Exception as e:
+        msg = f"Unexpected error for {atom.sub_type}: {e}"
+        log.error(f"  [bridge] {msg}")
+        return SqlAtomResult(atom=atom, sql=sql, params=params, error=msg)
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -440,13 +453,17 @@ class SchemaBridge:
 
     def __init__(
         self,
-        finance_db_path: Optional[Path] = None,
-        max_workers:     int = 8,
+        mysql_config: Optional[Dict[str, Any]] = None,
+        max_workers: int = 8,
     ):
-        # SQL atoms query Ai_Hedge_Fund.db (structured financial tables).
-        # Pass finance_db_path explicitly to override the settings default.
-        self.finance_db_path = finance_db_path or FINANCE_DB_PATH
-        self.max_workers     = max_workers
+        """
+        :param mysql_config: MySQL connection parameters (host, port, user,
+                             password, database). If None, uses defaults from
+                             environment or DEFAULT_MYSQL_CONFIG.
+        :param max_workers:  Maximum threads for parallel fetching.
+        """
+        self.mysql_config = mysql_config or DEFAULT_MYSQL_CONFIG.copy()
+        self.max_workers = max_workers
 
     # ── Main entry point ──────────────────────────────────────────────────────
 
@@ -490,6 +507,7 @@ class SchemaBridge:
             futures = {}
 
             for atom in sql_atoms:
+                # Pass the mysql_config to each task
                 f = pool.submit(self._safe_sql, atom)
                 futures[f] = ("sql", atom)
 
@@ -526,7 +544,7 @@ class SchemaBridge:
     # ── Internal helpers ──────────────────────────────────────────────────────
 
     def _safe_sql(self, atom: AtomicNeed) -> SqlAtomResult:
-        return _execute_sql_atom(atom, self.finance_db_path)
+        return _execute_sql_atom(atom, self.mysql_config)
 
     def _safe_vector(self, atom: AtomicNeed) -> VectorAtomResult:
         return _execute_vector_atom(atom)

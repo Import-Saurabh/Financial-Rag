@@ -116,7 +116,7 @@ The ingestion pipeline depends on three services.
 If using Docker:
 
 ```bash
-docker start finrag_qdrant
+docker start qdrant
 docker start finrag_minio
 docker start finrag_mysql
 ```

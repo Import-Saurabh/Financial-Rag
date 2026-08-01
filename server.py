@@ -151,6 +151,27 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.warning(f"[server] Qdrant warm failed: {e}")
 
+    # Warm the synthesis pipeline (decomposer + MySQL SchemaBridge + fusion).
+    # This is the atomic/SQL pipeline. It's optional at runtime (rag_engine.py
+    # degrades to vector-only if it's unavailable), but we still probe it here
+    # so a MySQL problem shows up as a clear WARNING in the startup log instead
+    # of silently degrading every query to vector-only with no visible signal.
+    try:
+        from rag.rag_engine import _get_synthesis_pipeline
+        loop = asyncio.get_event_loop()
+        pipeline = await loop.run_in_executor(None, _get_synthesis_pipeline)
+        if pipeline is not None:
+            log.info("[server] SynthesisPipeline (MySQL atomic pipeline) warm ✓")
+        else:
+            log.warning(
+                "[server] SynthesisPipeline unavailable at startup — queries will "
+                "run vector-only until it self-heals (retries every "
+                "30s once a query calls it again). Check MySQL is reachable "
+                "(DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD)."
+            )
+    except Exception as e:
+        log.warning(f"[server] SynthesisPipeline warm check failed: {e}")
+
     elapsed = time.perf_counter() - t0
     log.info(f"[server] All models warm in {elapsed:.1f}s — ready for queries")
 

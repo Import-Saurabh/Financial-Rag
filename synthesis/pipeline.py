@@ -17,7 +17,7 @@ prompt-building chain that sits *between* the reranker and the LLM call.
 Design decisions
 ────────────────
 1. FULLY OPTIONAL — if any upstream component is unavailable (missing DB,
-   import error, no FINANCE_DB_PATH) the pipeline gracefully degrades to
+   import error, MySQL unreachable) the pipeline gracefully degrades to
    the vector-only prompt path so query.py never crashes.
 
 2. SYMBOL FROM CHUNKS — if no symbol is passed explicitly, it is inferred
@@ -37,6 +37,7 @@ Design decisions
 from __future__ import annotations
 
 import os
+import time
 import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -84,11 +85,52 @@ except ModuleNotFoundError:
     import logging
     log = logging.getLogger(__name__)
 
-# ── FINANCE_DB_PATH — where the structured financial SQLite lives ─────────────
+# ── MySQL connectivity — the structured financial tables now live in the ─────
+#    same containerized MySQL instance as everything else (config/settings.py:
+#    DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_PASSWORD).
 try:
-    from config.settings import FINANCE_DB_PATH as _FINANCE_DB_PATH
+    from config.settings import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+    _HAS_DB_SETTINGS = True
 except (ImportError, AttributeError):
-    _FINANCE_DB_PATH = None   # bridge will skip SQL if None
+    _HAS_DB_SETTINGS = False
+
+
+_DB_REACHABLE_CACHE: Optional[bool] = None
+_DB_REACHABLE_CHECKED_AT: float = 0.0
+_DB_REACHABLE_TTL_SEC: float = 30.0   # re-probe at most every 30s, not once-ever
+
+
+def _mysql_reachable() -> bool:
+    """Cheap connectivity probe — used only for pipeline-mode gating, not
+    for actual queries (SchemaBridge owns the real pooled connection).
+
+    Cached for _DB_REACHABLE_TTL_SEC (30s) rather than for the life of the
+    process. A permanent cache meant a container-startup race (MySQL not up
+    yet when the first query landed) would lock the pipeline into
+    vector-only mode until the app was manually restarted, even though
+    MySQL came up seconds later. A short TTL lets it self-heal on the next
+    query instead.
+    """
+    global _DB_REACHABLE_CACHE, _DB_REACHABLE_CHECKED_AT
+    now = time.time()
+    if _DB_REACHABLE_CACHE is not None and (now - _DB_REACHABLE_CHECKED_AT) < _DB_REACHABLE_TTL_SEC:
+        return _DB_REACHABLE_CACHE
+    if not _HAS_DB_SETTINGS:
+        _DB_REACHABLE_CACHE = False
+        _DB_REACHABLE_CHECKED_AT = now
+        return False
+    try:
+        import mysql.connector
+        conn = mysql.connector.connect(
+            host=DB_HOST, port=DB_PORT, database=DB_NAME,
+            user=DB_USER, password=DB_PASSWORD, connection_timeout=3,
+        )
+        conn.close()
+        _DB_REACHABLE_CACHE = True
+    except Exception:
+        _DB_REACHABLE_CACHE = False
+    _DB_REACHABLE_CHECKED_AT = now
+    return _DB_REACHABLE_CACHE
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -125,12 +167,10 @@ class SynthesisResult:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _pipeline_available() -> bool:
-    """True only when every component is importable AND finance DB exists."""
+    """True only when every component is importable AND MySQL is reachable."""
     if not (_HAS_DECOMPOSER and _HAS_BRIDGE and _HAS_FUSION and _HAS_BUILDER):
         return False
-    if _FINANCE_DB_PATH is None:
-        return False
-    if not Path(str(_FINANCE_DB_PATH)).exists():
+    if not _mysql_reachable():
         return False
     return True
 
@@ -168,7 +208,10 @@ class SynthesisPipeline:
         finance_db_path: Optional[Path] = None,
         max_workers:     int = 6,
     ):
-        self._db = finance_db_path or (_FINANCE_DB_PATH and Path(str(_FINANCE_DB_PATH)))
+        # finance_db_path kept only for backward-compatible signatures — the
+        # bridge now uses its own pooled MySQL connection (config/settings.py),
+        # not a file path. See schema_bridge.py's _POOL / _get_connection().
+        self._db = finance_db_path
         self._max_workers = max_workers
 
         # Lazy-init components — only instantiated when actually needed
@@ -186,11 +229,10 @@ class SynthesisPipeline:
         return self._decomposer
 
     def _get_bridge(self) -> Optional[Any]:
-        if not (_HAS_BRIDGE and self._db and Path(str(self._db)).exists()):
+        if not (_HAS_BRIDGE and _mysql_reachable()):
             return None
         if self._bridge is None:
             self._bridge = SchemaBridge(
-                finance_db_path=Path(str(self._db)),
                 max_workers=self._max_workers,
             )
         return self._bridge
@@ -269,11 +311,11 @@ class SynthesisPipeline:
                 warnings.append("decomposer not importable — using vector-only path")
             elif not _HAS_BRIDGE:
                 warnings.append("schema_bridge not importable — using vector-only path")
-            elif _FINANCE_DB_PATH is None:
-                warnings.append("FINANCE_DB_PATH not set — using vector-only path")
-            elif not Path(str(_FINANCE_DB_PATH)).exists():
+            elif not _HAS_DB_SETTINGS:
+                warnings.append("DB_HOST/DB_NAME/... not set in config.settings — using vector-only path")
+            elif not _mysql_reachable():
                 warnings.append(
-                    f"FINANCE_DB_PATH={_FINANCE_DB_PATH} not found — using vector-only path"
+                    f"MySQL unreachable at {DB_HOST}:{DB_PORT}/{DB_NAME} — using vector-only path"
                 )
             else:
                 warnings.append("fusion layer unavailable — using vector-only path")
