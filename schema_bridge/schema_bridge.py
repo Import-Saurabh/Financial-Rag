@@ -59,6 +59,7 @@ import decimal   # [FIX] used in _execute_sql_atom but was never imported ->
                   # almost every real query. This was silently killing SQL
                   # results even for correctly-mapped tables.
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import date
@@ -387,6 +388,80 @@ def _execute_vector_atom(atom: AtomicNeed) -> VectorAtomResult:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# [FIX-CONCALL-YEAR-MISMATCH] Resolve "current" SQL results back to a FY
+# ─────────────────────────────────────────────────────────────────────────────
+def _latest_resolved_fy_by_symbol(sql_results: List[SqlAtomResult]) -> Dict[str, int]:
+    """
+    For each symbol, find the most recent period_end/date across all
+    successful SQL atom results and convert it to the Indian fiscal year
+    that date falls in (Apr-Mar). Used to backfill unscoped vector atoms
+    ("this quarter" style queries) so concall retrieval targets the same
+    period the SQL answer resolved to, instead of an unrelated default
+    window.
+    """
+    latest_date_by_symbol: Dict[str, str] = {}
+    date_keys = ("period_end", "date", "as_of_date", "snapshot_date",
+                 "action_date", "effective_date")
+
+    for result in sql_results:
+        if result.error or not result.rows:
+            continue
+        symbol = result.atom.symbol
+        if not symbol:
+            continue
+        for row in result.rows:
+            row_date = next((row[k] for k in date_keys if row.get(k)), None)
+            if not row_date:
+                continue
+            row_date = str(row_date)
+            if symbol not in latest_date_by_symbol or row_date > latest_date_by_symbol[symbol]:
+                latest_date_by_symbol[symbol] = row_date
+
+    resolved: Dict[str, int] = {}
+    for symbol, date_str in latest_date_by_symbol.items():
+        try:
+            y, m, _ = (int(x) for x in date_str[:10].split("-"))
+        except ValueError:
+            continue
+        # Indian FY: Apr-Dec belongs to FY(y+1), Jan-Mar belongs to FY(y)
+        resolved[symbol] = y + 1 if m >= 4 else y
+    return resolved
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# [FIX-EMPTY-VECTOR-FALLBACK]
+# If a QUALITATIVE/FORWARD_LOOKING atom (routed to chromadb) comes back with
+# ZERO chunks -- not "low score", literally nothing retrieved -- the query
+# may have been misclassified, or the honest answer simply lives in
+# structured data instead of prose (e.g. "profit this quarter" phrased in a
+# way that leaned qualitative). Rather than surfacing a dead end, do one
+# best-effort SQL lookup using keyword cues from the atom's own text. This
+# is intentionally conservative: it only fires on EMPTY vector results, and
+# only for keywords with an unambiguous, already-whitelisted SQL mapping
+# (via SUBTYPE_TABLE_MAP) -- no free-form guessing, no new columns invented.
+_VECTOR_EMPTY_SQL_FALLBACK: List[Tuple[str, str]] = [
+    (r"\bnet\s+profit|\bpat\b|\bprofit\b", "net_profit"),
+    (r"\brevenue|\bsales\b|\btop[\s\-]?line", "revenue"),
+    (r"\bebitda\b", "ebitda"),
+    (r"\bmargin\b", "opm"),
+    (r"\beps\b", "eps"),
+    (r"\bdebt\b|\bborrowings?\b", "borrowings"),
+    (r"\bcash\b", "cash"),
+    (r"\bmarket\s+cap", "market_cap"),
+    (r"\broe\b", "roe"),
+    (r"\bcapex\b", "capex"),
+]
+
+
+def _infer_fallback_sql_sub_type(atom: AtomicNeed) -> Optional[str]:
+    text = f"{atom.raw_text or ''} {atom.metric or ''}".lower()
+    for pattern, sub_type in _VECTOR_EMPTY_SQL_FALLBACK:
+        if re.search(pattern, text):
+            return sub_type
+    return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Comparative expansion
 # ─────────────────────────────────────────────────────────────────────────────
 def _expand_comparative(atom: AtomicNeed) -> List[AtomicNeed]:
@@ -549,6 +624,84 @@ class SchemaBridge:
                     msg = f"Unexpected failure in bridge ({atom.sub_type}): {e}"
                     log.error(f"  [bridge] {msg}")
                     errors.append(msg)
+
+        # [FIX-EMPTY-VECTOR-FALLBACK]
+        # A qualitative/forward-looking ask that came back with literally
+        # zero chunks shouldn't just dead-end. If the atom's own text
+        # contains an unambiguous quantitative cue (see
+        # _VECTOR_EMPTY_SQL_FALLBACK), fire one SQL lookup for it so the
+        # answer still surfaces from structured data instead of "not found."
+        # This only fires on EMPTY results (0 chunks) -- atoms that got some
+        # chunks back (even low-scoring ones) are left to the relevance
+        # floor in prompt_builder.py, not re-routed here.
+        for vres in vector_results:
+            if vres.chunks or vres.error:
+                continue
+            fallback_sub_type = _infer_fallback_sql_sub_type(vres.atom)
+            if not fallback_sub_type or fallback_sub_type in ORPHANED_SUBTYPES:
+                continue
+            fallback_atom = AtomicNeed(
+                need_type    = NeedType.QUANTITATIVE,
+                sub_type     = fallback_sub_type,
+                metric       = fallback_sub_type,
+                symbol       = vres.atom.symbol,
+                years        = vres.atom.years,
+                time_horizon = vres.atom.time_horizon,
+                period_type  = vres.atom.period_type,
+                raw_text     = vres.atom.raw_text,
+                source       = "fallback_empty_vector",
+            )
+            fallback_atom.resolve_schema()
+            fallback_result = self._safe_sql(fallback_atom)
+            if fallback_result.rows and not fallback_result.error:
+                log.info(
+                    f"  [bridge] empty-vector fallback: {vres.atom.sub_type!r} "
+                    f"had 0 chunks -> fired SQL sub_type={fallback_sub_type!r}, "
+                    f"got {len(fallback_result.rows)} row(s)"
+                )
+                sql_results.append(fallback_result)
+            elif fallback_result.error:
+                errors.append(fallback_result.error)
+
+        # [FIX-CONCALL-YEAR-MISMATCH]
+        # SQL atoms with time_horizon=CURRENT and no explicit years resolve
+        # to whatever period is actually latest in the DB (e.g. Q1 FY27 /
+        # period_end=2026-06-30 -- see _build_sql's "ORDER BY ... LIMIT 5"
+        # branch). Vector atoms (FORWARD_LOOKING/QUALITATIVE) with the same
+        # symbol and no explicit years never see that resolved period --
+        # they fall through to retriever.py's own "no year hint -> default
+        # last 3 FY" logic, which has no idea what period the SQL side
+        # actually landed on. On the BEL "profit this quarter" query this
+        # produced a concall search over [2023,2024,2025] while the SQL
+        # answer was for FY2027 Q1 -- guaranteed mismatch, guaranteed
+        # irrelevant excerpts.
+        #
+        # Fix: after SQL results are in, backfill the resolved fiscal year
+        # into any sibling vector atom (same symbol, no explicit years,
+        # not historical) so concall retrieval targets the period the
+        # answer is actually about.
+        if vector_results and sql_results:
+            resolved_fy_by_symbol = _latest_resolved_fy_by_symbol(sql_results)
+            rerun: List[VectorAtomResult] = []
+            for vres in vector_results:
+                atom = vres.atom
+                needs_backfill = (
+                    not atom.years
+                    and atom.time_horizon != TimeHorizon.HISTORICAL
+                    and atom.symbol
+                    and atom.symbol in resolved_fy_by_symbol
+                )
+                if needs_backfill:
+                    atom.years = [resolved_fy_by_symbol[atom.symbol]]
+                    log.info(
+                        f"  [bridge] backfilled years={atom.years} onto vector "
+                        f"atom {atom.sub_type!r} from sibling SQL result "
+                        f"(was unscoped -> mismatched-period retrieval)"
+                    )
+                    rerun.append(self._safe_vector(atom))
+                else:
+                    rerun.append(vres)
+            vector_results = rerun
 
         log.info(
             f"[bridge] Done — {sum(len(r.rows) for r in sql_results)} SQL row(s), "
