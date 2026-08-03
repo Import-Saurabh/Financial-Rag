@@ -125,21 +125,24 @@ def load_chunks_to_qdrant(
         points = []
         for chunk, emb in zip(batch, embeddings):
             payload = {
-                "chunk_id":    chunk.chunk_id,
-                "symbol":      chunk.symbol,
-                "year":        chunk.year or 0,
-                "title":       (chunk.title or "")[:200],
-                "doc_type":    chunk.doc_type,
-                "chunk_type":  chunk.chunk_type,
-                "section":     (chunk.section or "")[:200],
-                "speaker":     (chunk.speaker or "")[:100],
-                "speaker_role": (chunk.speaker_role or ""),
-                "page_start":  chunk.page_start or 0,
-                "page_end":    chunk.page_end   or 0,
-                "word_count":  chunk.word_count,
-                "chunk_index": chunk.chunk_index,
+                "chunk_id":         chunk.chunk_id,
+                "symbol":           chunk.symbol,
+                "year":             chunk.year or 0,
+                "title":            (chunk.title or "")[:200],
+                "doc_type":         chunk.doc_type,
+                "chunk_type":       chunk.chunk_type,
+                "section":          (chunk.section or "")[:200],
+                "section_type":     (chunk.section_type or "")[:50],
+                "speaker":          (chunk.speaker or "")[:100],
+                "speaker_role":     (chunk.speaker_role or ""),
+                "page_start":       chunk.page_start or 0,
+                "page_end":         chunk.page_end   or 0,
+                "word_count":       chunk.word_count,
+                "chunk_index":      chunk.chunk_index,
+                "importance_score": chunk.importance_score,
+                "retrieval_tags":   chunk.retrieval_tags or [],
                 # Store the display text in payload for retrieval
-                "text":        chunk.text,
+                "text":             chunk.text,
             }
             points.append(
                 PointStruct(
