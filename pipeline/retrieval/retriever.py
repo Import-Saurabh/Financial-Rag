@@ -50,7 +50,7 @@ from typing import List, Dict, Optional, Any, Tuple
 from dataclasses import dataclass
 
 
-from config.settings import ANNUAL_RETRIEVAL, CONCALL_RETRIEVAL
+from config.settings import ANNUAL_RETRIEVAL, CONCALL_RETRIEVAL, RETRIEVAL_BOOSTS
 from pipeline.loader.embedder import embed_query
 from pipeline.loader.qdrant_loader import query_collection
 from utils.logger import get_logger
@@ -87,9 +87,16 @@ _INTENT_EXPANSIONS: Dict[str, List[str]] = {
     "capex":          ["capital expenditure", "capex plan", "investment", "expansion",
                        "additions to fixed assets", "property plant equipment"],
     "margin":         ["EBITDA margin", "operating margin", "margin guidance",
-                       "margin improvement", "EBIT margin", "gross margin"],
+                       "margin improvement", "EBIT margin", "gross margin",
+                       "what affected margins", "margin pressure", "margin expansion"],
     "management":     ["management commentary", "CEO said", "CFO mentioned",
                        "management discussion", "MD&A", "management discussion and analysis"],
+    "orders":         ["order book", "backlog", "bookings", "order inflow",
+                       "pipeline", "deal wins", "order momentum"],
+    "earnings_call":  ["earnings call", "conference call", "quarterly results",
+                       "financial performance", "operating performance",
+                       "management remarks", "analyst questions", "Q&A session",
+                       "opening remarks", "prepared remarks"],
 
     # ── Income statement ─────────────────────────────────────────
     "revenue":        ["revenue from operations", "total income", "net revenue",
