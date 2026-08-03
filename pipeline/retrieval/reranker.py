@@ -30,6 +30,43 @@ NOTE ON BUG-1 (new process per query):
     FastAPI wrapper that keeps the process alive between queries.
     Even with this fix, cold-start costs ~3-5s instead of ~65s.
 
+PHASE-2 CHANGES (evidence-quality layer — this pass)
+──────────────────────────────────────────────────────
+Previously this file did ONE thing well: cross-encoder scoring, fast.
+It did nothing about *which* evidence survives beyond a flat top_k cut.
+That's the gap this pass closes:
+
+  1. Score calibration — fp32 CrossEncoder outputs raw logits, not
+     probabilities, so _SCORE_THRESHOLD (a 0-1 gate) was silently
+     meaningless on that path (INT8 path already applied sigmoid).
+     FIX: sigmoid-calibrate fp32 scores too, so thresholds mean the same
+     thing regardless of which backend loaded.
+
+  2. Metadata-aware + query-aware boosting — cross-encoder relevance is
+     blended with importance_score, section_type (MD&A / guidance / QA),
+     speaker_role (management > analyst > moderator), and query-keyword
+     signals (financial figures, "margin", "guidance", etc.) using the
+     same RETRIEVAL_BOOSTS weights the retriever already exposes, so the
+     reranker and retriever stay consistent instead of re-inventing weights.
+
+  3. Duplicate removal — near-identical chunks (adjacent overlapping
+     windows) are collapsed before diversity selection so they don't eat
+     two of the final slots for one idea.
+
+  4. Section / speaker diversity — MMR-style greedy selection caps how
+     many chunks come from the same section_type or speaker, so the
+     context isn't dominated by one repeated topic.
+
+  5. Dynamic rerank depth — top_k now scales up when candidate scores are
+     tightly clustered (ambiguous relevance → keep more candidates for the
+     LLM to reason over) and scales down when the top scores clearly
+     separate from the rest.
+
+  6. Confidence gate — chunks below a calibrated confidence floor are
+     dropped rather than padded in just to hit top_k, and the caller gets
+     a `low_confidence` flag when this happens so rag_engine can decide
+     whether to retry retrieval.
+
 Hardware note (i5-1240p, 16 GB RAM, Iris Xe)
 ──────────────────────────────────────────────
   fp32 PyTorch : 30 pairs ~40-70s   (broken old path)
@@ -50,11 +87,13 @@ USAGE (unchanged):
 
 from __future__ import annotations
 
+import math
 import os
+import re
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from utils.logger import get_logger
 
@@ -64,6 +103,21 @@ try:
 except Exception:
     import logging
     log = logging.getLogger(__name__)
+
+# [PHASE-2] reuse the boost weights already defined in settings.py so the
+# retriever's metadata heuristics and the reranker's don't drift apart.
+try:
+    from config.settings import RETRIEVAL_BOOSTS, RERANKER_QUALITY
+except Exception:
+    RETRIEVAL_BOOSTS = {
+        "importance_weight": 0.12, "management_boost": 0.06, "qa_section_boost": 0.05,
+        "forward_looking_boost": 0.04, "early_page_penalty": 0.10,
+        "moderator_penalty": 0.08, "low_value_penalty": 0.12, "boilerplate_penalty": 0.15,
+    }
+    RERANKER_QUALITY = {
+        "concall_min_score": 0.15, "annual_min_score": 0.10,
+        "dedup_threshold": 0.92, "max_per_section": 3,
+    }
 
 try:
     from pipeline.retrieval.retriever import RetrievedChunk

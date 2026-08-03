@@ -144,6 +144,26 @@ CONCALL_RETRIEVAL = {
     "search_type":  "hybrid",
 }
 
+# Metadata boost/penalty weights applied post-retrieval (retriever.py)
+RETRIEVAL_BOOSTS = {
+    "importance_weight":     0.12,   # scale importance_score [0,1] into fused score
+    "management_boost":      0.06,
+    "qa_section_boost":      0.05,
+    "forward_looking_boost": 0.04,
+    "early_page_penalty":    0.10,   # pages 1-2 of concall
+    "moderator_penalty":     0.08,
+    "low_value_penalty":     0.12,
+    "boilerplate_penalty":   0.15,
+}
+
+# Reranker quality gates (reranker.py)
+RERANKER_QUALITY = {
+    "concall_min_score":  0.15,   # reject below this after sigmoid
+    "annual_min_score":   0.10,
+    "dedup_threshold":    0.92,   # Jaccard word-overlap above this = duplicate
+    "max_per_section":    3,      # diversity: max chunks per section_type
+}
+
 COMBINED_ANNUAL_CHUNKS  = 12
 COMBINED_CONCALL_CHUNKS =  6
 

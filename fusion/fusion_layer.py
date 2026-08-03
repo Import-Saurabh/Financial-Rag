@@ -341,6 +341,13 @@ class ConcallClaim:
     chunk_score:  float
     # BUG 2 FIX: store the company symbol so orphan-forward insights are labelled
     symbol:       str = ""
+    # [PHASE-2] which vector channel this claim was pulled from — lets the
+    # cross-referencer and prompt builder distinguish "management said X on
+    # the call" from "the annual report states X", which matters for citation
+    # and for weighting (management commentary > report prose for forward
+    # guidance; report prose > commentary for audited historical figures).
+    source:       str = "concall"   # "concall" | "annual_report"
+    chunk_id:     str = ""
 
 
 @dataclass
@@ -356,6 +363,11 @@ class FusionInsight:
     claim:         Optional[ConcallClaim]
     divergence_pct: Optional[float]  # abs((claim - actual) / actual * 100)
     note:          str               # human-readable summary
+    # [PHASE-2] additional claims (e.g. from the OTHER vector channel) that
+    # were also checked against the same SQL row, so the prompt builder can
+    # show full source agreement instead of a single cherry-picked quote.
+    other_claims:  List[ConcallClaim] = field(default_factory=list)
+    confidence:    float = 1.0        # 0-1, lower when sources disagree or data is thin
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -402,6 +414,7 @@ def _extract_numeric_claims(
     sub_type: str,
     keywords: List[str],
     unit_hint: str,
+    source: str = "concall",
 ) -> List[ConcallClaim]:
     """
     Scan chunk text sentence-by-sentence.
@@ -475,6 +488,8 @@ def _extract_numeric_claims(
                 source_text  = sent.strip()[:300],
                 chunk_score  = chunk.score,
                 symbol       = symbol,   # BUG 2 FIX
+                source       = source,
+                chunk_id     = getattr(chunk, "chunk_id", "") or meta.get("chunk_id", ""),
             ))
 
     return claims
@@ -494,6 +509,53 @@ def _pct_divergence(actual: float, claim: float) -> float:
     if actual == 0:
         return 0.0
     return abs((claim - actual) / actual)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# [PHASE-2] Chunk-level near-duplicate removal
+#
+# Retrieval can return the same passage twice: once from an annual-report
+# chunk and its neighbouring overlap chunk, or the same concall answer split
+# across adjacent windows. Feeding the LLM two near-identical excerpts wastes
+# context budget and can look like independent "confirming" evidence when
+# it's really the same sentence twice. We dedup on word-shingle Jaccard
+# similarity, which is cheap and works well on short-to-medium chunks
+# without pulling in a real similarity model.
+# ─────────────────────────────────────────────────────────────────────────────
+_DEDUP_JACCARD_THRESHOLD = 0.85
+
+
+def _shingles(text: str, n: int = 8) -> set:
+    words = re.findall(r"\w+", text.lower())
+    if len(words) < n:
+        return {" ".join(words)} if words else set()
+    return {" ".join(words[i:i + n]) for i in range(len(words) - n + 1)}
+
+
+def _jaccard(a: set, b: set) -> float:
+    if not a or not b:
+        return 0.0
+    inter = len(a & b)
+    union = len(a | b)
+    return inter / union if union else 0.0
+
+
+def _dedup_chunks(chunks: List["RetrievedChunk"]) -> List["RetrievedChunk"]:
+    """
+    Remove near-duplicate chunks, keeping the highest-scoring copy.
+    Chunks must already be sorted by score descending (or this re-sorts).
+    O(n^2) shingle comparisons — fine at typical post-rerank fan-in (<40 chunks).
+    """
+    ordered = sorted(chunks, key=lambda c: c.score, reverse=True)
+    kept: List["RetrievedChunk"] = []
+    kept_shingles: List[set] = []
+    for c in ordered:
+        sh = _shingles(c.text)
+        is_dup = any(_jaccard(sh, ks) >= _DEDUP_JACCARD_THRESHOLD for ks in kept_shingles)
+        if not is_dup:
+            kept.append(c)
+            kept_shingles.append(sh)
+    return kept
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -540,30 +602,85 @@ class FusionLayer:
                 else:
                     annual_chunks.append(chunk)
 
-        concall_chunks.sort(key=lambda c: c.score, reverse=True)
-        annual_chunks.sort(key=lambda c: c.score, reverse=True)
+        # [PHASE-2] near-duplicate removal before anything downstream sees
+        # these chunks — keeps claim extraction and citation from double
+        # counting the same passage as independent evidence.
+        n_annual_raw, n_concall_raw = len(annual_chunks), len(concall_chunks)
+        annual_chunks  = _dedup_chunks(annual_chunks)
+        concall_chunks = _dedup_chunks(concall_chunks)
+        if (n_annual_raw - len(annual_chunks)) or (n_concall_raw - len(concall_chunks)):
+            log.info(
+                f"[fusion] dedup removed {n_annual_raw - len(annual_chunks)} annual + "
+                f"{n_concall_raw - len(concall_chunks)} concall near-duplicate chunks"
+            )
 
-        # ── Step 3: extract numeric claims from concall chunks ─────────────────
-        concall_claims = self._extract_all_claims(bridge.sql_results, concall_chunks)
+        # ── Step 3: extract numeric claims from BOTH vector channels ───────────
+        # [PHASE-2] previously only concall chunks were scanned for numeric
+        # claims, so an annual-report MD&A statement like "EBITDA margin
+        # improved to 22%" could never be cross-checked against SQL, and
+        # could never be compared against what management said on the call.
+        # Both channels now feed the same claim pool, tagged by `source`.
+        concall_claims = self._extract_all_claims(
+            bridge.sql_results, concall_chunks, source="concall"
+        )
+        annual_claims = self._extract_all_claims(
+            bridge.sql_results, annual_chunks, source="annual_report"
+        )
+        all_claims = concall_claims + annual_claims
 
-        # ── Step 4: cross-reference → insights ───────────────────────────────
-        insights = self._cross_reference(metric_rows, concall_claims)
+        # ── Step 4: cross-reference → insights (with full source agreement) ───
+        insights = self._cross_reference(metric_rows, all_claims)
 
+        n_contra = sum(1 for i in insights if i.insight_type == InsightType.CONTRADICT)
         log.info(
             f"[fusion] {len(metric_rows)} metric rows | "
-            f"{len(concall_claims)} concall claims | "
-            f"{len(insights)} insights "
-            f"({sum(1 for i in insights if i.insight_type == InsightType.CONTRADICT)} contradictions)"
+            f"{len(concall_claims)} concall claims + {len(annual_claims)} annual-report claims | "
+            f"{len(insights)} insights ({n_contra} contradictions)"
         )
 
-        return FusionResult(
+        result = FusionResult(
             metric_rows    = metric_rows,
-            concall_claims = concall_claims,
+            concall_claims = all_claims,
             insights       = insights,
             annual_chunks  = annual_chunks,
             concall_chunks = concall_chunks,
             errors         = errors,
         )
+        result.overall_confidence = self._compute_overall_confidence(result)
+        return result
+
+    # ── [PHASE-2] Overall evidence confidence ───────────────────────────────
+    def _compute_overall_confidence(self, result: "FusionResult") -> float:
+        """
+        A single 0-1 score summarising how trustworthy this evidence bundle
+        is, driven by the same signals a human analyst would use:
+          - fraction of metrics that have ANY reported (SQL) figure at all
+          - fraction of metrics confirmed vs contradicted by commentary
+          - presence of unresolved contradictions (heavily penalised —
+            better to flag uncertainty than let the LLM average them away)
+        This is surfaced to the prompt builder and to rag_engine's routing
+        so a weak-evidence answer can trigger a retry or an explicit
+        uncertainty disclosure instead of a confident-sounding guess.
+        """
+        if not result.metric_rows and not result.concall_claims:
+            return 0.0
+
+        total_insights = len(result.insights)
+        if total_insights == 0:
+            # No SQL-vs-commentary cross-check was possible at all (e.g. a
+            # pure qualitative question). Base confidence on whether we have
+            # *any* evidence, not on cross-referencing.
+            has_any = bool(result.metric_rows or result.concall_chunks or result.annual_chunks)
+            return 0.55 if has_any else 0.0
+
+        n_confirm    = sum(1 for i in result.insights if i.insight_type == InsightType.CONFIRM)
+        n_contradict = sum(1 for i in result.insights if i.insight_type == InsightType.CONTRADICT)
+        n_unmatched  = sum(1 for i in result.insights if i.insight_type == InsightType.UNMATCHED)
+
+        score = 0.5 + 0.4 * (n_confirm / total_insights)
+        score -= 0.35 * (n_contradict / total_insights)   # contradictions hurt a lot
+        score -= 0.05 * (n_unmatched / total_insights)    # unmatched hurts a little
+        return round(max(0.0, min(1.0, score)), 3)
 
     # ── Step 1: MetricRow builder ─────────────────────────────────────────────
 
@@ -609,27 +726,30 @@ class FusionLayer:
     def _extract_all_claims(
         self,
         sql_results:    List[SqlAtomResult],
-        concall_chunks: List["RetrievedChunk"],
+        chunks:         List["RetrievedChunk"],
+        source:         str = "concall",
     ) -> List[ConcallClaim]:
         """
-        For each sub_type that has SQL results, scan concall chunks for
-        matching numeric claims.
+        For each sub_type that has SQL results, scan the given chunk list
+        (concall OR annual-report — caller decides) for matching numeric
+        claims, tagging each with `source` so downstream cross-referencing
+        knows which channel it came from.
         """
         # Only scan for sub_types that actually have SQL atoms
         active_sub_types = {sr.atom.sub_type for sr in sql_results if not sr.error}
 
         all_claims: List[ConcallClaim] = []
-        for chunk in concall_chunks:
+        for chunk in chunks:
             for sub_type, (val_col, keywords, unit_hint) in _METRIC_SIGNALS.items():
                 if sub_type not in active_sub_types:
                     continue
-                claims = _extract_numeric_claims(chunk, sub_type, keywords, unit_hint)
+                claims = _extract_numeric_claims(chunk, sub_type, keywords, unit_hint, source=source)
                 all_claims.extend(claims)
 
-        # Deduplicate: same text + same sub_type → keep highest chunk score
+        # Deduplicate: same text + same sub_type + same source → keep highest chunk score
         seen: Dict[str, ConcallClaim] = {}
         for c in all_claims:
-            key = f"{c.sub_type}|{c.source_text[:80]}"
+            key = f"{c.source}|{c.sub_type}|{c.source_text[:80]}"
             if key not in seen or c.chunk_score > seen[key].chunk_score:
                 seen[key] = c
         return list(seen.values())
@@ -671,6 +791,7 @@ class FusionLayer:
                         f"Reported {row.metric} = {row.value:,.1f} {row.unit} "
                         f"({row.period}) — no management commentary found."
                     ),
+                    confidence    = 0.6,
                 ))
                 continue
 
@@ -680,6 +801,12 @@ class FusionLayer:
                 return (role_score, c.chunk_score)
 
             best = max(relevant, key=_claim_priority)
+            # [PHASE-2] every OTHER claim on this sub_type — including ones
+            # from the other vector channel — is carried along so the prompt
+            # builder can show "management said X on the call AND the annual
+            # report states X" (source agreement) rather than a single quote
+            # that looks unverified.
+            other_claims = [c for c in relevant if c is not best]
 
             # Forward-looking claim — no numeric comparison to actuals
             if best.is_forward:
@@ -701,6 +828,8 @@ class FusionLayer:
                         f"{best.speaker} guidance: {val_str} {best.unit}. "
                         f"[Forward-looking — {best.source_text[:120]}]"
                     ),
+                    other_claims  = other_claims,
+                    confidence    = 0.9,
                 ))
                 continue
 
@@ -736,6 +865,24 @@ class FusionLayer:
                     f"(divergence {div*100:.1f}%)."
                 )
 
+            # [PHASE-2] confidence reflects whether OTHER sources agree with
+            # `best`. If a claim from the other channel (annual report vs
+            # concall) is also within the confirm threshold of the SQL
+            # figure, confidence goes up; if it contradicts, confidence goes
+            # down even though we still surface `best` as the headline claim.
+            insight_confidence = 1.0 if itype == InsightType.CONFIRM else 0.4
+            for oc in other_claims:
+                if oc.is_forward or row.value is None:
+                    continue
+                oc_val = (oc.value_low + oc.value_high) / 2 if oc.value_high else oc.value_low
+                if oc.unit == "lakh" and row.unit == "crore":
+                    oc_val /= 100.0
+                oc_div = _pct_divergence(row.value, oc_val)
+                if oc_div <= self.confirm_threshold:
+                    insight_confidence = min(1.0, insight_confidence + 0.15)
+                elif oc_div >= self.contradict_threshold:
+                    insight_confidence = max(0.15, insight_confidence - 0.25)
+
             insights.append(FusionInsight(
                 insight_type  = itype,
                 sub_type      = sub_type,
@@ -747,6 +894,8 @@ class FusionLayer:
                 claim         = best,
                 divergence_pct= round(div * 100, 2),
                 note          = note,
+                other_claims  = other_claims,
+                confidence    = round(insight_confidence, 3),
             ))
 
         # Also surface forward-looking claims with NO matching SQL row
@@ -792,6 +941,11 @@ class FusionResult:
     annual_chunks:  List["RetrievedChunk"]  = field(default_factory=list)
     concall_chunks: List["RetrievedChunk"]  = field(default_factory=list)
     errors:         List[str]             = field(default_factory=list)
+    # [PHASE-2] 0-1 summary of how trustworthy this evidence bundle is as a
+    # whole. rag_engine uses this to decide whether to retry retrieval or
+    # widen the search before handing off to the LLM; the prompt builder
+    # uses it to calibrate how hedged the final answer should sound.
+    overall_confidence: float = 1.0
 
     # ── Accessors ─────────────────────────────────────────────────────────────
 
@@ -806,6 +960,53 @@ class FusionResult:
 
     def unmatched(self) -> List[FusionInsight]:
         return [i for i in self.insights if i.insight_type == InsightType.UNMATCHED]
+
+    # ── [PHASE-2] Citation selection ────────────────────────────────────────
+    def best_citations(self, max_citations: int = 8) -> List[Dict[str, Any]]:
+        """
+        Pick the citation set the LLM should actually quote from, instead of
+        handing over every retrieved chunk and hoping it picks well.
+
+        Priority order:
+          1. Contradictions — always cited, they're the highest-value finding
+             an analyst needs to see explicitly.
+          2. Confirmed metrics with source agreement (confidence >= 0.85) —
+             strong, verifiable evidence.
+          3. Forward guidance — needed for outlook questions.
+          4. Remaining confirmed metrics, highest confidence first.
+        Chunks already deduped in fuse(), so this list won't contain
+        near-identical passages.
+        """
+        buckets = (
+            sorted(self.contradictions(), key=lambda i: -(i.divergence_pct or 0)),
+            sorted([i for i in self.confirmations() if i.confidence >= 0.85],
+                   key=lambda i: -i.confidence),
+            sorted(self.forward_guidance(), key=lambda i: -(i.claim.chunk_score if i.claim else 0)),
+            sorted([i for i in self.confirmations() if i.confidence < 0.85],
+                   key=lambda i: -i.confidence),
+        )
+        picked: List[Dict[str, Any]] = []
+        seen_text_keys: set = set()
+        for bucket in buckets:
+            for insight in bucket:
+                if len(picked) >= max_citations:
+                    return picked
+                if not insight.claim:
+                    continue
+                key = insight.claim.source_text[:80]
+                if key in seen_text_keys:
+                    continue
+                seen_text_keys.add(key)
+                picked.append({
+                    "type":       insight.insight_type.value,
+                    "metric":     insight.metric,
+                    "source":     insight.claim.source,
+                    "speaker":    insight.claim.speaker,
+                    "quote":      insight.claim.source_text,
+                    "confidence": insight.confidence,
+                    "note":       insight.note,
+                })
+        return picked
 
     # ── Context dict for synthesis prompt builder ──────────────────────────────
 
@@ -852,11 +1053,21 @@ class FusionResult:
                 d["claim_unit"]  = i.claim.unit
                 d["claim_text"]  = i.claim.source_text
                 d["speaker"]     = i.claim.speaker
+                d["claim_source"]= i.claim.source   # "concall" | "annual_report"
             if i.divergence_pct is not None:
                 d["divergence_pct"] = i.divergence_pct
+            d["confidence"] = i.confidence
+            if i.other_claims:
+                d["source_agreement"] = [
+                    {"source": oc.source, "speaker": oc.speaker,
+                     "value": oc.value_low, "unit": oc.unit}
+                    for oc in i.other_claims
+                ]
             return d
 
         return {
+            "overall_confidence": self.overall_confidence,
+            "best_citations":  self.best_citations(),
             "metric_table":    [_row_dict(r) for r in self.metric_rows],
             "contradictions":  [_insight_dict(i) for i in self.contradictions()],
             "confirmations":   [_insight_dict(i) for i in self.confirmations()],
