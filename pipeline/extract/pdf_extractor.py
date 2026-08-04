@@ -23,12 +23,22 @@ Dependencies:
     pip install docling
 """
 
+import json
+import os
 import re
+import sys
+import threading
+import time
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import List, Optional
 
 from config.settings import MAX_PDF_SIZE_MB
+try:
+    from config.settings import LOG_DIR
+except ImportError:
+    LOG_DIR = Path.home() / ".finrag_logs"
+
 from pipeline.extract.text_cleaner import (
     is_boilerplate_page,
     classify_section_header,
@@ -36,6 +46,44 @@ from pipeline.extract.text_cleaner import (
 from utils.logger import get_logger
 
 log = get_logger(__name__)
+
+
+# ─────────────────────────────────────────────
+# CPU tuning for i5-1240P-class laptops (4 P-cores + 8 E-cores, 16 threads,
+# no usable dedicated GPU — Iris Xe is not something Docling/PyTorch can
+# offload matmuls to on this stack). The two things that actually move the
+# needle without touching model quality:
+#
+#   1. Give Docling's own thread pool the real physical core count instead
+#      of a hardcoded 8 (which under-uses the 1240P and, worse, can also
+#      OVER-subscribe a smaller machine — it should track the host, not be
+#      a magic number).
+#   2. Pin OMP/MKL threads to the SAME number *before* torch/docling are
+#      imported. Left unset, PyTorch's OpenMP pool and Docling's own
+#      thread pool both try to claim all logical threads independently,
+#      which causes CPU thread contention (each fighting the OS scheduler)
+#      rather than any speedup — classic thread oversubscription. This is
+#      very likely a meaningful chunk of why a 15MB annual report is
+#      crawling: more threads were being *requested* than were being used
+#      efficiently.
+#
+# Must run before `docling`/`torch` get imported anywhere in the process,
+# so it lives at module import time, not inside _get_converter().
+# ─────────────────────────────────────────────
+def _optimal_thread_count() -> int:
+    cpu_count = os.cpu_count() or 4
+    # Leave 1-2 logical threads free for the OS / MinIO download / MySQL
+    # driver / progress printing so the machine doesn't stutter under load.
+    reserved = 2 if cpu_count >= 8 else 1
+    return max(2, cpu_count - reserved)
+
+
+_NUM_THREADS = _optimal_thread_count()
+
+for _env_var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
+    # Respect an explicit override if the user already set one (e.g. in a
+    # shared/production environment); only fill it in when unset.
+    os.environ.setdefault(_env_var, str(_NUM_THREADS))
 
 
 # ─────────────────────────────────────────────
@@ -79,13 +127,30 @@ def _get_converter():
     from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 
     pipeline_options = PdfPipelineOptions()
-    pipeline_options.do_ocr             = False
-    pipeline_options.do_table_structure = True
+    pipeline_options.do_ocr             = False   # text-layer PDFs only — OCR is the single
+                                                   # biggest Docling cost and these financial
+                                                   # PDFs are never scanned images.
+    pipeline_options.do_table_structure = True    # keep: financial tables need real structure
     pipeline_options.table_structure_options.mode = TableFormerMode.FAST
     pipeline_options.accelerator_options = AcceleratorOptions(
-        num_threads=8,
+        num_threads=_NUM_THREADS,   # was hardcoded to 8; now tracks the actual host
         device=AcceleratorDevice.CPU,
     )
+
+    # Explicitly disable enrichment passes we never consume downstream.
+    # These default to False in most Docling versions already, but pinning
+    # them here means an upstream Docling upgrade can't silently turn one
+    # on and add several extra model passes per page for free.
+    for _attr, _val in (
+        ("do_picture_classification", False),
+        ("do_picture_description", False),
+        ("do_formula_enrichment", False),
+        ("do_code_enrichment", False),
+        ("generate_page_images", False),
+        ("generate_picture_images", False),
+    ):
+        if hasattr(pipeline_options, _attr):
+            setattr(pipeline_options, _attr, _val)
 
     _converter = DocumentConverter(
         format_options={
@@ -95,8 +160,134 @@ def _get_converter():
             ),
         }
     )
-    log.info("Docling DocumentConverter initialised")
+    log.info(f"Docling DocumentConverter initialised (num_threads={_NUM_THREADS})")
     return _converter
+
+
+def _peek_page_count(pdf_path: Path) -> Optional[int]:
+    """
+    Cheap page-count peek via pypdfium2 (already a hard dependency through
+    the Docling backend) — lets us log an expectation ("this is a 220-page
+    PDF, it'll take a while") before the slow Docling convert() call starts,
+    instead of the run looking hung for minutes.
+    """
+    try:
+        import pypdfium2 as pdfium
+        doc = pdfium.PdfDocument(str(pdf_path))
+        try:
+            return len(doc)
+        finally:
+            doc.close()
+    except Exception:
+        return None
+
+
+# ─────────────────────────────────────────────
+# Live ETA progress bar around Docling's convert() call
+#
+# IMPORTANT — what this is and isn't: Docling's convert() is one blocking
+# call with no per-page callback in this version, so there is no way to
+# know its *actual* page-by-page position while it runs. What we do
+# instead is track how many seconds/page THIS MACHINE has actually taken
+# on past documents (separately for annual_report vs concall, since table
+# density differs a lot) and use that learned rate + the page count we
+# already peeked to render a live elapsed/ETA bar. It's an estimate, and
+# the bar itself says so — treat the ETA as "roughly", not exact.
+# ─────────────────────────────────────────────
+_RATE_STATE_PATH = Path(LOG_DIR) / "docling_rate_state.json"
+_DEFAULT_SEC_PER_PAGE = {"annual_report": 6.0, "concall": 4.5}
+
+
+def _load_rate_state() -> dict:
+    try:
+        return json.loads(_RATE_STATE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _save_rate_state(state: dict) -> None:
+    try:
+        _RATE_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _RATE_STATE_PATH.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    except Exception:
+        pass  # progress/ETA is a nicety, never worth failing ingestion over
+
+
+def _estimated_sec_per_page(doc_type: str) -> float:
+    state = _load_rate_state()
+    return state.get(doc_type, {}).get("sec_per_page", _DEFAULT_SEC_PER_PAGE.get(doc_type, 5.0))
+
+
+def _update_rate_state(doc_type: str, actual_sec_per_page: float) -> None:
+    """Exponential moving average — recent runs matter more, but one weird
+    outlier document doesn't wreck the estimate for everything after it."""
+    state = _load_rate_state()
+    prev = state.get(doc_type, {}).get("sec_per_page")
+    new_rate = actual_sec_per_page if prev is None else (0.7 * prev + 0.3 * actual_sec_per_page)
+    state[doc_type] = {"sec_per_page": round(new_rate, 3), "updated_at": time.time()}
+    _save_rate_state(state)
+
+
+def _convert_with_progress(converter, pdf_path: Path, doc_type: str, total_pages: Optional[int]):
+    """
+    Runs converter.convert() on a background thread while the main thread
+    prints a live \\r-updating progress/ETA line. Returns the Docling
+    ConversionResult (same object convert() would have returned directly).
+    """
+    result_box: dict = {}
+    error_box: dict = {}
+
+    def _worker():
+        try:
+            result_box["result"] = converter.convert(source=str(pdf_path))
+        except Exception as e:
+            error_box["error"] = e
+
+    thread = threading.Thread(target=_worker, daemon=True)
+    t0 = time.time()
+    thread.start()
+
+    rate = _estimated_sec_per_page(doc_type)
+    is_tty = sys.stdout.isatty()
+    bar_width = 28
+
+    while thread.is_alive():
+        elapsed = time.time() - t0
+        if total_pages:
+            expected_total = max(rate * total_pages, 1.0)
+            frac = min(0.97, elapsed / expected_total)  # never claim 100% until it's actually done
+            filled = int(bar_width * frac)
+            bar = "█" * filled + "░" * (bar_width - filled)
+            pages_est = frac * total_pages
+            eta = max(0.0, expected_total - elapsed)
+            line = (f"\r  [{bar}] ~{frac*100:3.0f}% est.  "
+                    f"~{pages_est:5.1f}/{total_pages} pages  "
+                    f"{rate:.2f}s/page (learned avg)  "
+                    f"elapsed {elapsed:5.1f}s  ETA ~{eta:5.1f}s   ")
+        else:
+            line = f"\r  Extracting... elapsed {elapsed:5.1f}s (page count unknown)   "
+        if is_tty:
+            sys.stdout.write(line)
+            sys.stdout.flush()
+        time.sleep(1.5)
+
+    thread.join()
+    if is_tty:
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+
+    if "error" in error_box:
+        raise error_box["error"]
+
+    total_elapsed = time.time() - t0
+    if total_pages and total_pages > 0:
+        _update_rate_state(doc_type, total_elapsed / total_pages)
+        log.info(f"  Docling convert() finished in {total_elapsed:.1f}s "
+                 f"({total_elapsed / total_pages:.2f}s/page actual)")
+    else:
+        log.info(f"  Docling convert() finished in {total_elapsed:.1f}s")
+
+    return result_box["result"]
 
 
 # ─────────────────────────────────────────────
@@ -267,8 +458,14 @@ def extract_annual_report(pdf_path: Path) -> ExtractedDocument:
     L = _get_labels()
     converter = _get_converter()
 
-    log.info(f"  Extracting annual report with Docling: {pdf_path.name}")
-    result = converter.convert(source=str(pdf_path))
+    _preview_pages = _peek_page_count(pdf_path)
+    if _preview_pages:
+        log.info(f"  Extracting annual report with Docling: {pdf_path.name} "
+                 f"(~{_preview_pages} pages — large annual reports can take several "
+                 f"minutes on CPU-only layout/table models, this is expected)")
+    else:
+        log.info(f"  Extracting annual report with Docling: {pdf_path.name}")
+    result = _convert_with_progress(converter, pdf_path, "annual_report", _preview_pages)
     dl_doc = result.document
 
     total_pages = getattr(dl_doc, "num_pages", None)
@@ -362,8 +559,12 @@ def extract_concall(pdf_path: Path) -> ExtractedDocument:
     L = _get_labels()
     converter = _get_converter()
 
-    log.info(f"  Extracting concall with Docling: {pdf_path.name}")
-    result = converter.convert(source=str(pdf_path))
+    _preview_pages = _peek_page_count(pdf_path)
+    if _preview_pages:
+        log.info(f"  Extracting concall with Docling: {pdf_path.name} (~{_preview_pages} pages)")
+    else:
+        log.info(f"  Extracting concall with Docling: {pdf_path.name}")
+    result = _convert_with_progress(converter, pdf_path, "concall", _preview_pages)
     dl_doc = result.document
 
     total_pages = getattr(dl_doc, "num_pages", None)

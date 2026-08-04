@@ -23,6 +23,10 @@ Usage:
     python ingest.py --all --year 2020            # ingest only PDFs from 2020
     python ingest.py --all --batch-size 10        # process in batches of 10
     python ingest.py --all --dry-run              # validate + report only, ingest nothing
+    python ingest.py --file annual-reports/bel/2025_Financial_Year_2025_from_bse.pdf
+                                                   # ingest exactly one object, by full
+                                                   # "{bucket}/{key}" path — no bucket listing,
+                                                   # can be repeated for multiple specific files
     python ingest.py --stats                      # show DB stats
     python ingest.py --list                       # list all MinIO keys available
     python ingest.py --report                     # show the last run's validation report
@@ -86,10 +90,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 import time
 import traceback
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
@@ -263,6 +269,61 @@ def _quick_pdf_sanity_check(local_path: Path) -> Optional[str]:
     except Exception as e:
         return f"Could not read downloaded file: {e}"
     return None
+
+
+def _resolve_single_object(path: str, client: Optional[Minio] = None) -> dict:
+    """
+    Resolve a single explicit MinIO object into the same pdf_info shape
+    list_minio_pdfs() produces, WITHOUT listing the whole bucket.
+
+    Accepts a full "{bucket}/{key}" path — e.g.
+        annual-reports/bel/2025_Financial_Year_2025_from_bse.pdf
+    which is exactly the `minio_key` format already stored in MySQL, so this
+    is copy-pasteable straight out of `--list` or the DB.
+
+    Also accepts a bare "{symbol}/{filename}.pdf" key if --type is supplied
+    separately by the caller (see main()), since the bucket is then implied.
+
+    Raises ValueError with an actionable message on any resolution failure
+    (unknown bucket, missing object, wrong extension) — the caller decides
+    whether that's fatal for the whole run or just this one file.
+    """
+    if client is None:
+        client = _minio_client()
+
+    path = path.strip().lstrip("/")
+    parts = path.split("/", 1)
+    if len(parts) < 2:
+        raise ValueError(
+            f"'{path}' is not a valid object path — expected "
+            f"'{{bucket}}/{{symbol}}/{{filename}}.pdf', e.g. "
+            f"'annual-reports/bel/2025_Financial_Year_2025_from_bse.pdf'"
+        )
+
+    bucket, key = parts
+    reverse_bucket_map = {v: k for k, v in DOC_TYPE_BUCKETS.items()}
+    if bucket not in reverse_bucket_map:
+        raise ValueError(
+            f"Unknown bucket '{bucket}' in '{path}'. "
+            f"Known buckets: {list(DOC_TYPE_BUCKETS.values())}"
+        )
+    doc_type = reverse_bucket_map[bucket]
+
+    parsed = _parse_minio_key(key, doc_type, bucket)
+    if parsed is None:
+        raise ValueError(
+            f"Could not parse '{key}' as a valid PDF key under bucket '{bucket}' "
+            f"(expected '{{symbol}}/{{filename}}.pdf')"
+        )
+
+    try:
+        stat = client.stat_object(bucket, key)
+    except S3Error as e:
+        raise ValueError(f"Object not found in MinIO: '{path}' ({e})")
+
+    parsed["size_bytes"] = stat.size or 0
+    parsed["etag"] = (stat.etag or "").strip('"')
+    return parsed
 
 
 # ─────────────────────────────────────────────
@@ -667,6 +728,99 @@ def _check_chunk_quality(chunks: list, minio_key: str, report: Optional[RunRepor
 
 
 # ─────────────────────────────────────────────
+# Parallel batch worker
+#
+# Only helps `--all` / `--symbol` runs over MANY files — a single `--file`
+# run is already using every thread Docling was given inside one process,
+# so running it through this path buys nothing. On an i5-1240P (12 cores /
+# 16 threads) with 16GB RAM, 2 workers is the sane ceiling: each worker
+# loads its own Docling converter (~1-2GB) + embedding model, and Docling's
+# own internal thread pool is already tuned to the host in pdf_extractor.py,
+# so more than 2-3 workers just re-introduces the thread-oversubscription
+# problem this whole change is trying to avoid.
+#
+# Trade-off: each worker gets its own MinIO client and does NOT share the
+# in-memory `state` dict (etag/content-hash dedup), so cross-document
+# duplicate-content detection within a single parallel run is skipped.
+# The MySQL `is_already_ingested()` check still runs per-document inside
+# ingest_pdf(), so previously-completed documents are still safely skipped
+# on re-runs — this only weakens same-run duplicate detection, not
+# incremental/idempotent re-runs.
+# ─────────────────────────────────────────────
+def _ingest_worker(pdf_info: dict, force: bool, dry_run: bool) -> Dict[str, Any]:
+    """Runs in a separate process. Returns a plain dict (must be picklable)."""
+    worker_client = _minio_client()
+    worker_state: Dict[str, Any] = {"etags": {}, "content_hash_to_key": {}}
+    worker_report = RunReport()
+
+    t0 = time.time()
+    status = ingest_pdf(
+        pdf_info, force=force, client=worker_client,
+        state=worker_state, report=worker_report, dry_run=dry_run,
+    )
+    return {
+        "minio_key":    pdf_info["minio_key"],
+        "status":       status,
+        "elapsed_sec":  round(time.time() - t0, 2),
+        "chunks_created":   worker_report.chunks_created,
+        "vectors_uploaded": worker_report.vectors_uploaded,
+        "warnings":     worker_report.warnings,
+        "failures":     worker_report.failures,
+    }
+
+
+def _run_batch_parallel(
+    pdfs: List[dict], force: bool, dry_run: bool,
+    workers: int, report: RunReport, total: int,
+) -> None:
+    if workers > 3:
+        log.warning(
+            f"--workers {workers} requested — on a 16GB laptop this risks OOM "
+            f"(each worker loads its own Docling + embedding models). Capping at 3."
+        )
+        workers = 3
+
+    done = 0
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(_ingest_worker, p, force, dry_run): p for p in pdfs}
+        for fut in as_completed(futures):
+            pdf_info = futures[fut]
+            try:
+                result = fut.result()
+            except Exception as e:
+                result = {
+                    "minio_key": pdf_info["minio_key"], "status": "failed",
+                    "elapsed_sec": 0.0, "chunks_created": 0, "vectors_uploaded": 0,
+                    "warnings": [], "failures": [{"minio_key": pdf_info["minio_key"],
+                                                    "error": f"{type(e).__name__}: {e}"}],
+                }
+
+            done += 1
+            if result["status"] == "ingested":
+                report.documents_processed += 1
+            elif result["status"] == "failed":
+                pass  # failures list appended below
+            else:
+                report.documents_skipped += 1
+                if result["status"] == "skipped_duplicate":
+                    report.duplicates_skipped += 1
+                elif result["status"] == "skipped_invalid":
+                    report.validation_failed += 1
+
+            report.chunks_created   += result["chunks_created"]
+            report.vectors_uploaded += result["vectors_uploaded"]
+            report.warnings.extend(result["warnings"])
+            report.failures.extend(result["failures"])
+            report.per_doc_timing.append({
+                "minio_key": result["minio_key"], "duration_sec": result["elapsed_sec"],
+            })
+
+            bar = _progress_bar(done, total)
+            print(f"  {bar}  {result['status']:<26} {result['minio_key']}  "
+                  f"({result['elapsed_sec']:.1f}s)")
+
+
+# ─────────────────────────────────────────────
 # CLI
 # ─────────────────────────────────────────────
 def main() -> None:
@@ -675,6 +829,13 @@ def main() -> None:
     ap.add_argument("--type", "-t", choices=["annual", "concall"], help="Filter by document type")
     ap.add_argument("--year", "-y", type=int, help="Filter by year (e.g. 2020)")
     ap.add_argument("--all",   action="store_true", help="Ingest all objects across both buckets")
+    ap.add_argument(
+        "--file", "-f", action="append", default=None, metavar="BUCKET/KEY",
+        help="Ingest one exact object by full path, e.g. "
+             "'annual-reports/bel/2025_Financial_Year_2025_from_bse.pdf'. "
+             "Resolved directly via stat_object — no bucket listing required. "
+             "Repeatable: --file a/x.pdf --file b/y.pdf",
+    )
     ap.add_argument("--force", action="store_true", help="Re-ingest already ingested docs")
     ap.add_argument("--stats", action="store_true", help="Show database stats and exit")
     ap.add_argument("--list",  action="store_true", help="List available MinIO objects and exit")
@@ -683,6 +844,10 @@ def main() -> None:
                      help="Validate + detect duplicates/incremental work, ingest nothing")
     ap.add_argument("--batch-size", type=int, default=25,
                      help="Number of documents processed per batch (default: 25)")
+    ap.add_argument("--workers", type=int, default=1,
+                     help="Parallel worker processes for multi-document runs "
+                          "(--all/--symbol only; --file always runs single-process). "
+                          "2 is a sane ceiling on a 16GB laptop. Default: 1 (sequential).")
     args = ap.parse_args()
 
     if args.report:
@@ -715,7 +880,25 @@ def main() -> None:
 
     doc_type_filter = {"annual": "annual_report", "concall": "concall"}.get(args.type)
 
-    if args.all:
+    if args.file:
+        pdfs = []
+        resolution_errors: List[str] = []
+        for raw_path in args.file:
+            try:
+                pdfs.append(_resolve_single_object(raw_path, client=client))
+            except ValueError as e:
+                log.error(f"  ✗ {e}")
+                resolution_errors.append(str(e))
+        if not pdfs:
+            log.error("None of the requested --file path(s) could be resolved. Aborting.")
+            sys.exit(1)
+        if resolution_errors:
+            log.warning(
+                f"{len(resolution_errors)} of {len(args.file)} requested file(s) could not "
+                f"be resolved and will be skipped; proceeding with the remaining "
+                f"{len(pdfs)}."
+            )
+    elif args.all:
         pdfs = list_minio_pdfs(doc_type_filter=doc_type_filter, year=args.year, client=client)
         log.info(f"Found {len(pdfs)} PDF(s) across bucket(s)")
     elif args.symbol:
@@ -740,27 +923,36 @@ def main() -> None:
 
     batch_size = max(1, args.batch_size)
     total = len(pdfs)
+    workers = max(1, args.workers)
+    use_parallel = workers > 1 and total > 1
     print(f"\n▶ Processing {total} document(s) in batches of {batch_size}"
+          f"{f' with {workers} parallel workers' if use_parallel else ''}"
           f"{' [DRY RUN]' if args.dry_run else ''}\n")
 
-    for batch_start in range(0, total, batch_size):
-        batch = pdfs[batch_start:batch_start + batch_size]
-        for idx_in_batch, pdf_info in enumerate(batch):
-            global_idx = batch_start + idx_in_batch + 1
-            doc_t0 = time.time()
-            status = ingest_pdf(
-                pdf_info, force=args.force, client=client,
-                state=state, report=report, dry_run=args.dry_run,
-            )
-            doc_elapsed = time.time() - doc_t0
-            bar = _progress_bar(global_idx, total)
-            print(f"  {bar}  {status:<26} {pdf_info['minio_key']}  ({doc_elapsed:.1f}s)")
+    if use_parallel:
+        # Parallel path skips the sequential batch/state-checkpoint loop below
+        # (each worker uses its own transient state — see _run_batch_parallel
+        # docstring for the dedup trade-off this implies).
+        _run_batch_parallel(pdfs, args.force, args.dry_run, workers, report, total)
+    else:
+        for batch_start in range(0, total, batch_size):
+            batch = pdfs[batch_start:batch_start + batch_size]
+            for idx_in_batch, pdf_info in enumerate(batch):
+                global_idx = batch_start + idx_in_batch + 1
+                doc_t0 = time.time()
+                status = ingest_pdf(
+                    pdf_info, force=args.force, client=client,
+                    state=state, report=report, dry_run=args.dry_run,
+                )
+                doc_elapsed = time.time() - doc_t0
+                bar = _progress_bar(global_idx, total)
+                print(f"  {bar}  {status:<26} {pdf_info['minio_key']}  ({doc_elapsed:.1f}s)")
 
-        # Checkpoint the state file after every batch (also happens per-doc
-        # inside ingest_pdf on success, but this covers dry-run/skip paths too)
-        _save_state(state)
-        log.info(f"Batch {batch_start // batch_size + 1} complete "
-                 f"({min(batch_start + batch_size, total)}/{total} documents)")
+            # Checkpoint the state file after every batch (also happens per-doc
+            # inside ingest_pdf on success, but this covers dry-run/skip paths too)
+            _save_state(state)
+            log.info(f"Batch {batch_start // batch_size + 1} complete "
+                     f"({min(batch_start + batch_size, total)}/{total} documents)")
 
     report.finish(time.time() - run_t0)
     report.print_summary()
