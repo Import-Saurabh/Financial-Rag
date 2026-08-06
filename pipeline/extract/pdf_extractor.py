@@ -417,6 +417,54 @@ def _extract_speaker_turns(
     return blocks
 
 
+# ─────────────────────────────────────────────
+# Section-header plausibility guard
+#
+# Docling occasionally mislabels letterhead text, CIN/exchange-listing
+# lines, page-date stamps, or running headers/footers as SECTION_HEADER
+# items. Left unchecked, these fragments (e.g. "TFP, CStl, Date",
+# "Bandra, Block, Date") silently become `current_section` for every
+# block that follows on the page — which is what was showing up verbatim
+# in retrieval output instead of real section titles like "Q&A Session".
+# ─────────────────────────────────────────────
+_HEADER_BOILERPLATE_PATTERNS = re.compile(
+    r"(?:^\s*(?:CIN|BSE|NSE|ISIN|Regd\.?\s*Office|Registered\s+Office)\s*[:\-]|"
+    r"\bpage\s+\d+\s+of\s+\d+\b|"
+    r"^\d{1,4}$|"                                    # bare page number
+    r"^[A-Z]{2,6}(?:\s*[:\-]\s*\d+)?$|"               # bare exchange code / ticker
+    r"\b[A-Z]{1}\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6}\b)",  # CIN-format string
+    re.IGNORECASE,
+)
+
+
+def is_plausible_section_header(text: str) -> bool:
+    """
+    True if `text` looks like a real document section title rather than a
+    letterhead/footer/listing-info fragment. Exposed (not underscore-
+    prefixed) so chunker.py can reuse it as a defence-in-depth check.
+    """
+    t = (text or "").strip()
+    if not t:
+        return False
+    words = t.split()
+    if len(words) < 2 or len(words) > 14:
+        return False
+    if _HEADER_BOILERPLATE_PATTERNS.search(t):
+        return False
+    # Reject strings that are mostly digits/punctuation (codes, dates, phone numbers)
+    alpha_chars = sum(c.isalpha() for c in t)
+    if alpha_chars < max(3, len(t) * 0.4):
+        return False
+    # Reject comma-joined short-token runs like "TFP, CStl, Date" — 2+
+    # commas where most fragments are <=2 words each is the signature of
+    # a run-on letterhead/footer line, not an actual section title.
+    if t.count(",") >= 2:
+        fragments = [f.strip() for f in t.split(",") if f.strip()]
+        if fragments and sum(1 for f in fragments if len(f.split()) <= 2) / len(fragments) >= 0.6:
+            return False
+    return True
+
+
 # Annual report sections to deprioritize (still extracted as headers for context,
 # but prose under these gets lower importance downstream)
 LOW_VALUE_SECTIONS = re.compile(
@@ -505,6 +553,20 @@ def extract_annual_report(pdf_path: Path) -> ExtractedDocument:
                 continue
 
             if label == L.SECTION_HEADER:
+                if not is_plausible_section_header(text):
+                    # Letterhead / CIN / footer fragment mislabeled as a
+                    # header — do not let it become current_section for
+                    # everything that follows; keep it as ordinary prose
+                    # under whatever section is already active.
+                    if not (current_section_type == "low_value" and page_num <= 15):
+                        doc_out.blocks.append(PageBlock(
+                            page_num     = page_num,
+                            block_type   = "prose",
+                            text         = text,
+                            section      = current_section,
+                            section_type = current_section_type,
+                        ))
+                    continue
                 current_section = text
                 current_section_type = "low_value" if _is_low_value_section(text) else "content"
                 doc_out.blocks.append(PageBlock(
@@ -576,6 +638,7 @@ def extract_concall(pdf_path: Path) -> ExtractedDocument:
 
     page_texts: dict[int, list[str]] = {}
     page_headers: dict[int, list[str]] = {}
+    header_pages: dict[str, set] = {}   # normalised header text → pages it appeared on
 
     for item, _level in dl_doc.iterate_items():
         label = getattr(item, "label", None)
@@ -585,17 +648,35 @@ def extract_concall(pdf_path: Path) -> ExtractedDocument:
         page_num = _page_of(item)
         if label == L.SECTION_HEADER:
             page_headers.setdefault(page_num, []).append(text)
+            norm = re.sub(r"\s+", " ", text.strip().lower())
+            header_pages.setdefault(norm, set()).add(page_num)
         elif label in (L.TEXT, L.PARAGRAPH, L.LIST_ITEM, L.SECTION_HEADER):
             page_texts.setdefault(page_num, []).append(text)
+
+    # A "header" that recurs across many pages is a running letterhead/
+    # footer (company name block, CIN/listing line, date stamp) — never a
+    # real section title. Flag it so it can never drive current_section,
+    # regardless of whether it also happens to pass the plausibility check.
+    _all_pages = set(page_texts) | set(page_headers)
+    _total_pages = len(_all_pages) or 1
+    _repeated_headers = {
+        norm for norm, pages in header_pages.items()
+        if len(pages) >= 3 or (len(pages) / _total_pages) >= 0.25
+    }
 
     current_section      = "Conference Call"
     current_section_type = "opening_remarks"
     skipped_pages        = 0
     content_started      = False
 
-    for page_num in sorted(set(page_texts) | set(page_headers)):
-        # Update section from headers on this page
+    for page_num in sorted(_all_pages):
+        # Update section from headers on this page — but only if the
+        # header text is a plausible section title AND isn't a recurring
+        # letterhead/footer fragment (see _repeated_headers above).
         for hdr in page_headers.get(page_num, []):
+            norm = re.sub(r"\s+", " ", hdr.strip().lower())
+            if norm in _repeated_headers or not is_plausible_section_header(hdr):
+                continue
             st = classify_section_header(hdr)
             if st:
                 current_section_type = st

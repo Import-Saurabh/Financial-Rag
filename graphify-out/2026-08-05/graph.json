@@ -18,7 +18,7 @@
       "label": "_load_state()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L160",
+      "source_location": "L158",
       "_origin": "ast",
       "id": "ingest_load_state",
       "community": 9,
@@ -40,7 +40,7 @@
       "label": "_save_state()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L169",
+      "source_location": "L167",
       "_origin": "ast",
       "id": "ingest_save_state",
       "community": 9,
@@ -51,7 +51,7 @@
       "label": "_minio_client()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L180",
+      "source_location": "L178",
       "_origin": "ast",
       "id": "ingest_minio_client",
       "community": 9,
@@ -73,7 +73,7 @@
       "label": "_parse_minio_key()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L193",
+      "source_location": "L191",
       "_origin": "ast",
       "id": "ingest_parse_minio_key",
       "community": 9,
@@ -84,7 +84,7 @@
       "label": "ValidationIssue",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L224",
+      "source_location": "L222",
       "_origin": "ast",
       "id": "ingest_validationissue",
       "community": 9,
@@ -95,7 +95,7 @@
       "label": "_validate_pdf_metadata()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L231",
+      "source_location": "L229",
       "_origin": "ast",
       "id": "ingest_validate_pdf_metadata",
       "community": 9,
@@ -106,7 +106,7 @@
       "label": "_quick_pdf_sanity_check()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L256",
+      "source_location": "L254",
       "_origin": "ast",
       "id": "ingest_quick_pdf_sanity_check",
       "community": 9,
@@ -128,7 +128,7 @@
       "label": "_resolve_single_object()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L274",
+      "source_location": "L272",
       "_origin": "ast",
       "id": "ingest_resolve_single_object",
       "community": 9,
@@ -139,7 +139,7 @@
       "label": "list_minio_pdfs()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L332",
+      "source_location": "L330",
       "_origin": "ast",
       "id": "ingest_list_minio_pdfs",
       "community": 9,
@@ -150,7 +150,7 @@
       "label": "_download_pdf()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L369",
+      "source_location": "L367",
       "_origin": "ast",
       "id": "ingest_download_pdf",
       "community": 9,
@@ -161,7 +161,7 @@
       "label": "_file_md5()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L377",
+      "source_location": "L375",
       "_origin": "ast",
       "id": "ingest_file_md5",
       "community": 9,
@@ -172,7 +172,7 @@
       "label": "_peak_rss_mb()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L385",
+      "source_location": "L383",
       "_origin": "ast",
       "id": "ingest_peak_rss_mb",
       "community": 9,
@@ -183,7 +183,7 @@
       "label": "_progress_bar()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L400",
+      "source_location": "L398",
       "_origin": "ast",
       "id": "ingest_progress_bar",
       "community": 9,
@@ -194,7 +194,7 @@
       "label": "RunReport",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L413",
+      "source_location": "L411",
       "_origin": "ast",
       "id": "ingest_runreport",
       "community": 9,
@@ -205,7 +205,7 @@
       "label": ".finish()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L428",
+      "source_location": "L426",
       "_origin": "ast",
       "id": "ingest_runreport_finish",
       "community": 9,
@@ -216,7 +216,7 @@
       "label": ".print_summary()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L432",
+      "source_location": "L430",
       "_origin": "ast",
       "id": "ingest_runreport_print_summary",
       "community": 9,
@@ -227,7 +227,7 @@
       "label": ".save()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L463",
+      "source_location": "L461",
       "_origin": "ast",
       "id": "ingest_runreport_save",
       "community": 9,
@@ -238,7 +238,7 @@
       "label": "_print_last_report()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L475",
+      "source_location": "L473",
       "_origin": "ast",
       "id": "ingest_print_last_report",
       "community": 9,
@@ -249,7 +249,7 @@
       "label": "ingest_pdf()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L488",
+      "source_location": "L486",
       "_origin": "ast",
       "id": "ingest_ingest_pdf",
       "community": 9,
@@ -260,7 +260,7 @@
       "label": "_check_chunk_quality()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L706",
+      "source_location": "L704",
       "_origin": "ast",
       "id": "ingest_check_chunk_quality",
       "community": 9,
@@ -268,32 +268,10 @@
       "norm_label": "_check_chunk_quality()"
     },
     {
-      "label": "_ingest_worker()",
-      "file_type": "code",
-      "source_file": "Ingest.py",
-      "source_location": "L750",
-      "_origin": "ast",
-      "id": "ingest_ingest_worker",
-      "community": 9,
-      "community_name": "Ingest.py",
-      "norm_label": "_ingest_worker()"
-    },
-    {
-      "label": "_run_batch_parallel()",
-      "file_type": "code",
-      "source_file": "Ingest.py",
-      "source_location": "L772",
-      "_origin": "ast",
-      "id": "ingest_run_batch_parallel",
-      "community": 9,
-      "community_name": "Ingest.py",
-      "norm_label": "_run_batch_parallel()"
-    },
-    {
       "label": "main()",
       "file_type": "code",
       "source_file": "Ingest.py",
-      "source_location": "L826",
+      "source_location": "L731",
       "_origin": "ast",
       "id": "ingest_main",
       "community": 9,
@@ -304,9 +282,9 @@
       "label": "Parse a MinIO object key (within a doc_type-specific bucket) into (symbol,\u2026",
       "file_type": "rationale",
       "source_file": "Ingest.py",
-      "source_location": "L194",
+      "source_location": "L192",
       "_origin": "ast",
-      "id": "ingest_rationale_194",
+      "id": "ingest_rationale_192",
       "community": 9,
       "community_name": "Ingest.py",
       "norm_label": "parse a minio object key (within a doc_type-specific bucket) into (symbol,..."
@@ -315,9 +293,9 @@
       "label": "Pre-flight metadata validation, run BEFORE any download or embedding work\u2026",
       "file_type": "rationale",
       "source_file": "Ingest.py",
-      "source_location": "L232",
+      "source_location": "L230",
       "_origin": "ast",
-      "id": "ingest_rationale_232",
+      "id": "ingest_rationale_230",
       "community": 9,
       "community_name": "Ingest.py",
       "norm_label": "pre-flight metadata validation, run before any download or embedding work..."
@@ -326,9 +304,9 @@
       "label": "Cheap \"is this actually a PDF\" check before handing it to the (slow) Docling\u2026",
       "file_type": "rationale",
       "source_file": "Ingest.py",
-      "source_location": "L257",
+      "source_location": "L255",
       "_origin": "ast",
-      "id": "ingest_rationale_257",
+      "id": "ingest_rationale_255",
       "community": 9,
       "community_name": "Ingest.py",
       "norm_label": "cheap \"is this actually a pdf\" check before handing it to the (slow) docling..."
@@ -337,9 +315,9 @@
       "label": "Resolve a single explicit MinIO object into the same pdf_info shape\u2026",
       "file_type": "rationale",
       "source_file": "Ingest.py",
-      "source_location": "L275",
+      "source_location": "L273",
       "_origin": "ast",
-      "id": "ingest_rationale_275",
+      "id": "ingest_rationale_273",
       "community": 9,
       "community_name": "Ingest.py",
       "norm_label": "resolve a single explicit minio object into the same pdf_info shape..."
@@ -348,9 +326,9 @@
       "label": "List all matching PDF objects across the doc-type-specific MinIO buckets.",
       "file_type": "rationale",
       "source_file": "Ingest.py",
-      "source_location": "L338",
+      "source_location": "L336",
       "_origin": "ast",
-      "id": "ingest_rationale_338",
+      "id": "ingest_rationale_336",
       "community": 9,
       "community_name": "Ingest.py",
       "norm_label": "list all matching pdf objects across the doc-type-specific minio buckets."
@@ -359,9 +337,9 @@
       "label": "Download object to INGEST_TMP_DIR and return local Path.",
       "file_type": "rationale",
       "source_file": "Ingest.py",
-      "source_location": "L370",
+      "source_location": "L368",
       "_origin": "ast",
-      "id": "ingest_rationale_370",
+      "id": "ingest_rationale_368",
       "community": 9,
       "community_name": "Ingest.py",
       "norm_label": "download object to ingest_tmp_dir and return local path."
@@ -370,9 +348,9 @@
       "label": "Ingest one PDF end-to-end. Returns one of: \"ingested\" |\u2026",
       "file_type": "rationale",
       "source_file": "Ingest.py",
-      "source_location": "L496",
+      "source_location": "L494",
       "_origin": "ast",
-      "id": "ingest_rationale_496",
+      "id": "ingest_rationale_494",
       "community": 9,
       "community_name": "Ingest.py",
       "norm_label": "ingest one pdf end-to-end. returns one of: \"ingested\" |..."
@@ -381,23 +359,12 @@
       "label": "Non-fatal data-quality checks, rolled into the run's warning list.",
       "file_type": "rationale",
       "source_file": "Ingest.py",
-      "source_location": "L707",
+      "source_location": "L705",
       "_origin": "ast",
-      "id": "ingest_rationale_707",
+      "id": "ingest_rationale_705",
       "community": 9,
       "community_name": "Ingest.py",
       "norm_label": "non-fatal data-quality checks, rolled into the run's warning list."
-    },
-    {
-      "label": "Runs in a separate process. Returns a plain dict (must be picklable).",
-      "file_type": "rationale",
-      "source_file": "Ingest.py",
-      "source_location": "L751",
-      "_origin": "ast",
-      "id": "ingest_rationale_751",
-      "community": 9,
-      "community_name": "Ingest.py",
-      "norm_label": "runs in a separate process. returns a plain dict (must be picklable)."
     },
     {
       "label": "config/__init__.py",
@@ -660,7 +627,7 @@
       "_origin": "ast",
       "id": "decomposer_init",
       "community": 5,
-      "community_name": "pipeline.py",
+      "community_name": "NeedType",
       "norm_label": "decomposer/__init__.py"
     },
     {
@@ -671,7 +638,7 @@
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer",
       "community": 5,
-      "community_name": "pipeline.py",
+      "community_name": "NeedType",
       "norm_label": "atomic_decomposer.py"
     },
     {
@@ -682,7 +649,7 @@
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_needtype",
       "community": 5,
-      "community_name": "pipeline.py",
+      "community_name": "NeedType",
       "norm_label": "needtype"
     },
     {
@@ -693,7 +660,7 @@
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_py_str",
       "community": 5,
-      "community_name": "pipeline.py",
+      "community_name": "NeedType",
       "norm_label": "str"
     },
     {
@@ -704,7 +671,7 @@
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_py_enum",
       "community": 5,
-      "community_name": "pipeline.py",
+      "community_name": "NeedType",
       "norm_label": "enum"
     },
     {
@@ -715,7 +682,7 @@
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_timehorizon",
       "community": 5,
-      "community_name": "pipeline.py",
+      "community_name": "NeedType",
       "norm_label": "timehorizon"
     },
     {
@@ -725,7 +692,7 @@
       "source_location": "L250",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_atomicneed",
-      "community": 7,
+      "community": 10,
       "community_name": "AtomicNeed",
       "norm_label": "atomicneed"
     },
@@ -736,8 +703,8 @@
       "source_location": "L265",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_atomicneed_resolve_schema",
-      "community": 7,
-      "community_name": "AtomicNeed",
+      "community": 5,
+      "community_name": "NeedType",
       "norm_label": ".resolve_schema()"
     },
     {
@@ -747,8 +714,8 @@
       "source_location": "L270",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_atomicneed_to_dict",
-      "community": 7,
-      "community_name": "AtomicNeed",
+      "community": 2,
+      "community_name": "RAGResponse",
       "norm_label": ".to_dict()"
     },
     {
@@ -758,8 +725,8 @@
       "source_location": "L281",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_extract_years",
-      "community": 15,
-      "community_name": "_extract_years",
+      "community": 2,
+      "community_name": "RAGResponse",
       "norm_label": "_extract_years()"
     },
     {
@@ -769,8 +736,8 @@
       "source_location": "L325",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_normalise_fy",
-      "community": 15,
-      "community_name": "_extract_years",
+      "community": 2,
+      "community_name": "RAGResponse",
       "norm_label": "_normalise_fy()"
     },
     {
@@ -780,8 +747,8 @@
       "source_location": "L571",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_is_ebitda_multi_year_query",
-      "community": 7,
-      "community_name": "AtomicNeed",
+      "community": 5,
+      "community_name": "NeedType",
       "norm_label": "_is_ebitda_multi_year_query()"
     },
     {
@@ -791,8 +758,8 @@
       "source_location": "L590",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_rule_based_decompose",
-      "community": 7,
-      "community_name": "AtomicNeed",
+      "community": 5,
+      "community_name": "NeedType",
       "norm_label": "_rule_based_decompose()"
     },
     {
@@ -802,8 +769,8 @@
       "source_location": "L684",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_llm_decompose",
-      "community": 7,
-      "community_name": "AtomicNeed",
+      "community": 5,
+      "community_name": "NeedType",
       "norm_label": "_llm_decompose()"
     },
     {
@@ -813,8 +780,8 @@
       "source_location": "L741",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_atomicdecomposer",
-      "community": 5,
-      "community_name": "pipeline.py",
+      "community": 1,
+      "community_name": "SynthesisPipeline",
       "norm_label": "atomicdecomposer"
     },
     {
@@ -824,8 +791,8 @@
       "source_location": "L751",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_atomicdecomposer_init",
-      "community": 5,
-      "community_name": "pipeline.py",
+      "community": 1,
+      "community_name": "SynthesisPipeline",
       "norm_label": ".__init__()"
     },
     {
@@ -835,8 +802,8 @@
       "source_location": "L772",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_atomicdecomposer_decompose",
-      "community": 7,
-      "community_name": "AtomicNeed",
+      "community": 5,
+      "community_name": "NeedType",
       "norm_label": ".decompose()"
     },
     {
@@ -846,8 +813,8 @@
       "source_location": "L805",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_atomicdecomposer_decompose_verbose",
-      "community": 7,
-      "community_name": "AtomicNeed",
+      "community": 2,
+      "community_name": "RAGResponse",
       "norm_label": ".decompose_verbose()"
     },
     {
@@ -858,7 +825,7 @@
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_rationale_1",
       "community": 5,
-      "community_name": "pipeline.py",
+      "community_name": "NeedType",
       "norm_label": "decomposer/atomic_decomposer.py \u2014 patched bug fixes applied in this version..."
     },
     {
@@ -868,8 +835,8 @@
       "source_location": "L282",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_rationale_282",
-      "community": 15,
-      "community_name": "_extract_years",
+      "community": 2,
+      "community_name": "RAGResponse",
       "norm_label": "extract all fiscal years mentioned in the query and expand ranges. handles:..."
     },
     {
@@ -879,8 +846,8 @@
       "source_location": "L326",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_rationale_326",
-      "community": 15,
-      "community_name": "_extract_years",
+      "community": 2,
+      "community_name": "RAGResponse",
       "norm_label": "convert \"23\", \"2023\", \"25\" \u2192 fiscal year int (e.g. 2023, 2025)."
     },
     {
@@ -890,8 +857,8 @@
       "source_location": "L572",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_rationale_572",
-      "community": 7,
-      "community_name": "AtomicNeed",
+      "community": 5,
+      "community_name": "NeedType",
       "norm_label": "returns true when the query asks for ebitda across multiple years (cagr, yoy,..."
     },
     {
@@ -901,8 +868,8 @@
       "source_location": "L742",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_rationale_742",
-      "community": 5,
-      "community_name": "pipeline.py",
+      "community": 1,
+      "community_name": "SynthesisPipeline",
       "norm_label": "main decomposer class. usage: decomposer = atomicdecomposer() atoms =..."
     },
     {
@@ -912,8 +879,8 @@
       "source_location": "L777",
       "_origin": "ast",
       "id": "decomposer_atomic_decomposer_rationale_777",
-      "community": 7,
-      "community_name": "AtomicNeed",
+      "community": 5,
+      "community_name": "NeedType",
       "norm_label": "decompose a user query into a list of atomicneed objects. symbol is stamped..."
     },
     {
@@ -923,7 +890,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "fusion_init",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "fusion/__init__.py"
     },
@@ -1011,7 +978,7 @@
       "source_location": "L321",
       "_origin": "ast",
       "id": "fusion_fusion_layer_insighttype",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "insighttype"
     },
@@ -1022,7 +989,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "fusion_fusion_layer_py_str",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "str"
     },
@@ -1033,7 +1000,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "fusion_fusion_layer_py_enum",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "enum"
     },
@@ -1055,8 +1022,8 @@
       "source_location": "L354",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusioninsight",
-      "community": 1,
-      "community_name": "RetrievedChunk",
+      "community": 15,
+      "community_name": "FusionInsight",
       "norm_label": "fusioninsight"
     },
     {
@@ -1066,8 +1033,8 @@
       "source_location": "L377",
       "_origin": "ast",
       "id": "fusion_fusion_layer_parse_year_from_period",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": "_parse_year_from_period()"
     },
     {
@@ -1099,8 +1066,8 @@
       "source_location": "L498",
       "_origin": "ast",
       "id": "fusion_fusion_layer_get_period_col",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 15,
+      "community_name": "FusionInsight",
       "norm_label": "_get_period_col()"
     },
     {
@@ -1110,8 +1077,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "fusion_fusion_layer_py_any",
-      "community": 1,
-      "community_name": "RetrievedChunk",
+      "community": 15,
+      "community_name": "FusionInsight",
       "norm_label": "any"
     },
     {
@@ -1121,8 +1088,8 @@
       "source_location": "L507",
       "_origin": "ast",
       "id": "fusion_fusion_layer_pct_divergence",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": "_pct_divergence()"
     },
     {
@@ -1165,8 +1132,8 @@
       "source_location": "L565",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionlayer",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": "fusionlayer"
     },
     {
@@ -1176,8 +1143,8 @@
       "source_location": "L579",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionlayer_init",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": ".__init__()"
     },
     {
@@ -1187,8 +1154,8 @@
       "source_location": "L589",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionlayer_fuse",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": ".fuse()"
     },
     {
@@ -1198,8 +1165,8 @@
       "source_location": "L653",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionlayer_compute_overall_confidence",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": "._compute_overall_confidence()"
     },
     {
@@ -1209,8 +1176,8 @@
       "source_location": "L687",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionlayer_build_metric_rows",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": "._build_metric_rows()"
     },
     {
@@ -1220,8 +1187,8 @@
       "source_location": "L726",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionlayer_extract_all_claims",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": "._extract_all_claims()"
     },
     {
@@ -1231,8 +1198,8 @@
       "source_location": "L759",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionlayer_cross_reference",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": "._cross_reference()"
     },
     {
@@ -1242,7 +1209,7 @@
       "source_location": "L937",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionresult",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "fusionresult"
     },
@@ -1253,8 +1220,8 @@
       "source_location": "L952",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionresult_contradictions",
-      "community": 1,
-      "community_name": "RetrievedChunk",
+      "community": 15,
+      "community_name": "FusionInsight",
       "norm_label": ".contradictions()"
     },
     {
@@ -1264,8 +1231,8 @@
       "source_location": "L955",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionresult_confirmations",
-      "community": 1,
-      "community_name": "RetrievedChunk",
+      "community": 15,
+      "community_name": "FusionInsight",
       "norm_label": ".confirmations()"
     },
     {
@@ -1275,8 +1242,8 @@
       "source_location": "L958",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionresult_forward_guidance",
-      "community": 1,
-      "community_name": "RetrievedChunk",
+      "community": 15,
+      "community_name": "FusionInsight",
       "norm_label": ".forward_guidance()"
     },
     {
@@ -1286,8 +1253,8 @@
       "source_location": "L961",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionresult_unmatched",
-      "community": 1,
-      "community_name": "RetrievedChunk",
+      "community": 15,
+      "community_name": "FusionInsight",
       "norm_label": ".unmatched()"
     },
     {
@@ -1297,8 +1264,8 @@
       "source_location": "L965",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionresult_best_citations",
-      "community": 1,
-      "community_name": "RetrievedChunk",
+      "community": 15,
+      "community_name": "FusionInsight",
       "norm_label": ".best_citations()"
     },
     {
@@ -1308,8 +1275,8 @@
       "source_location": "L1013",
       "_origin": "ast",
       "id": "fusion_fusion_layer_fusionresult_to_context_dict",
-      "community": 1,
-      "community_name": "RetrievedChunk",
+      "community": 15,
+      "community_name": "FusionInsight",
       "norm_label": ".to_context_dict()"
     },
     {
@@ -1363,8 +1330,8 @@
       "source_location": "L355",
       "_origin": "ast",
       "id": "fusion_fusion_layer_rationale_355",
-      "community": 1,
-      "community_name": "RetrievedChunk",
+      "community": 15,
+      "community_name": "FusionInsight",
       "norm_label": "a cross-referenced finding between sql actuals and concall claims."
     },
     {
@@ -1374,8 +1341,8 @@
       "source_location": "L378",
       "_origin": "ast",
       "id": "fusion_fusion_layer_rationale_378",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": "convert a period-end date string to an indian fy year. indian financial year..."
     },
     {
@@ -1396,8 +1363,8 @@
       "source_location": "L499",
       "_origin": "ast",
       "id": "fusion_fusion_layer_rationale_499",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 15,
+      "community_name": "FusionInsight",
       "norm_label": "return whichever date column is present in the row."
     },
     {
@@ -1407,8 +1374,8 @@
       "source_location": "L508",
       "_origin": "ast",
       "id": "fusion_fusion_layer_rationale_508",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": "absolute percentage divergence between actual and claim."
     },
     {
@@ -1429,8 +1396,8 @@
       "source_location": "L566",
       "_origin": "ast",
       "id": "fusion_fusion_layer_rationale_566",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": "cross-references sql actuals with concall management claims. usage: fusion =..."
     },
     {
@@ -1440,8 +1407,8 @@
       "source_location": "L654",
       "_origin": "ast",
       "id": "fusion_fusion_layer_rationale_654",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": "a single 0-1 score summarising how trustworthy this evidence bundle is, driven..."
     },
     {
@@ -1451,8 +1418,8 @@
       "source_location": "L732",
       "_origin": "ast",
       "id": "fusion_fusion_layer_rationale_732",
-      "community": 0,
-      "community_name": "fusion_layer.py",
+      "community": 12,
+      "community_name": "FusionLayer",
       "norm_label": "for each sub_type that has sql results, scan the given chunk list (concall or..."
     },
     {
@@ -1462,8 +1429,8 @@
       "source_location": "L966",
       "_origin": "ast",
       "id": "fusion_fusion_layer_rationale_966",
-      "community": 1,
-      "community_name": "RetrievedChunk",
+      "community": 15,
+      "community_name": "FusionInsight",
       "norm_label": "pick the citation set the llm should actually quote from, instead of handing..."
     },
     {
@@ -1473,8 +1440,8 @@
       "source_location": "L1014",
       "_origin": "ast",
       "id": "fusion_fusion_layer_rationale_1014",
-      "community": 1,
-      "community_name": "RetrievedChunk",
+      "community": 15,
+      "community_name": "FusionInsight",
       "norm_label": "serialise everything the synthesis prompt builder needs. structure: {..."
     },
     {
@@ -1500,21 +1467,10 @@
       "norm_label": "pdf_extractor.py"
     },
     {
-      "label": "_optimal_thread_count()",
-      "file_type": "code",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L73",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_optimal_thread_count",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "_optimal_thread_count()"
-    },
-    {
       "label": "PageBlock",
       "file_type": "code",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L93",
+      "source_location": "L45",
       "_origin": "ast",
       "id": "pipeline_extract_pdf_extractor_pageblock",
       "community": 3,
@@ -1525,7 +1481,7 @@
       "label": "ExtractedDocument",
       "file_type": "code",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L105",
+      "source_location": "L57",
       "_origin": "ast",
       "id": "pipeline_extract_pdf_extractor_extracteddocument",
       "community": 3,
@@ -1536,7 +1492,7 @@
       "label": "_get_converter()",
       "file_type": "code",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L118",
+      "source_location": "L70",
       "_origin": "ast",
       "id": "pipeline_extract_pdf_extractor_get_converter",
       "community": 3,
@@ -1544,15 +1500,70 @@
       "norm_label": "_get_converter()"
     },
     {
-      "label": "_peek_page_count()",
+      "label": "_detect_speaker_role()",
       "file_type": "code",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L167",
+      "source_location": "L138",
       "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_peek_page_count",
+      "id": "pipeline_extract_pdf_extractor_detect_speaker_role",
       "community": 3,
       "community_name": "pdf_extractor.py",
-      "norm_label": "_peek_page_count()"
+      "norm_label": "_detect_speaker_role()"
+    },
+    {
+      "label": "_infer_section_type()",
+      "file_type": "code",
+      "source_file": "pipeline/extract/pdf_extractor.py",
+      "source_location": "L149",
+      "_origin": "ast",
+      "id": "pipeline_extract_pdf_extractor_infer_section_type",
+      "community": 3,
+      "community_name": "pdf_extractor.py",
+      "norm_label": "_infer_section_type()"
+    },
+    {
+      "label": "_extract_speaker_turns()",
+      "file_type": "code",
+      "source_file": "pipeline/extract/pdf_extractor.py",
+      "source_location": "L161",
+      "_origin": "ast",
+      "id": "pipeline_extract_pdf_extractor_extract_speaker_turns",
+      "community": 3,
+      "community_name": "pdf_extractor.py",
+      "norm_label": "_extract_speaker_turns()"
+    },
+    {
+      "label": "_is_low_value_section()",
+      "file_type": "code",
+      "source_file": "pipeline/extract/pdf_extractor.py",
+      "source_location": "L241",
+      "_origin": "ast",
+      "id": "pipeline_extract_pdf_extractor_is_low_value_section",
+      "community": 3,
+      "community_name": "pdf_extractor.py",
+      "norm_label": "_is_low_value_section()"
+    },
+    {
+      "label": "_get_labels()",
+      "file_type": "code",
+      "source_file": "pipeline/extract/pdf_extractor.py",
+      "source_location": "L248",
+      "_origin": "ast",
+      "id": "pipeline_extract_pdf_extractor_get_labels",
+      "community": 3,
+      "community_name": "pdf_extractor.py",
+      "norm_label": "_get_labels()"
+    },
+    {
+      "label": "extract_annual_report()",
+      "file_type": "code",
+      "source_file": "pipeline/extract/pdf_extractor.py",
+      "source_location": "L260",
+      "_origin": "ast",
+      "id": "pipeline_extract_pdf_extractor_extract_annual_report",
+      "community": 3,
+      "community_name": "pdf_extractor.py",
+      "norm_label": "extract_annual_report()"
     },
     {
       "label": "Path",
@@ -1566,131 +1577,10 @@
       "norm_label": "path"
     },
     {
-      "label": "_load_rate_state()",
-      "file_type": "code",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L201",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_load_rate_state",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "_load_rate_state()"
-    },
-    {
-      "label": "_save_rate_state()",
-      "file_type": "code",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L208",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_save_rate_state",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "_save_rate_state()"
-    },
-    {
-      "label": "_estimated_sec_per_page()",
-      "file_type": "code",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L216",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_estimated_sec_per_page",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "_estimated_sec_per_page()"
-    },
-    {
-      "label": "_update_rate_state()",
-      "file_type": "code",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L221",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_update_rate_state",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "_update_rate_state()"
-    },
-    {
-      "label": "_convert_with_progress()",
-      "file_type": "code",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L231",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_convert_with_progress",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "_convert_with_progress()"
-    },
-    {
-      "label": "_detect_speaker_role()",
-      "file_type": "code",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L329",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_detect_speaker_role",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "_detect_speaker_role()"
-    },
-    {
-      "label": "_infer_section_type()",
-      "file_type": "code",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L340",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_infer_section_type",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "_infer_section_type()"
-    },
-    {
-      "label": "_extract_speaker_turns()",
-      "file_type": "code",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L352",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_extract_speaker_turns",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "_extract_speaker_turns()"
-    },
-    {
-      "label": "_is_low_value_section()",
-      "file_type": "code",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L432",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_is_low_value_section",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "_is_low_value_section()"
-    },
-    {
-      "label": "_get_labels()",
-      "file_type": "code",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L439",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_get_labels",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "_get_labels()"
-    },
-    {
-      "label": "extract_annual_report()",
-      "file_type": "code",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L451",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_extract_annual_report",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "extract_annual_report()"
-    },
-    {
       "label": "extract_concall()",
       "file_type": "code",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L552",
+      "source_location": "L355",
       "_origin": "ast",
       "id": "pipeline_extract_pdf_extractor_extract_concall",
       "community": 3,
@@ -1701,7 +1591,7 @@
       "label": "_page_of()",
       "file_type": "code",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L657",
+      "source_location": "L456",
       "_origin": "ast",
       "id": "pipeline_extract_pdf_extractor_page_of",
       "community": 3,
@@ -1712,7 +1602,7 @@
       "label": "_count_pages()",
       "file_type": "code",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L667",
+      "source_location": "L466",
       "_origin": "ast",
       "id": "pipeline_extract_pdf_extractor_count_pages",
       "community": 3,
@@ -1723,7 +1613,7 @@
       "label": "_extract_table()",
       "file_type": "code",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L674",
+      "source_location": "L473",
       "_origin": "ast",
       "id": "pipeline_extract_pdf_extractor_extract_table",
       "community": 3,
@@ -1734,7 +1624,7 @@
       "label": "extract_pdf()",
       "file_type": "code",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L694",
+      "source_location": "L493",
       "_origin": "ast",
       "id": "pipeline_extract_pdf_extractor_extract_pdf",
       "community": 3,
@@ -1753,45 +1643,12 @@
       "norm_label": "pipeline/extract/pdf_extractor.py replaces pdfplumber with docling for layout-..."
     },
     {
-      "label": "Cheap page-count peek via pypdfium2 (already a hard dependency through the\u2026",
-      "file_type": "rationale",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L168",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_rationale_168",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "cheap page-count peek via pypdfium2 (already a hard dependency through the..."
-    },
-    {
-      "label": "Exponential moving average \u2014 recent runs matter more, but one weird outlier\u2026",
-      "file_type": "rationale",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L222",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_rationale_222",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "exponential moving average \u2014 recent runs matter more, but one weird outlier..."
-    },
-    {
-      "label": "Runs converter.convert() on a background thread while the main thread prints a\u2026",
-      "file_type": "rationale",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L232",
-      "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_rationale_232",
-      "community": 3,
-      "community_name": "pdf_extractor.py",
-      "norm_label": "runs converter.convert() on a background thread while the main thread prints a..."
-    },
-    {
       "label": "Update section_type based on header text or Q&A transition signals.",
       "file_type": "rationale",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L341",
+      "source_location": "L150",
       "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_rationale_341",
+      "id": "pipeline_extract_pdf_extractor_rationale_150",
       "community": 3,
       "community_name": "pdf_extractor.py",
       "norm_label": "update section_type based on header text or q&a transition signals."
@@ -1800,9 +1657,9 @@
       "label": "Parse speaker-labelled dialogue from a page of concall text.",
       "file_type": "rationale",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L358",
+      "source_location": "L167",
       "_origin": "ast",
-      "id": "pipeline_extract_pdf_extractor_rationale_358",
+      "id": "pipeline_extract_pdf_extractor_rationale_167",
       "community": 3,
       "community_name": "pdf_extractor.py",
       "norm_label": "parse speaker-labelled dialogue from a page of concall text."
@@ -2639,7 +2496,7 @@
       "source_location": "L209",
       "_origin": "ast",
       "id": "pipeline_retrieval_retriever_retrievedchunk",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "retrievedchunk"
     },
@@ -3630,7 +3487,7 @@
       "_origin": "ast",
       "id": "rag_init",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "rag/__init__.py"
     },
     {
@@ -3641,7 +3498,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "rag_engine.py"
     },
     {
@@ -3652,7 +3509,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_providerentry",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "providerentry"
     },
     {
@@ -3663,7 +3520,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_discover_ollama",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "_discover_ollama()"
     },
     {
@@ -3674,7 +3531,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_build_provider_catalogue",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "build_provider_catalogue()"
     },
     {
@@ -3685,7 +3542,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_call_anthropic",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "_call_anthropic()"
     },
     {
@@ -3696,7 +3553,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_validate_provider",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "validate_provider()"
     },
     {
@@ -3707,7 +3564,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_validate_via_completion",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "_validate_via_completion()"
     },
     {
@@ -3717,8 +3574,8 @@
       "source_location": "L406",
       "_origin": "ast",
       "id": "rag_rag_engine_validate_all_providers",
-      "community": 6,
-      "community_name": "server.py",
+      "community": 4,
+      "community_name": "rag_engine.py",
       "norm_label": "validate_all_providers()"
     },
     {
@@ -3729,7 +3586,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_get_healthy_providers",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "get_healthy_providers()"
     },
     {
@@ -3740,7 +3597,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_pick_provider_interactive",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "pick_provider_interactive()"
     },
     {
@@ -3751,7 +3608,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_get_provider",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "get_provider()"
     },
     {
@@ -3762,7 +3619,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_estimate_tokens",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "_estimate_tokens()"
     },
     {
@@ -3773,7 +3630,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_trim_chunks_to_budget",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "_trim_chunks_to_budget()"
     },
     {
@@ -3784,7 +3641,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_py_retrievedchunk",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "retrievedchunk"
     },
     {
@@ -3795,7 +3652,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_call_gemini",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "_call_gemini()"
     },
     {
@@ -3806,7 +3663,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_call_openai_compat",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "_call_openai_compat()"
     },
     {
@@ -3817,7 +3674,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_call_with_retry",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "_call_with_retry()"
     },
     {
@@ -3827,8 +3684,8 @@
       "source_location": "L734",
       "_origin": "ast",
       "id": "rag_rag_engine_get_synthesis_pipeline",
-      "community": 6,
-      "community_name": "server.py",
+      "community": 4,
+      "community_name": "rag_engine.py",
       "norm_label": "_get_synthesis_pipeline()"
     },
     {
@@ -3850,7 +3707,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_build_context_legacy",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "_build_context_legacy()"
     },
     {
@@ -3861,7 +3718,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_build_user_prompt_legacy",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "_build_user_prompt_legacy()"
     },
     {
@@ -3872,7 +3729,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_generate_answer",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "generate_answer()"
     },
     {
@@ -3883,7 +3740,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_rationale_1",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "rag/rag_engine.py \u2014 patched to use synthesispipeline (layer 5) what changed..."
     },
     {
@@ -3894,7 +3751,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_rationale_145",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "build the full catalogue of configured providers. model slug correctness (as of..."
     },
     {
@@ -3905,7 +3762,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_rationale_267",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "call anthropic messages api directly."
     },
     {
@@ -3916,7 +3773,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_rationale_304",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "lightweight health-check for a single provider. strategy per provider type: \u2022..."
     },
     {
@@ -3927,7 +3784,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_rationale_387",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "fallback: send a 1-token completion to check the provider is alive."
     },
     {
@@ -3937,8 +3794,8 @@
       "source_location": "L407",
       "_origin": "ast",
       "id": "rag_rag_engine_rationale_407",
-      "community": 6,
-      "community_name": "server.py",
+      "community": 4,
+      "community_name": "rag_engine.py",
       "norm_label": "validate every entry in *catalogue* (or build a fresh one if none). updates the..."
     },
     {
@@ -3949,7 +3806,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_rationale_439",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "return cached healthy providers; rebuild if cache is empty."
     },
     {
@@ -3960,7 +3817,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_rationale_528",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "simplified trimmer: for large-context providers returns all chunks. for groq..."
     },
     {
@@ -3971,7 +3828,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_rationale_668",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "retry policy (revised): \u2022 429 (rate-limit) \u2192 back off and retry (max 2 retries,..."
     },
     {
@@ -3982,7 +3839,7 @@
       "_origin": "ast",
       "id": "rag_rag_engine_rationale_901",
       "community": 4,
-      "community_name": "SynthesisPipeline",
+      "community_name": "rag_engine.py",
       "norm_label": "generate a cited answer using the full synthesis pipeline. new parameters vs..."
     },
     {
@@ -3992,8 +3849,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "schema_bridge_init",
-      "community": 10,
-      "community_name": "schema_bridge.py",
+      "community": 0,
+      "community_name": "fusion_layer.py",
       "norm_label": "schema_bridge/__init__.py"
     },
     {
@@ -4004,7 +3861,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "schema_bridge.py"
     },
     {
@@ -4015,7 +3872,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_fy_date_range",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "_fy_date_range()"
     },
     {
@@ -4025,8 +3882,8 @@
       "source_location": "L162",
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_sqlatomresult",
-      "community": 10,
-      "community_name": "schema_bridge.py",
+      "community": 0,
+      "community_name": "fusion_layer.py",
       "norm_label": "sqlatomresult"
     },
     {
@@ -4036,8 +3893,8 @@
       "source_location": "L171",
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_vectoratomresult",
-      "community": 12,
-      "community_name": "VectorAtomResult",
+      "community": 0,
+      "community_name": "fusion_layer.py",
       "norm_label": "vectoratomresult"
     },
     {
@@ -4058,8 +3915,8 @@
       "source_location": "L184",
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_bridgeresult_all_sql_rows",
-      "community": 16,
-      "community_name": "Any",
+      "community": 10,
+      "community_name": "AtomicNeed",
       "norm_label": ".all_sql_rows()"
     },
     {
@@ -4069,8 +3926,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_py_any",
-      "community": 16,
-      "community_name": "Any",
+      "community": 10,
+      "community_name": "AtomicNeed",
       "norm_label": "any"
     },
     {
@@ -4103,7 +3960,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_build_sql",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "_build_sql()"
     },
     {
@@ -4114,7 +3971,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_execute_sql_atom",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "_execute_sql_atom()"
     },
     {
@@ -4124,8 +3981,8 @@
       "source_location": "L363",
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_execute_vector_atom",
-      "community": 12,
-      "community_name": "VectorAtomResult",
+      "community": 10,
+      "community_name": "AtomicNeed",
       "norm_label": "_execute_vector_atom()"
     },
     {
@@ -4136,7 +3993,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_latest_resolved_fy_by_symbol",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "_latest_resolved_fy_by_symbol()"
     },
     {
@@ -4147,7 +4004,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_infer_fallback_sql_sub_type",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "_infer_fallback_sql_sub_type()"
     },
     {
@@ -4158,7 +4015,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_expand_comparative",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "_expand_comparative()"
     },
     {
@@ -4169,7 +4026,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_classify",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "_classify()"
     },
     {
@@ -4179,8 +4036,8 @@
       "source_location": "L529",
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_schemabridge",
-      "community": 5,
-      "community_name": "pipeline.py",
+      "community": 10,
+      "community_name": "AtomicNeed",
       "norm_label": "schemabridge"
     },
     {
@@ -4190,8 +4047,8 @@
       "source_location": "L549",
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_schemabridge_init",
-      "community": 16,
-      "community_name": "Any",
+      "community": 10,
+      "community_name": "AtomicNeed",
       "norm_label": ".__init__()"
     },
     {
@@ -4202,7 +4059,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_schemabridge_fetch",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": ".fetch()"
     },
     {
@@ -4213,7 +4070,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_schemabridge_safe_sql",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "._safe_sql()"
     },
     {
@@ -4223,8 +4080,8 @@
       "source_location": "L722",
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_schemabridge_safe_vector",
-      "community": 12,
-      "community_name": "VectorAtomResult",
+      "community": 10,
+      "community_name": "AtomicNeed",
       "norm_label": "._safe_vector()"
     },
     {
@@ -4234,7 +4091,7 @@
       "source_location": "L727",
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_schemabridge_fetch_symbol",
-      "community": 7,
+      "community": 10,
       "community_name": "AtomicNeed",
       "norm_label": ".fetch_symbol()"
     },
@@ -4246,7 +4103,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_rationale_1",
       "community": 5,
-      "community_name": "pipeline.py",
+      "community_name": "NeedType",
       "norm_label": "schema_bridge/schema_bridge.py layer 2 of the quant copilot intent..."
     },
     {
@@ -4257,7 +4114,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_rationale_149",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "indian fy: april of (fy_year-1) \u2192 march of fy_year. e.g. fy2024 = 2023-04-01 to..."
     },
     {
@@ -4268,7 +4125,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_rationale_201",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "build a parameterized select for one sql-backed atomicneed. returns..."
     },
     {
@@ -4279,7 +4136,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_rationale_317",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "run the sql for one atom against mysql, return sqlatomresult (never raises)."
     },
     {
@@ -4289,8 +4146,8 @@
       "source_location": "L364",
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_rationale_364",
-      "community": 12,
-      "community_name": "VectorAtomResult",
+      "community": 10,
+      "community_name": "AtomicNeed",
       "norm_label": "run a chromadb vector query for one atom, return vectoratomresult."
     },
     {
@@ -4301,7 +4158,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_rationale_394",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "for each symbol, find the most recent period_end/date across all successful sql..."
     },
     {
@@ -4312,7 +4169,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_rationale_468",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "a comparative atom targets multiple symbols. expand it into one atom per..."
     },
     {
@@ -4323,7 +4180,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_rationale_513",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "return 'sql', 'vector', or 'both'."
     },
     {
@@ -4333,8 +4190,8 @@
       "source_location": "L530",
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_rationale_530",
-      "community": 5,
-      "community_name": "pipeline.py",
+      "community": 10,
+      "community_name": "AtomicNeed",
       "norm_label": "translates a list of atomicneed objects into concrete data-fetch results...."
     },
     {
@@ -4344,8 +4201,8 @@
       "source_location": "L554",
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_rationale_554",
-      "community": 16,
-      "community_name": "Any",
+      "community": 10,
+      "community_name": "AtomicNeed",
       "norm_label": ":param mysql_config: mysql connection parameters (host, port, user, password,..."
     },
     {
@@ -4356,7 +4213,7 @@
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_rationale_566",
       "community": 10,
-      "community_name": "schema_bridge.py",
+      "community_name": "AtomicNeed",
       "norm_label": "dispatch all atoms to the appropriate channel(s), running them in parallel...."
     },
     {
@@ -4366,7 +4223,7 @@
       "source_location": "L733",
       "_origin": "ast",
       "id": "schema_bridge_schema_bridge_rationale_733",
-      "community": 7,
+      "community": 10,
       "community_name": "AtomicNeed",
       "norm_label": "helper for the common case: fetch several metrics for one company. example:..."
     },
@@ -4653,7 +4510,7 @@
       "_origin": "ast",
       "id": "synthesis_init",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "synthesis/__init__.py"
     },
     {
@@ -4663,8 +4520,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "synthesis_pipeline",
-      "community": 5,
-      "community_name": "pipeline.py",
+      "community": 1,
+      "community_name": "SynthesisPipeline",
       "norm_label": "pipeline.py"
     },
     {
@@ -4675,7 +4532,7 @@
       "_origin": "ast",
       "id": "synthesis_pipeline_py_dc",
       "community": 5,
-      "community_name": "pipeline.py",
+      "community_name": "NeedType",
       "norm_label": "_dc"
     },
     {
@@ -4686,7 +4543,7 @@
       "_origin": "ast",
       "id": "synthesis_pipeline_retrievedchunk",
       "community": 5,
-      "community_name": "pipeline.py",
+      "community_name": "NeedType",
       "norm_label": "retrievedchunk"
     },
     {
@@ -4696,7 +4553,7 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "synthesis_pipeline_mysql_reachable",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "_mysql_reachable()"
     },
@@ -4707,8 +4564,8 @@
       "source_location": "L141",
       "_origin": "ast",
       "id": "synthesis_pipeline_synthesisresult",
-      "community": 5,
-      "community_name": "pipeline.py",
+      "community": 1,
+      "community_name": "SynthesisPipeline",
       "norm_label": "synthesisresult"
     },
     {
@@ -4718,8 +4575,8 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "synthesis_pipeline_synthesisresult_system_prompt",
-      "community": 5,
-      "community_name": "pipeline.py",
+      "community": 1,
+      "community_name": "SynthesisPipeline",
       "norm_label": ".system_prompt()"
     },
     {
@@ -4729,8 +4586,8 @@
       "source_location": "L161",
       "_origin": "ast",
       "id": "synthesis_pipeline_synthesisresult_user_prompt",
-      "community": 5,
-      "community_name": "pipeline.py",
+      "community": 1,
+      "community_name": "SynthesisPipeline",
       "norm_label": ".user_prompt()"
     },
     {
@@ -4740,7 +4597,7 @@
       "source_location": "L169",
       "_origin": "ast",
       "id": "synthesis_pipeline_pipeline_available",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "_pipeline_available()"
     },
@@ -4751,8 +4608,8 @@
       "source_location": "L178",
       "_origin": "ast",
       "id": "synthesis_pipeline_builder_available",
-      "community": 5,
-      "community_name": "pipeline.py",
+      "community": 1,
+      "community_name": "SynthesisPipeline",
       "norm_label": "_builder_available()"
     },
     {
@@ -4762,7 +4619,7 @@
       "source_location": "L187",
       "_origin": "ast",
       "id": "synthesis_pipeline_synthesispipeline",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "synthesispipeline"
     },
@@ -4773,7 +4630,7 @@
       "source_location": "L206",
       "_origin": "ast",
       "id": "synthesis_pipeline_synthesispipeline_init",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": ".__init__()"
     },
@@ -4784,7 +4641,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "synthesis_pipeline_py_path",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "path"
     },
@@ -4795,7 +4652,7 @@
       "source_location": "L224",
       "_origin": "ast",
       "id": "synthesis_pipeline_synthesispipeline_get_decomposer",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "._get_decomposer()"
     },
@@ -4806,7 +4663,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "synthesis_pipeline_py_any",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "any"
     },
@@ -4817,7 +4674,7 @@
       "source_location": "L231",
       "_origin": "ast",
       "id": "synthesis_pipeline_synthesispipeline_get_bridge",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "._get_bridge()"
     },
@@ -4828,7 +4685,7 @@
       "source_location": "L240",
       "_origin": "ast",
       "id": "synthesis_pipeline_synthesispipeline_get_fusion",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "._get_fusion()"
     },
@@ -4839,7 +4696,7 @@
       "source_location": "L250",
       "_origin": "ast",
       "id": "synthesis_pipeline_synthesispipeline_infer_symbol",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "._infer_symbol()"
     },
@@ -4850,7 +4707,7 @@
       "source_location": "L264",
       "_origin": "ast",
       "id": "synthesis_pipeline_synthesispipeline_run",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": ".run()"
     },
@@ -4861,7 +4718,7 @@
       "source_location": "L330",
       "_origin": "ast",
       "id": "synthesis_pipeline_synthesispipeline_run_full",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "._run_full()"
     },
@@ -4872,7 +4729,7 @@
       "source_location": "L448",
       "_origin": "ast",
       "id": "synthesis_pipeline_synthesispipeline_run_vector_only",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "._run_vector_only()"
     },
@@ -4883,7 +4740,7 @@
       "source_location": "L481",
       "_origin": "ast",
       "id": "synthesis_pipeline_synthesispipeline_fallback_result",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "._fallback_result()"
     },
@@ -4894,8 +4751,8 @@
       "source_location": "L515",
       "_origin": "ast",
       "id": "synthesis_pipeline_merge_chunks_into_bridge",
-      "community": 12,
-      "community_name": "VectorAtomResult",
+      "community": 0,
+      "community_name": "fusion_layer.py",
       "norm_label": "_merge_chunks_into_bridge()"
     },
     {
@@ -4905,7 +4762,7 @@
       "source_location": "L550",
       "_origin": "ast",
       "id": "synthesis_pipeline_minimal_fallback_prompt",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "_minimal_fallback_prompt()"
     },
@@ -4917,7 +4774,7 @@
       "_origin": "ast",
       "id": "synthesis_pipeline_rationale_1",
       "community": 5,
-      "community_name": "pipeline.py",
+      "community_name": "NeedType",
       "norm_label": "synthesis/pipeline.py orchestrates the full intent-decomposition \u2192 retrieval \u2192..."
     },
     {
@@ -4927,7 +4784,7 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "synthesis_pipeline_rationale_104",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "cheap connectivity probe \u2014 used only for pipeline-mode gating, not for actual..."
     },
@@ -4938,8 +4795,8 @@
       "source_location": "L142",
       "_origin": "ast",
       "id": "synthesis_pipeline_rationale_142",
-      "community": 5,
-      "community_name": "pipeline.py",
+      "community": 1,
+      "community_name": "SynthesisPipeline",
       "norm_label": "everything the llm call needs, plus diagnostics."
     },
     {
@@ -4949,7 +4806,7 @@
       "source_location": "L170",
       "_origin": "ast",
       "id": "synthesis_pipeline_rationale_170",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "true only when every component is importable and mysql is reachable."
     },
@@ -4960,8 +4817,8 @@
       "source_location": "L179",
       "_origin": "ast",
       "id": "synthesis_pipeline_rationale_179",
-      "community": 5,
-      "community_name": "pipeline.py",
+      "community": 1,
+      "community_name": "SynthesisPipeline",
       "norm_label": "true when at least prompt builder is importable (vector-only path)."
     },
     {
@@ -4971,7 +4828,7 @@
       "source_location": "L188",
       "_origin": "ast",
       "id": "synthesis_pipeline_rationale_188",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "runs the full chain: decompose \u2192 bridge \u2192 fuse \u2192 build prompt. usage (from..."
     },
@@ -4982,7 +4839,7 @@
       "source_location": "L274",
       "_origin": "ast",
       "id": "synthesis_pipeline_rationale_274",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "run the full pipeline. never raises \u2014 on any error degrades gracefully. returns..."
     },
@@ -4993,7 +4850,7 @@
       "source_location": "L490",
       "_origin": "ast",
       "id": "synthesis_pipeline_rationale_490",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "called only when promptbuilder itself is missing. returns a synthesisresult..."
     },
@@ -5004,8 +4861,8 @@
       "source_location": "L519",
       "_origin": "ast",
       "id": "synthesis_pipeline_rationale_519",
-      "community": 12,
-      "community_name": "VectorAtomResult",
+      "community": 0,
+      "community_name": "fusion_layer.py",
       "norm_label": "the bridge already fetched vector chunks via its own queries. augment its..."
     },
     {
@@ -5015,7 +4872,7 @@
       "source_location": "L554",
       "_origin": "ast",
       "id": "synthesis_pipeline_rationale_554",
-      "community": 4,
+      "community": 1,
       "community_name": "SynthesisPipeline",
       "norm_label": "emergency fallback \u2014 builds the simplest possible builtprompt without importing..."
     },
@@ -5027,7 +4884,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "prompt_builder.py"
     },
     {
@@ -5037,7 +4894,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "synthesis_prompt_builder_py_dc",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "_dc"
     },
@@ -5048,7 +4905,7 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "synthesis_prompt_builder_retrievedchunk",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "retrievedchunk"
     },
@@ -5060,7 +4917,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_builtprompt",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "builtprompt"
     },
     {
@@ -5071,7 +4928,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_fmt_value",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "_fmt_value()"
     },
     {
@@ -5082,7 +4939,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_render_sql_table",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "_render_sql_table()"
     },
     {
@@ -5093,7 +4950,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_render_insights",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "_render_insights()"
     },
     {
@@ -5104,7 +4961,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_render_chunks",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "_render_chunks()"
     },
     {
@@ -5115,7 +4972,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_build_gap_flag_note",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "_build_gap_flag_note()"
     },
     {
@@ -5126,7 +4983,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_build_intent_note",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "_build_intent_note()"
     },
     {
@@ -5137,7 +4994,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_build_metric_note",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "_build_metric_note()"
     },
     {
@@ -5148,7 +5005,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_promptbuilder",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "promptbuilder"
     },
     {
@@ -5159,7 +5016,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_promptbuilder_init",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": ".__init__()"
     },
     {
@@ -5170,7 +5027,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_promptbuilder_build",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": ".build()"
     },
     {
@@ -5181,7 +5038,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_py_any",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "any"
     },
     {
@@ -5192,7 +5049,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_promptbuilder_build_fusion_prompt",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "._build_fusion_prompt()"
     },
     {
@@ -5203,7 +5060,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_promptbuilder_build_vector_only_prompt",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "._build_vector_only_prompt()"
     },
     {
@@ -5214,7 +5071,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_promptbuilder_for_provider",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": ".for_provider()"
     },
     {
@@ -5225,7 +5082,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_trim_chunks",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "_trim_chunks()"
     },
     {
@@ -5235,7 +5092,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "synthesis_prompt_builder_rationale_1",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "synthesis/prompt_builder.py layer 5 of the quant copilot intent decomposition..."
     },
@@ -5246,7 +5103,7 @@
       "source_location": "L180",
       "_origin": "ast",
       "id": "synthesis_prompt_builder_rationale_180",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "format a metric value with its unit for display."
     },
@@ -5257,7 +5114,7 @@
       "source_location": "L197",
       "_origin": "ast",
       "id": "synthesis_prompt_builder_rationale_197",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "render the list of metricrow dicts as a compact ascii table. groups rows by..."
     },
@@ -5269,7 +5126,7 @@
       "_origin": "ast",
       "id": "synthesis_prompt_builder_rationale_225",
       "community": 1,
-      "community_name": "RetrievedChunk",
+      "community_name": "SynthesisPipeline",
       "norm_label": "render fusion insights (contradictions / confirmations / forward / unmatched)..."
     },
     {
@@ -5279,7 +5136,7 @@
       "source_location": "L261",
       "_origin": "ast",
       "id": "synthesis_prompt_builder_rationale_261",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "render vector chunks as labelled [src-n] blocks."
     },
@@ -5290,7 +5147,7 @@
       "source_location": "L344",
       "_origin": "ast",
       "id": "synthesis_prompt_builder_rationale_344",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "return model-specific calculation instructions based on detected metrics...."
     },
@@ -5301,7 +5158,7 @@
       "source_location": "L417",
       "_origin": "ast",
       "id": "synthesis_prompt_builder_rationale_417",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "assembles (system_prompt, user_prompt) from fusionresult + raw chunks. usage:..."
     },
@@ -5312,7 +5169,7 @@
       "source_location": "L440",
       "_origin": "ast",
       "id": "synthesis_prompt_builder_rationale_440",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "build the full (system, user) prompt pair. parameters \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 query raw user..."
     },
@@ -5323,7 +5180,7 @@
       "source_location": "L638",
       "_origin": "ast",
       "id": "synthesis_prompt_builder_rationale_638",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "return a new promptbuilder sized for a specific model. usage: built =..."
     },
@@ -5334,7 +5191,7 @@
       "source_location": "L670",
       "_origin": "ast",
       "id": "synthesis_prompt_builder_rationale_670",
-      "community": 1,
+      "community": 7,
       "community_name": "RetrievedChunk",
       "norm_label": "keep top-ranked chunks until char_budget is consumed. returns (kept_chunks,..."
     },
@@ -5345,8 +5202,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_init",
-      "community": 14,
-      "community_name": "retriever.py",
+      "community": 6,
+      "community_name": "server.py",
       "norm_label": "utils/__init__.py"
     },
     {
@@ -5356,8 +5213,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_logger",
-      "community": 14,
-      "community_name": "retriever.py",
+      "community": 6,
+      "community_name": "server.py",
       "norm_label": "logger.py"
     },
     {
@@ -5367,8 +5224,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "utils_logger_get_logger",
-      "community": 14,
-      "community_name": "retriever.py",
+      "community": 6,
+      "community_name": "server.py",
       "norm_label": "get_logger()"
     },
     {
@@ -5378,8 +5235,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "utils_logger_py_path",
-      "community": 14,
-      "community_name": "retriever.py",
+      "community": 6,
+      "community_name": "server.py",
       "norm_label": "path"
     },
     {
@@ -5389,8 +5246,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "logger",
-      "community": 14,
-      "community_name": "retriever.py",
+      "community": 6,
+      "community_name": "server.py",
       "norm_label": "logger"
     },
     {
@@ -5400,8 +5257,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_logger_rationale_1",
-      "community": 14,
-      "community_name": "retriever.py",
+      "community": 6,
+      "community_name": "server.py",
       "norm_label": "utils/logger.py structured logging with file + console output."
     },
     {
@@ -5748,7 +5605,7 @@
       "file_type": "code",
       "source_file": "",
       "source_location": "",
-      "community": 4,
+      "community": 1,
       "norm_label": "str",
       "community_name": "SynthesisPipeline",
       "id": "str"
@@ -5760,7 +5617,7 @@
       "source_location": "",
       "community": 5,
       "norm_label": "enum",
-      "community_name": "pipeline.py",
+      "community_name": "NeedType",
       "id": "enum"
     },
     {
@@ -5868,9 +5725,9 @@
       "file_type": "code",
       "source_file": "synthesis/pipeline.py",
       "source_location": "L115",
-      "community": 5,
+      "community": 1,
       "norm_label": "system_prompt()",
-      "community_name": "pipeline.py",
+      "community_name": "SynthesisPipeline",
       "id": "synthesis_pipeline_system_prompt"
     },
     {
@@ -5878,9 +5735,9 @@
       "file_type": "code",
       "source_file": "synthesis/pipeline.py",
       "source_location": "L119",
-      "community": 5,
+      "community": 1,
       "norm_label": "user_prompt()",
-      "community_name": "pipeline.py",
+      "community_name": "SynthesisPipeline",
       "id": "synthesis_pipeline_user_prompt"
     },
     {
@@ -5888,7 +5745,7 @@
       "file_type": "code",
       "source_file": "synthesis/pipeline.py",
       "source_location": "L208",
-      "community": 4,
+      "community": 1,
       "norm_label": "_infer_symbol()",
       "community_name": "SynthesisPipeline",
       "id": "synthesis_pipeline_infer_symbol"
@@ -6340,7 +6197,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L107",
+      "source_location": "L105",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6352,7 +6209,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L111",
+      "source_location": "L109",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6364,7 +6221,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L111",
+      "source_location": "L109",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6376,7 +6233,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L111",
+      "source_location": "L109",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6388,7 +6245,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L111",
+      "source_location": "L109",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6400,7 +6257,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L111",
+      "source_location": "L109",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6412,7 +6269,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L111",
+      "source_location": "L109",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6424,7 +6281,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L111",
+      "source_location": "L109",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6436,7 +6293,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L111",
+      "source_location": "L109",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6448,7 +6305,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L111",
+      "source_location": "L109",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6489,7 +6346,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L706",
+      "source_location": "L704",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6500,7 +6357,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L369",
+      "source_location": "L367",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6511,7 +6368,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L377",
+      "source_location": "L375",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6522,7 +6379,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L488",
+      "source_location": "L486",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6533,18 +6390,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L750",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "ingest",
-      "target": "ingest_ingest_worker",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "Ingest.py",
-      "source_location": "L332",
+      "source_location": "L330",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6555,7 +6401,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L160",
+      "source_location": "L158",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6566,7 +6412,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L826",
+      "source_location": "L731",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6577,7 +6423,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L180",
+      "source_location": "L178",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6588,7 +6434,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L193",
+      "source_location": "L191",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6599,7 +6445,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L385",
+      "source_location": "L383",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6610,7 +6456,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L475",
+      "source_location": "L473",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6621,7 +6467,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L400",
+      "source_location": "L398",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6632,7 +6478,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L256",
+      "source_location": "L254",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6643,7 +6489,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L274",
+      "source_location": "L272",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6654,18 +6500,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L772",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "ingest",
-      "target": "ingest_run_batch_parallel",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "Ingest.py",
-      "source_location": "L413",
+      "source_location": "L411",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6676,7 +6511,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L169",
+      "source_location": "L167",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6687,7 +6522,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L231",
+      "source_location": "L229",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6698,7 +6533,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L224",
+      "source_location": "L222",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6710,7 +6545,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L104",
+      "source_location": "L102",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6722,7 +6557,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L121",
+      "source_location": "L119",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6734,7 +6569,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L122",
+      "source_location": "L120",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6746,7 +6581,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L122",
+      "source_location": "L120",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6758,7 +6593,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L123",
+      "source_location": "L121",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6770,7 +6605,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L123",
+      "source_location": "L121",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest",
@@ -6782,7 +6617,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L160",
+      "source_location": "L158",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_load_state",
@@ -6794,7 +6629,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L920",
+      "source_location": "L821",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
@@ -6806,7 +6641,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L488",
+      "source_location": "L486",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -6818,19 +6653,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L750",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "ingest_ingest_worker",
-      "target": "ingest_py_any",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "references",
-      "context": "generic_arg",
-      "confidence": "EXTRACTED",
-      "source_file": "Ingest.py",
-      "source_location": "L169",
+      "source_location": "L167",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_save_state",
@@ -6842,7 +6665,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L663",
+      "source_location": "L661",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -6854,7 +6677,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L953",
+      "source_location": "L845",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
@@ -6866,7 +6689,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L580",
+      "source_location": "L578",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -6878,19 +6701,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L752",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "ingest_ingest_worker",
-      "target": "ingest_minio_client",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "Ingest.py",
-      "source_location": "L340",
+      "source_location": "L338",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_list_minio_pdfs",
@@ -6902,7 +6713,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L870",
+      "source_location": "L771",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
@@ -6914,7 +6725,7 @@
       "context": "return_type",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L180",
+      "source_location": "L178",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_minio_client",
@@ -6926,7 +6737,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L292",
+      "source_location": "L290",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_resolve_single_object",
@@ -6938,7 +6749,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L369",
+      "source_location": "L367",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_download_pdf",
@@ -6950,7 +6761,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L488",
+      "source_location": "L486",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -6962,7 +6773,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L332",
+      "source_location": "L330",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_list_minio_pdfs",
@@ -6974,7 +6785,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L274",
+      "source_location": "L272",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_resolve_single_object",
@@ -6986,7 +6797,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L355",
+      "source_location": "L353",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_list_minio_pdfs",
@@ -6998,7 +6809,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L219",
+      "source_location": "L217",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_parse_minio_key",
@@ -7009,10 +6820,10 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L194",
+      "source_location": "L192",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "ingest_rationale_194",
+      "source": "ingest_rationale_192",
       "target": "ingest_parse_minio_key",
       "confidence_score": 1.0
     },
@@ -7021,7 +6832,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L312",
+      "source_location": "L310",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_resolve_single_object",
@@ -7033,7 +6844,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L231",
+      "source_location": "L229",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_validate_pdf_metadata",
@@ -7045,7 +6856,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L517",
+      "source_location": "L515",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7056,10 +6867,10 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L232",
+      "source_location": "L230",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "ingest_rationale_232",
+      "source": "ingest_rationale_230",
       "target": "ingest_validate_pdf_metadata",
       "confidence_score": 1.0
     },
@@ -7068,7 +6879,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L596",
+      "source_location": "L594",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7080,7 +6891,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L256",
+      "source_location": "L254",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_quick_pdf_sanity_check",
@@ -7091,10 +6902,10 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L257",
+      "source_location": "L255",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "ingest_rationale_257",
+      "source": "ingest_rationale_255",
       "target": "ingest_quick_pdf_sanity_check",
       "confidence_score": 1.0
     },
@@ -7103,7 +6914,7 @@
       "context": "return_type",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L369",
+      "source_location": "L367",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_download_pdf",
@@ -7115,7 +6926,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L377",
+      "source_location": "L375",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_file_md5",
@@ -7127,7 +6938,7 @@
       "context": "return_type",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L463",
+      "source_location": "L461",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_runreport_save",
@@ -7139,7 +6950,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L888",
+      "source_location": "L789",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
@@ -7150,10 +6961,10 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L275",
+      "source_location": "L273",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "ingest_rationale_275",
+      "source": "ingest_rationale_273",
       "target": "ingest_resolve_single_object",
       "confidence_score": 1.0
     },
@@ -7162,7 +6973,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L873",
+      "source_location": "L774",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
@@ -7173,10 +6984,10 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L338",
+      "source_location": "L336",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "ingest_rationale_338",
+      "source": "ingest_rationale_336",
       "target": "ingest_list_minio_pdfs",
       "confidence_score": 1.0
     },
@@ -7185,7 +6996,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L590",
+      "source_location": "L588",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7196,10 +7007,10 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L370",
+      "source_location": "L368",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "ingest_rationale_370",
+      "source": "ingest_rationale_368",
       "target": "ingest_download_pdf",
       "confidence_score": 1.0
     },
@@ -7208,7 +7019,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L600",
+      "source_location": "L598",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7220,7 +7031,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L657",
+      "source_location": "L655",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7232,22 +7043,10 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L948",
+      "source_location": "L840",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
-      "target": "ingest_progress_bar",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "Ingest.py",
-      "source_location": "L818",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "ingest_run_batch_parallel",
       "target": "ingest_progress_bar",
       "confidence_score": 1.0
     },
@@ -7256,7 +7055,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L706",
+      "source_location": "L704",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_check_chunk_quality",
@@ -7268,7 +7067,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L488",
+      "source_location": "L486",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7280,19 +7079,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L754",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "ingest_ingest_worker",
-      "target": "ingest_runreport",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "Ingest.py",
-      "source_location": "L921",
+      "source_location": "L822",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
@@ -7304,7 +7091,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L481",
+      "source_location": "L479",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_print_last_report",
@@ -7312,22 +7099,10 @@
       "confidence_score": 1.0
     },
     {
-      "relation": "references",
-      "context": "parameter_type",
-      "confidence": "EXTRACTED",
-      "source_file": "Ingest.py",
-      "source_location": "L772",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "ingest_run_batch_parallel",
-      "target": "ingest_runreport",
-      "confidence_score": 1.0
-    },
-    {
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L428",
+      "source_location": "L426",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_runreport",
@@ -7338,7 +7113,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L432",
+      "source_location": "L430",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_runreport",
@@ -7349,7 +7124,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L463",
+      "source_location": "L461",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_runreport",
@@ -7361,7 +7136,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L957",
+      "source_location": "L849",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
@@ -7373,7 +7148,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L958",
+      "source_location": "L850",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
@@ -7385,7 +7160,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L482",
+      "source_location": "L480",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_print_last_report",
@@ -7397,7 +7172,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L959",
+      "source_location": "L851",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
@@ -7409,7 +7184,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L854",
+      "source_location": "L755",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
@@ -7421,7 +7196,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L633",
+      "source_location": "L631",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7433,7 +7208,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L547",
+      "source_location": "L545",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7445,7 +7220,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L648",
+      "source_location": "L646",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7457,7 +7232,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L679",
+      "source_location": "L677",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7469,7 +7244,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L647",
+      "source_location": "L645",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7481,7 +7256,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L570",
+      "source_location": "L568",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7493,7 +7268,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L623",
+      "source_location": "L621",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7515,7 +7290,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L606",
+      "source_location": "L604",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7527,7 +7302,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L616",
+      "source_location": "L614",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7539,7 +7314,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L628",
+      "source_location": "L626",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_ingest_pdf",
@@ -7557,14 +7332,13 @@
       "target": "str"
     },
     {
-      "relation": "calls",
-      "context": "call",
+      "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L757",
+      "source_location": "L494",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "ingest_ingest_worker",
+      "source": "ingest_rationale_494",
       "target": "ingest_ingest_pdf",
       "confidence_score": 1.0
     },
@@ -7572,57 +7346,11 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L496",
+      "source_location": "L705",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "ingest_rationale_496",
-      "target": "ingest_ingest_pdf",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "Ingest.py",
-      "source_location": "L707",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "ingest_rationale_707",
+      "source": "ingest_rationale_705",
       "target": "ingest_check_chunk_quality",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "Ingest.py",
-      "source_location": "L751",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "ingest_rationale_751",
-      "target": "ingest_ingest_worker",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "indirect_call",
-      "context": "argument",
-      "confidence": "INFERRED",
-      "source_file": "Ingest.py",
-      "source_location": "L785",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "ingest_run_batch_parallel",
-      "target": "ingest_ingest_worker",
-      "confidence_score": 0.5
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "Ingest.py",
-      "source_location": "L936",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "ingest_main",
-      "target": "ingest_run_batch_parallel",
       "confidence_score": 1.0
     },
     {
@@ -7640,7 +7368,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L860",
+      "source_location": "L761",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
@@ -7652,7 +7380,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L857",
+      "source_location": "L758",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
@@ -7664,7 +7392,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "Ingest.py",
-      "source_location": "L876",
+      "source_location": "L777",
       "weight": 1.0,
       "_origin": "ast",
       "source": "ingest_main",
@@ -7721,7 +7449,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L38",
+      "source_location": "L31",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11763,18 +11491,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L231",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor",
-      "target": "pipeline_extract_pdf_extractor_convert_with_progress",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L667",
+      "source_location": "L466",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11785,7 +11502,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L329",
+      "source_location": "L138",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11796,18 +11513,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L216",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor",
-      "target": "pipeline_extract_pdf_extractor_estimated_sec_per_page",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L451",
+      "source_location": "L260",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11818,7 +11524,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L552",
+      "source_location": "L355",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11829,7 +11535,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L694",
+      "source_location": "L493",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11850,7 +11556,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L352",
+      "source_location": "L161",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11861,7 +11567,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L674",
+      "source_location": "L473",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11872,7 +11578,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L105",
+      "source_location": "L57",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11883,7 +11589,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L118",
+      "source_location": "L70",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11894,7 +11600,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L439",
+      "source_location": "L248",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11915,7 +11621,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L340",
+      "source_location": "L149",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11926,7 +11632,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L432",
+      "source_location": "L241",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11947,29 +11653,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L201",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor",
-      "target": "pipeline_extract_pdf_extractor_load_rate_state",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L73",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor",
-      "target": "pipeline_extract_pdf_extractor_optimal_thread_count",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L657",
+      "source_location": "L456",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -11980,22 +11664,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L93",
+      "source_location": "L45",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
       "target": "pipeline_extract_pdf_extractor_pageblock",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L167",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor",
-      "target": "pipeline_extract_pdf_extractor_peek_page_count",
       "confidence_score": 1.0
     },
     {
@@ -12012,17 +11685,6 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L208",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor",
-      "target": "pipeline_extract_pdf_extractor_save_rate_state",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
       "source_location": "L141",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -12030,22 +11692,11 @@
       "target": "pipeline_extract_pdf_extractor_table_to_text"
     },
     {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L221",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor",
-      "target": "pipeline_extract_pdf_extractor_update_rate_state",
-      "confidence_score": 1.0
-    },
-    {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L42",
+      "source_location": "L32",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -12057,7 +11708,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L42",
+      "source_location": "L32",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -12069,7 +11720,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L42",
+      "source_location": "L32",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -12081,7 +11732,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L46",
+      "source_location": "L36",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -12093,7 +11744,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L46",
+      "source_location": "L36",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor",
@@ -12117,7 +11768,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L510",
+      "source_location": "L313",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_annual_report",
@@ -12129,7 +11780,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L635",
+      "source_location": "L434",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_concall",
@@ -12141,7 +11792,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L352",
+      "source_location": "L161",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_speaker_turns",
@@ -12217,7 +11868,7 @@
       "context": "return_type",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L451",
+      "source_location": "L260",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_annual_report",
@@ -12229,7 +11880,7 @@
       "context": "return_type",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L552",
+      "source_location": "L355",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_concall",
@@ -12241,7 +11892,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L694",
+      "source_location": "L493",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_pdf",
@@ -12331,7 +11982,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L459",
+      "source_location": "L268",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_annual_report",
@@ -12343,212 +11994,11 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L560",
+      "source_location": "L363",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_concall",
       "target": "pipeline_extract_pdf_extractor_get_converter",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L461",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_extract_annual_report",
-      "target": "pipeline_extract_pdf_extractor_peek_page_count",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L562",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_extract_concall",
-      "target": "pipeline_extract_pdf_extractor_peek_page_count",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "references",
-      "context": "parameter_type",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L167",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_peek_page_count",
-      "target": "pipeline_extract_pdf_extractor_py_path",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L168",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_rationale_168",
-      "target": "pipeline_extract_pdf_extractor_peek_page_count",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "references",
-      "context": "parameter_type",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L231",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_convert_with_progress",
-      "target": "pipeline_extract_pdf_extractor_py_path",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "references",
-      "context": "parameter_type",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L451",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_extract_annual_report",
-      "target": "pipeline_extract_pdf_extractor_py_path",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "references",
-      "context": "parameter_type",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L552",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_extract_concall",
-      "target": "pipeline_extract_pdf_extractor_py_path",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "references",
-      "context": "parameter_type",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L694",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_extract_pdf",
-      "target": "pipeline_extract_pdf_extractor_py_path",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L217",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_estimated_sec_per_page",
-      "target": "pipeline_extract_pdf_extractor_load_rate_state",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L224",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_update_rate_state",
-      "target": "pipeline_extract_pdf_extractor_load_rate_state",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L228",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_update_rate_state",
-      "target": "pipeline_extract_pdf_extractor_save_rate_state",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L250",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_convert_with_progress",
-      "target": "pipeline_extract_pdf_extractor_estimated_sec_per_page",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L284",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_convert_with_progress",
-      "target": "pipeline_extract_pdf_extractor_update_rate_state",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L222",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_rationale_222",
-      "target": "pipeline_extract_pdf_extractor_update_rate_state",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L468",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_extract_annual_report",
-      "target": "pipeline_extract_pdf_extractor_convert_with_progress",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L567",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_extract_concall",
-      "target": "pipeline_extract_pdf_extractor_convert_with_progress",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L232",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_rationale_232",
-      "target": "pipeline_extract_pdf_extractor_convert_with_progress",
       "confidence_score": 1.0
     },
     {
@@ -12566,7 +12016,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L624",
+      "source_location": "L423",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_concall",
@@ -12578,7 +12028,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L342",
+      "source_location": "L151",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_infer_section_type",
@@ -12589,10 +12039,10 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L341",
+      "source_location": "L150",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_rationale_341",
+      "source": "pipeline_extract_pdf_extractor_rationale_150",
       "target": "pipeline_extract_pdf_extractor_infer_section_type",
       "confidence_score": 1.0
     },
@@ -12601,7 +12051,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L626",
+      "source_location": "L425",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_concall",
@@ -12622,10 +12072,10 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L358",
+      "source_location": "L167",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "pipeline_extract_pdf_extractor_rationale_358",
+      "source": "pipeline_extract_pdf_extractor_rationale_167",
       "target": "pipeline_extract_pdf_extractor_extract_speaker_turns",
       "confidence_score": 1.0
     },
@@ -12634,7 +12084,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L509",
+      "source_location": "L312",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_annual_report",
@@ -12646,7 +12096,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L458",
+      "source_location": "L267",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_annual_report",
@@ -12658,7 +12108,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L559",
+      "source_location": "L362",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_concall",
@@ -12670,7 +12120,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L475",
+      "source_location": "L278",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_annual_report",
@@ -12692,7 +12142,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L519",
+      "source_location": "L322",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_annual_report",
@@ -12704,7 +12154,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L485",
+      "source_location": "L288",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_annual_report",
@@ -12712,11 +12162,23 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "pipeline/extract/pdf_extractor.py",
+      "source_location": "L260",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "pipeline_extract_pdf_extractor_extract_annual_report",
+      "target": "pipeline_extract_pdf_extractor_py_path",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L497",
+      "source_location": "L300",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_annual_report",
@@ -12786,11 +12248,35 @@
       "target": "pipeline_extract_pdf_extractor_extract_annual_report"
     },
     {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "pipeline/extract/pdf_extractor.py",
+      "source_location": "L355",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "pipeline_extract_pdf_extractor_extract_concall",
+      "target": "pipeline_extract_pdf_extractor_py_path",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "pipeline/extract/pdf_extractor.py",
+      "source_location": "L493",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "pipeline_extract_pdf_extractor_extract_pdf",
+      "target": "pipeline_extract_pdf_extractor_py_path",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L574",
+      "source_location": "L373",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_concall",
@@ -12812,7 +12298,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L585",
+      "source_location": "L384",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_concall",
@@ -12824,7 +12310,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L599",
+      "source_location": "L398",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_concall",
@@ -12836,7 +12322,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L611",
+      "source_location": "L410",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_extract_concall",
@@ -12859,7 +12345,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "pipeline/extract/pdf_extractor.py",
-      "source_location": "L670",
+      "source_location": "L469",
       "weight": 1.0,
       "_origin": "ast",
       "source": "pipeline_extract_pdf_extractor_count_pages",
@@ -22234,5 +21720,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "273fd1ca4d9b8f83d047f776f928245b74d13267"
+  "built_at_commit": "0650d00d4a56ef543ade16a97fd3c4fccf5f1326"
 }
