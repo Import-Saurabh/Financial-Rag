@@ -1,15 +1,20 @@
 """
-pipeline/loader/embedder.py
+pipeline/loader/embedder.py  —  Financial-RAG Embedding Engine v2
 
 Singleton embedding model — loaded ONCE per process, never reloaded.
 PID guard ensures subprocesses reload safely.
 
-build_embedding_text is imported from chunker to avoid circular imports.
-Re-exported here so qdrant_loader can do a single import from embedder.
+v2 additions:
+  - build_query_embedding_text() — structures queries with financial context
+    (company, metrics, temporal flags) to create embedding symmetry with
+    chunker_v2's structured document embeddings.
+  - embed_query_structured() — uses structured query text for better
+    financial-domain retrieval.
+  - batch embedding with metadata-aware text selection.
 """
 
 import os
-from typing import List
+from typing import List, Optional, Dict, Any
 
 from config.settings import EMBEDDING_MODEL, EMBEDDING_BATCH_SIZE
 from utils.logger import get_logger
@@ -57,8 +62,82 @@ def embed_texts(texts: List[str]) -> List[List[float]]:
 
 
 def embed_query(query: str) -> List[float]:
-    """Embed a single query string."""
+    """Embed a single query string (legacy, unstructured)."""
     return embed_texts([query])[0]
+
+
+def build_query_embedding_text(
+    query: str,
+    symbol: Optional[str] = None,
+    metrics: Optional[List[str]] = None,
+    section_types: Optional[List[str]] = None,
+    is_forward_looking: bool = False,
+    is_historical: bool = False,
+    table_type: Optional[str] = None,
+) -> str:
+    """
+    Build a structured query text that mirrors chunker_v2's structured
+    embedding text. This creates embedding symmetry: the query and document
+    embeddings live in the same structured semantic space.
+
+    Example output for "What is BEL's revenue guidance for FY26?":
+        Query: What is BEL's revenue guidance for FY26?
+        Company: BEL
+        Financial Topic: Revenue, Guidance
+        Financial Metrics Mentioned: revenue
+        Flags: Forward Looking
+        Table Preference: income_statement
+        Content: What is BEL's revenue guidance for FY26?
+    """
+    lines = [f"Query: {query}"]
+
+    if symbol:
+        lines.append(f"Company: {symbol}")
+    if section_types:
+        lines.append(f"Financial Topic: {', '.join(section_types)}")
+    if metrics:
+        lines.append(f"Financial Metrics Mentioned: {', '.join(metrics)}")
+
+    flags = []
+    if is_forward_looking:
+        flags.append("Forward Looking")
+    if is_historical:
+        flags.append("Historical")
+    if table_type:
+        flags.append(f"Table Preference: {table_type}")
+    if flags:
+        lines.append(f"Flags: {', '.join(flags)}")
+
+    lines.append("")
+    lines.append("Content:")
+    lines.append(query)
+
+    return "\n".join(lines)
+
+
+def embed_query_structured(
+    query: str,
+    symbol: Optional[str] = None,
+    metrics: Optional[List[str]] = None,
+    section_types: Optional[List[str]] = None,
+    is_forward_looking: bool = False,
+    is_historical: bool = False,
+    table_type: Optional[str] = None,
+) -> List[float]:
+    """
+    Embed a query using structured text for better financial-domain retrieval.
+    Use this when you have parsed query intent (e.g. from retriever_v2).
+    """
+    structured = build_query_embedding_text(
+        query=query,
+        symbol=symbol,
+        metrics=metrics,
+        section_types=section_types,
+        is_forward_looking=is_forward_looking,
+        is_historical=is_historical,
+        table_type=table_type,
+    )
+    return embed_texts([structured])[0]
 
 
 # Re-export so qdrant_loader only needs: from pipeline.loader.embedder import ...
