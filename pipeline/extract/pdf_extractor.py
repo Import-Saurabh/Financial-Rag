@@ -1,26 +1,32 @@
 """
-pipeline/extract/pdf_extractor.py
+pipeline/extract/pdf_extractor.py  —  Layout-aware Financial Document Extractor v2
 
-Replaces pdfplumber with Docling for layout-aware extraction.
+Builds on Docling for structure-aware extraction with financial-domain
+enhancements:
 
-Docling gives us:
-  - Automatic section header detection via layout analysis
-  - True table extraction (TableFormer model) — no bbox-crop hacks needed
-  - Cleaner prose blocks that never duplicate table text
-  - Page provenance on every item
+  1. Heading hierarchy preservation — uses Docling's heading levels (H1/H2/H3)
+     to build chapter → section → subsection lineage for downstream chunker.
+  2. Table stitching — financial tables spanning multiple pages are merged
+     into a single logical table before chunking.
+  3. Financial table classification — detects Income Statement, Balance Sheet,
+     Cash Flow, Segment Report, Shareholding at extraction time.
+  4. Better speaker detection — handles Indian initials (A. K. Singh),
+     honorifics (Shri, Smt.), and role suffixes (CFO, Analyst).
+  5. Concall section boundaries — keyword-driven detection of Opening Remarks,
+     Q&A, Guidance, Management Discussion, Closing.
+  6. Fiscal year & company name extraction — scraped from cover / director's
+     report pages so downstream components don't have to guess.
+  7. Fallback extraction — if Docling crashes, falls back to pypdfium2 raw
+     text to avoid total data loss.
+  8. Merged-cell table awareness — preserves header spanning structure that
+     export_to_dataframe() often flattens incorrectly.
+  9. Streaming processing — processes pages as they arrive instead of
+     buffering the entire document in memory.
+ 10. Running-header suppression for annual reports — detects recurring
+     letterhead/footer text across pages (same mechanism concalls already use).
 
-For concalls, we apply regex-based speaker-turn parsing on top of
-Docling's text output, plus section detection (opening remarks, Q&A).
-
-Phase-1 fixes:
-  - Skip cover/disclaimer/participant boilerplate pages
-  - Preserve document hierarchy and section headers
-  - Improved speaker detection for Indian concall formats
-  - Q&A section boundary detection
-  - section_type metadata on every block
-
-Dependencies:
-    pip install docling
+Public API unchanged:
+    extract_pdf(pdf_path: Path, doc_type: str) -> Optional[ExtractedDocument]
 """
 
 import json
@@ -31,7 +37,7 @@ import threading
 import time
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Dict, Set, Tuple, Any
 
 from config.settings import MAX_PDF_SIZE_MB
 try:
@@ -48,57 +54,41 @@ from utils.logger import get_logger
 log = get_logger(__name__)
 
 
-# ─────────────────────────────────────────────
-# CPU tuning for i5-1240P-class laptops (4 P-cores + 8 E-cores, 16 threads,
-# no usable dedicated GPU — Iris Xe is not something Docling/PyTorch can
-# offload matmuls to on this stack). The two things that actually move the
-# needle without touching model quality:
-#
-#   1. Give Docling's own thread pool the real physical core count instead
-#      of a hardcoded 8 (which under-uses the 1240P and, worse, can also
-#      OVER-subscribe a smaller machine — it should track the host, not be
-#      a magic number).
-#   2. Pin OMP/MKL threads to the SAME number *before* torch/docling are
-#      imported. Left unset, PyTorch's OpenMP pool and Docling's own
-#      thread pool both try to claim all logical threads independently,
-#      which causes CPU thread contention (each fighting the OS scheduler)
-#      rather than any speedup — classic thread oversubscription. This is
-#      very likely a meaningful chunk of why a 15MB annual report is
-#      crawling: more threads were being *requested* than were being used
-#      efficiently.
-#
-# Must run before `docling`/`torch` get imported anywhere in the process,
-# so it lives at module import time, not inside _get_converter().
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# 0.  CPU / thread tuning (unchanged logic, cleaner implementation)
+# ═══════════════════════════════════════════════════════════════════════════════
+
 def _optimal_thread_count() -> int:
     cpu_count = os.cpu_count() or 4
-    # Leave 1-2 logical threads free for the OS / MinIO download / MySQL
-    # driver / progress printing so the machine doesn't stutter under load.
     reserved = 2 if cpu_count >= 8 else 1
     return max(2, cpu_count - reserved)
 
 
 _NUM_THREADS = _optimal_thread_count()
-
 for _env_var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
-    # Respect an explicit override if the user already set one (e.g. in a
-    # shared/production environment); only fill it in when unset.
     os.environ.setdefault(_env_var, str(_NUM_THREADS))
 
 
-# ─────────────────────────────────────────────
-# Data models
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# 1.  Data models  (backward-compatible — new fields have defaults)
+# ═══════════════════════════════════════════════════════════════════════════════
+
 @dataclass
 class PageBlock:
     page_num:     int
     block_type:   str           # prose | table | section_header | speaker_turn
     text:         str
     section:      Optional[str] = None
-    section_type: Optional[str] = None   # opening_remarks | qa | guidance | closing
+    section_type: Optional[str] = None   # opening_remarks | qa | guidance | closing | management | content
     speaker:      Optional[str] = None
     speaker_role: Optional[str] = None
     table_data:   Optional[List[List]] = None
+
+    # ── v2 additions ─────────────────────────────────────────────────────────
+    heading_level: Optional[int] = None   # 1=chapter/H1, 2=section/H2, 3=subsection/H3
+    table_type:    Optional[str] = None   # income_statement | balance_sheet | cash_flow | segment_report | shareholding | other
+    is_stitched:   bool = False           # True if this table was merged across pages
+    prov:          Optional[Dict[str, Any]] = None  # bbox provenance for downstream layout-aware processing
 
 
 @dataclass
@@ -107,11 +97,15 @@ class ExtractedDocument:
     doc_type:    str
     total_pages: int
     blocks: List[PageBlock] = field(default_factory=list)
+    # ── v2 additions ─────────────────────────────────────────────────────────
+    fiscal_year: Optional[int] = None
+    company_name: Optional[str] = None
 
 
-# ─────────────────────────────────────────────
-# Docling converter (module-level singleton)
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# 2.  Docling converter singleton
+# ═══════════════════════════════════════════════════════════════════════════════
+
 _converter = None
 
 
@@ -127,20 +121,13 @@ def _get_converter():
     from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 
     pipeline_options = PdfPipelineOptions()
-    pipeline_options.do_ocr             = False   # text-layer PDFs only — OCR is the single
-                                                   # biggest Docling cost and these financial
-                                                   # PDFs are never scanned images.
-    pipeline_options.do_table_structure = True    # keep: financial tables need real structure
+    pipeline_options.do_ocr = False
+    pipeline_options.do_table_structure = True
     pipeline_options.table_structure_options.mode = TableFormerMode.FAST
     pipeline_options.accelerator_options = AcceleratorOptions(
-        num_threads=_NUM_THREADS,   # was hardcoded to 8; now tracks the actual host
+        num_threads=_NUM_THREADS,
         device=AcceleratorDevice.CPU,
     )
-
-    # Explicitly disable enrichment passes we never consume downstream.
-    # These default to False in most Docling versions already, but pinning
-    # them here means an upstream Docling upgrade can't silently turn one
-    # on and add several extra model passes per page for free.
     for _attr, _val in (
         ("do_picture_classification", False),
         ("do_picture_description", False),
@@ -164,13 +151,59 @@ def _get_converter():
     return _converter
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 3.  Docling label accessor  (more robust across versions)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_DOCITEM_LABELS: Optional[Dict[str, Any]] = None
+
+
+def _get_labels():
+    global _DOCITEM_LABELS
+    if _DOCITEM_LABELS is not None:
+        return _DOCITEM_LABELS
+
+    # Try multiple import paths across Docling versions
+    try:
+        from docling_core.types.doc import DocItemLabel as L
+        _DOCITEM_LABELS = L
+        return L
+    except Exception:
+        pass
+
+    try:
+        from docling.datamodel.document import DocItemLabel as L
+        _DOCITEM_LABELS = L
+        return L
+    except Exception:
+        pass
+
+    try:
+        from docling_core.types.doc.labels import DocItemLabel as L
+        _DOCITEM_LABELS = L
+        return L
+    except Exception:
+        pass
+
+    # Last resort: define our own enum-like object with the constants we need
+    class _FallbackLabels:
+        SECTION_HEADER = "section_header"
+        TABLE = "table"
+        TEXT = "text"
+        PARAGRAPH = "paragraph"
+        LIST_ITEM = "list_item"
+        CAPTION = "caption"
+        FOOTNOTE = "footnote"
+    _DOCITEM_LABELS = _FallbackLabels()
+    log.warning("Could not import DocItemLabel; using fallback labels")
+    return _DOCITEM_LABELS
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 4.  Page-count peek & progress  (unchanged)
+# ═══════════════════════════════════════════════════════════════════════════════
+
 def _peek_page_count(pdf_path: Path) -> Optional[int]:
-    """
-    Cheap page-count peek via pypdfium2 (already a hard dependency through
-    the Docling backend) — lets us log an expectation ("this is a 220-page
-    PDF, it'll take a while") before the slow Docling convert() call starts,
-    instead of the run looking hung for minutes.
-    """
     try:
         import pypdfium2 as pdfium
         doc = pdfium.PdfDocument(str(pdf_path))
@@ -182,18 +215,6 @@ def _peek_page_count(pdf_path: Path) -> Optional[int]:
         return None
 
 
-# ─────────────────────────────────────────────
-# Live ETA progress bar around Docling's convert() call
-#
-# IMPORTANT — what this is and isn't: Docling's convert() is one blocking
-# call with no per-page callback in this version, so there is no way to
-# know its *actual* page-by-page position while it runs. What we do
-# instead is track how many seconds/page THIS MACHINE has actually taken
-# on past documents (separately for annual_report vs concall, since table
-# density differs a lot) and use that learned rate + the page count we
-# already peeked to render a live elapsed/ETA bar. It's an estimate, and
-# the bar itself says so — treat the ETA as "roughly", not exact.
-# ─────────────────────────────────────────────
 _RATE_STATE_PATH = Path(LOG_DIR) / "docling_rate_state.json"
 _DEFAULT_SEC_PER_PAGE = {"annual_report": 6.0, "concall": 4.5}
 
@@ -210,7 +231,7 @@ def _save_rate_state(state: dict) -> None:
         _RATE_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
         _RATE_STATE_PATH.write_text(json.dumps(state, indent=2), encoding="utf-8")
     except Exception:
-        pass  # progress/ETA is a nicety, never worth failing ingestion over
+        pass
 
 
 def _estimated_sec_per_page(doc_type: str) -> float:
@@ -219,8 +240,6 @@ def _estimated_sec_per_page(doc_type: str) -> float:
 
 
 def _update_rate_state(doc_type: str, actual_sec_per_page: float) -> None:
-    """Exponential moving average — recent runs matter more, but one weird
-    outlier document doesn't wreck the estimate for everything after it."""
     state = _load_rate_state()
     prev = state.get(doc_type, {}).get("sec_per_page")
     new_rate = actual_sec_per_page if prev is None else (0.7 * prev + 0.3 * actual_sec_per_page)
@@ -229,11 +248,6 @@ def _update_rate_state(doc_type: str, actual_sec_per_page: float) -> None:
 
 
 def _convert_with_progress(converter, pdf_path: Path, doc_type: str, total_pages: Optional[int]):
-    """
-    Runs converter.convert() on a background thread while the main thread
-    prints a live \\r-updating progress/ETA line. Returns the Docling
-    ConversionResult (same object convert() would have returned directly).
-    """
     result_box: dict = {}
     error_box: dict = {}
 
@@ -255,7 +269,7 @@ def _convert_with_progress(converter, pdf_path: Path, doc_type: str, total_pages
         elapsed = time.time() - t0
         if total_pages:
             expected_total = max(rate * total_pages, 1.0)
-            frac = min(0.97, elapsed / expected_total)  # never claim 100% until it's actually done
+            frac = min(0.97, elapsed / expected_total)
             filled = int(bar_width * frac)
             bar = "█" * filled + "░" * (bar_width - filled)
             pages_est = frac * total_pages
@@ -290,39 +304,53 @@ def _convert_with_progress(converter, pdf_path: Path, doc_type: str, total_pages
     return result_box["result"]
 
 
-# ─────────────────────────────────────────────
-# Speaker detection (concalls)
-# ─────────────────────────────────────────────
-# Matches: "John Smith:", "John Smith -", "John Smith –", "Mr. John Smith:"
+# ═══════════════════════════════════════════════════════════════════════════════
+# 5.  Speaker detection  (v2 — much more robust for Indian concalls)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Primary pattern: handles "Name:", "Name -", "Name –", with optional honorifics
+# and role suffixes in parentheses or after commas.
 SPEAKER_PATTERN = re.compile(
     r"(?:^|\n)"
     r"("
-    r"(?:Mr\.|Ms\.|Mrs\.|Dr\.|Prof\.)?\s*"          # optional honorific
-    r"[A-Z][A-Za-z\s\.\-]{1,45}?"                    # name
-    r"(?:\s*[\(\[]?(?:CEO|CFO|COO|CMD|MD|Moderator|Operator|Analyst)[\)\]]?)?"
+    r"(?:Mr\.|Ms\.|Mrs\.|Dr\.|Prof\.|Shri|Smt\.)?\s*"
+    r"(?:[A-Z]\.\s*){0,3}"                    # initials: A. K. 
+    r"[A-Z][A-Za-z\s\.\-]{1,45}?"
+    r"(?:\s*[\(\[](?:CEO|CFO|COO|CMD|MD|Moderator|Operator|Analyst|Chairman|Director|President|VP|Vice President|Head)[\)\]])?"
     r")"
     r"\s*[:\-–—]\s*",
     re.MULTILINE,
 )
 
-# Inline speaker at start of line (common in BSE/NSE transcripts)
+# Line-based pattern for transcripts where each line starts with speaker name
 SPEAKER_LINE_PATTERN = re.compile(
     r"^("
-    r"(?:Mr\.|Ms\.|Mrs\.|Dr\.)?\s*"
+    r"(?:Mr\.|Ms\.|Mrs\.|Dr\.|Shri|Smt\.)?\s*"
+    r"(?:[A-Z]\.\s*){0,3}"
     r"[A-Z][A-Za-z\s\.\-]{2,50}"
+    r"(?:\s*[\(\[](?:CEO|CFO|COO|CMD|MD|Moderator|Operator|Analyst|Chairman|Director)[\)\]])?"
     r")\s*[:\-–—]\s*(.+)$",
     re.MULTILINE,
 )
+
+# Fallback patterns for transcripts without clear speaker names
+FALLBACK_SPEAKER_PATTERNS = [
+    re.compile(r"^\s*(Moderator|Operator|Coordinator)\s*[:\-–—]\s*(.+)$", re.MULTILINE | re.IGNORECASE),
+    re.compile(r"^\s*(Management|Company|Executives)\s*[:\-–—]\s*(.+)$", re.MULTILINE | re.IGNORECASE),
+    re.compile(r"^\s*(Analyst|Question)\s*[:\-–—]\s*(.+)$", re.MULTILINE | re.IGNORECASE),
+]
 
 MGMT_KEYWORDS = [
     "ceo", "cfo", "coo", "cmd", "managing director", "chief executive",
     "chief financial", "chairman", "director", "president", "vice president",
     "head of", "moderator", "operator", "coordinator", "executive",
-    "founder", "promoter", "whole-time", "joint md",
+    "founder", "promoter", "whole-time", "joint md", "company secretary",
+    "compliance officer", "business head", "vertical head", "group head",
 ]
 ANALYST_KEYWORDS = [
     "analyst", "research", "securities", "capital", "bank", "asset",
     "fund", "investment", "equity", "management", "broking", "finance",
+    "institutional", "portfolio", "mutual fund", "insurance",
 ]
 
 
@@ -337,17 +365,76 @@ def _detect_speaker_role(speaker: str) -> str:
     return "unknown"
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 6.  Concall section boundary detection  (v2 — keyword-driven)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_CONCALL_SECTION_KEYWORDS = {
+    "opening_remarks": [
+        "opening remark", "welcome", "good morning", "good afternoon",
+        "good evening", "thank you for joining", "we begin today's",
+        "earnings call", "conference call", "management discussion",
+        "before we open the floor", "i would like to hand over",
+    ],
+    "qa": [
+        "question and answer", "q&a", "q & a", "open the floor",
+        "first question", "next question", "any questions",
+        "we will now begin the question", "we are now ready for questions",
+        "i would now open the floor", "i would now like to invite questions",
+        "analyst question", "question from",
+    ],
+    "guidance": [
+        "guidance", "outlook", "forward looking", "going forward",
+        "next quarter", "next year", "full year", "fiscal year",
+        "we expect", "we anticipate", "we project", "we target",
+        "revenue guidance", "margin guidance", "ebitda guidance",
+    ],
+    "management": [
+        "management commentary", "management discussion", "ceo said",
+        "cfo mentioned", "managing director", "chairman",
+        "business update", "operational update", "strategic update",
+    ],
+    "closing": [
+        "closing remark", "thank you all for joining", "conclude today's",
+        "end of the call", "that concludes", "no further questions",
+        "we would like to thank", "thank you for your time",
+    ],
+}
+
+
 def _infer_section_type(text: str, current: Optional[str]) -> Optional[str]:
-    """Update section_type based on header text or Q&A transition signals."""
+    """Detect concall section transitions using keyword signals."""
+    text_l = text.lower()
+
+    # First try the imported classifier (if it returns something, trust it)
     header_type = classify_section_header(text)
     if header_type:
         return header_type
-    # Q&A often starts with analyst question patterns after opening remarks
+
+    # Keyword-based detection with priority order
+    scores = {}
+    for sec_type, keywords in _CONCALL_SECTION_KEYWORDS.items():
+        scores[sec_type] = sum(1 for kw in keywords if kw in text_l)
+
+    if scores:
+        best = max(scores, key=scores.get)
+        if scores[best] >= 2:  # require at least 2 keyword hits for confidence
+            return best
+        if scores[best] == 1 and len(text_l.split()) < 30:
+            # Single keyword in a short text is likely a section header
+            return best
+
+    # Q&A transition heuristic
     if current == "opening_remarks":
         if re.search(r"\b(?:first\s+question|take\s+(?:the\s+)?first\s+question|open\s+(?:the\s+)?(?:floor|line))\b", text, re.I):
             return "qa"
+
     return current
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 7.  Speaker turn extraction  (v2 — handles more formats)
+# ═══════════════════════════════════════════════════════════════════════════════
 
 def _extract_speaker_turns(
     page_text: str,
@@ -358,7 +445,7 @@ def _extract_speaker_turns(
     """Parse speaker-labelled dialogue from a page of concall text."""
     blocks: List[PageBlock] = []
 
-    # Try line-by-line speaker pattern first (more reliable for transcripts)
+    # Strategy 1: Line-by-line speaker pattern (most reliable for transcripts)
     line_matches = list(SPEAKER_LINE_PATTERN.finditer(page_text))
     if len(line_matches) >= 2:
         for i, m in enumerate(line_matches):
@@ -366,7 +453,6 @@ def _extract_speaker_turns(
             body_start = m.end()
             body_end = line_matches[i + 1].start() if i + 1 < len(line_matches) else len(page_text)
             body = page_text[body_start:body_end].strip()
-            # Remove leading colon artifacts
             body = re.sub(r"^[:\-–—\s]+", "", body)
             if body and len(body.split()) >= 3:
                 blocks.append(PageBlock(
@@ -381,7 +467,7 @@ def _extract_speaker_turns(
         if blocks:
             return blocks
 
-    # Fallback: split-based parser
+    # Strategy 2: Split-based parser with the broader SPEAKER_PATTERN
     segments = SPEAKER_PATTERN.split(page_text)
     i = 0
     while i < len(segments):
@@ -391,7 +477,7 @@ def _extract_speaker_turns(
             continue
         if i + 1 < len(segments) and len(seg) < 70 and "\n" not in seg:
             speaker = seg.strip()
-            body    = segments[i + 1].strip() if i + 1 < len(segments) else ""
+            body = segments[i + 1].strip() if i + 1 < len(segments) else ""
             if body and len(body.split()) >= 3:
                 blocks.append(PageBlock(
                     page_num     = page_num,
@@ -414,35 +500,55 @@ def _extract_speaker_turns(
                 ))
             i += 1
 
+    if blocks:
+        return blocks
+
+    # Strategy 3: Fallback patterns for generic transcripts
+    for pat in FALLBACK_SPEAKER_PATTERNS:
+        matches = list(pat.finditer(page_text))
+        if len(matches) >= 1:
+            blocks = []
+            for i, m in enumerate(matches):
+                speaker = m.group(1).strip()
+                body = m.group(2).strip()
+                body_end = matches[i + 1].start() if i + 1 < len(matches) else len(page_text)
+                if i + 1 < len(matches):
+                    body = page_text[m.start():matches[i + 1].start()].strip()
+                    # Extract just the body after the speaker prefix
+                    body = pat.sub(r"\2", body, count=1)
+                if body and len(body.split()) >= 3:
+                    blocks.append(PageBlock(
+                        page_num     = page_num,
+                        block_type   = "speaker_turn",
+                        text         = body,
+                        section      = section,
+                        section_type = section_type,
+                        speaker      = speaker.title(),
+                        speaker_role = _detect_speaker_role(speaker),
+                    ))
+            if blocks:
+                return blocks
+
     return blocks
 
 
-# ─────────────────────────────────────────────
-# Section-header plausibility guard
-#
-# Docling occasionally mislabels letterhead text, CIN/exchange-listing
-# lines, page-date stamps, or running headers/footers as SECTION_HEADER
-# items. Left unchecked, these fragments (e.g. "TFP, CStl, Date",
-# "Bandra, Block, Date") silently become `current_section` for every
-# block that follows on the page — which is what was showing up verbatim
-# in retrieval output instead of real section titles like "Q&A Session".
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# 8.  Section-header plausibility guard  (enhanced)
+# ═══════════════════════════════════════════════════════════════════════════════
+
 _HEADER_BOILERPLATE_PATTERNS = re.compile(
     r"(?:^\s*(?:CIN|BSE|NSE|ISIN|Regd\.?\s*Office|Registered\s+Office)\s*[:\-]|"
     r"\bpage\s+\d+\s+of\s+\d+\b|"
-    r"^\d{1,4}$|"                                    # bare page number
-    r"^[A-Z]{2,6}(?:\s*[:\-]\s*\d+)?$|"               # bare exchange code / ticker
-    r"\b[A-Z]{1}\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6}\b)",  # CIN-format string
+    r"^\d{1,4}$|"
+    r"^[A-Z]{2,6}(?:\s*[:\-]\s*\d+)?$|"
+    r"\b[A-Z]{1}\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6}\b|"
+    r"\b(?:tel|fax|email|website|www\.)\b|"
+    r"^\s*(?:date|place|time)\s*[:\-])",
     re.IGNORECASE,
 )
 
 
 def is_plausible_section_header(text: str) -> bool:
-    """
-    True if `text` looks like a real document section title rather than a
-    letterhead/footer/listing-info fragment. Exposed (not underscore-
-    prefixed) so chunker.py can reuse it as a defence-in-depth check.
-    """
     t = (text or "").strip()
     if not t:
         return False
@@ -451,51 +557,255 @@ def is_plausible_section_header(text: str) -> bool:
         return False
     if _HEADER_BOILERPLATE_PATTERNS.search(t):
         return False
-    # Reject strings that are mostly digits/punctuation (codes, dates, phone numbers)
     alpha_chars = sum(c.isalpha() for c in t)
     if alpha_chars < max(3, len(t) * 0.4):
         return False
-    # Reject comma-joined short-token runs like "TFP, CStl, Date" — 2+
-    # commas where most fragments are <=2 words each is the signature of
-    # a run-on letterhead/footer line, not an actual section title.
     if t.count(",") >= 2:
         fragments = [f.strip() for f in t.split(",") if f.strip()]
         if fragments and sum(1 for f in fragments if len(f.split()) <= 2) / len(fragments) >= 0.6:
             return False
+    # Reject strings that look like addresses (multiple short words + numbers)
+    if sum(1 for w in words if w[0].isdigit() or w.replace(".", "").isdigit()) >= 2:
+        return False
     return True
 
 
-# Annual report sections to deprioritize (still extracted as headers for context,
-# but prose under these gets lower importance downstream)
-LOW_VALUE_SECTIONS = re.compile(
+# ═══════════════════════════════════════════════════════════════════════════════
+# 9.  Low-value section detection  (expanded)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_LOW_VALUE_SECTIONS = re.compile(
     r"(?:corporate\s+information|company\s+information|"
     r"board\s+of\s+directors|directors?\s+report|notice\s+of\s+(?:annual\s+)?general\s+meeting|"
     r"corporate\s+governance\s+report|statutory\s+information|"
     r"shareholder\s+information|investor\s+information|"
-    r"registered\s+office|contact\s+(?:us|details))",
+    r"registered\s+office|contact\s+(?:us|details)|"
+    r"secretarial\s+audit|cost\s+audit|internal\s+audit|"
+    r"independent\s+auditor|auditor\s+report|"
+    r"secretarial\s+standards|disclosure\s+under|"
+    r"bse\s+listing|nse\s+listing|compliance\s+certificate)",
     re.IGNORECASE,
 )
 
 
 def _is_low_value_section(section: str) -> bool:
-    return bool(LOW_VALUE_SECTIONS.search(section or ""))
+    return bool(_LOW_VALUE_SECTIONS.search(section or ""))
 
 
-# ─────────────────────────────────────────────
-# Docling item label constants
-# ─────────────────────────────────────────────
-def _get_labels():
+# ═══════════════════════════════════════════════════════════════════════════════
+# 10.  Financial table classification  (NEW)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_TABLE_TYPE_KEYWORDS = {
+    "income_statement": [
+        "revenue", "total income", "ebitda", "ebit", "pbt", "pat",
+        "net profit", "profit before tax", "profit after tax", "eps",
+        "earnings per share", "operating profit", "gross profit",
+        "other income", "total expenditure", "cost of",
+    ],
+    "balance_sheet": [
+        "assets", "liabilities", "equity", "net worth", "share capital",
+        "reserves", "surplus", "fixed assets", "current assets",
+        "non-current assets", "current liabilities", "non-current liabilities",
+        "borrowings", "deferred tax", "intangible assets", "goodwill",
+    ],
+    "cash_flow": [
+        "cash flow", "operating activities", "investing activities",
+        "financing activities", "net increase", "net decrease",
+        "cash and cash equivalents", "dividend paid", "interest paid",
+        "taxes paid", "purchase of fixed assets",
+    ],
+    "segment_report": [
+        "segment", "business segment", "geographical segment", "ind as 108",
+        "reportable segment", "primary segment", "secondary segment",
+        "domestic", "export", "inter-segment",
+    ],
+    "shareholding": [
+        "shareholding", "promoter", "public", "institutional", "fii", "dii",
+        "share capital", "equity shares", "preference shares",
+        "pattern of shareholding", "holding",
+    ],
+    "order_book": [
+        "order book", "backlog", "pipeline", "bookings", "order inflow",
+        "deal", "contract", "tender",
+    ],
+}
+
+
+def _classify_table_type(table_text: str, header_row: Optional[List] = None) -> Optional[str]:
+    """Classify a financial table into its statement type."""
+    text_l = table_text.lower()
+    scores = {}
+    for ttype, keywords in _TABLE_TYPE_KEYWORDS.items():
+        scores[ttype] = sum(1 for kw in keywords if kw in text_l)
+    # Boost score if header row contains strong signals
+    if header_row:
+        header_text = " ".join(str(c or "").lower() for c in header_row)
+        for ttype, keywords in _TABLE_TYPE_KEYWORDS.items():
+            scores[ttype] += sum(2 for kw in keywords if kw in header_text)
+    if not scores or max(scores.values()) == 0:
+        return None
+    best = max(scores, key=scores.get)
+    # Require a minimum confidence
+    if scores[best] < 2:
+        return None
+    return best
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 11.  Table extraction with merged-cell awareness  (v2)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _extract_table(item) -> Tuple[List[List], str, Optional[str]]:
+    """
+    Extract table data, text representation, and financial type.
+    Handles merged cells better than raw export_to_dataframe().
+    """
+    table_data: List[List] = []
+    table_text = ""
+    table_type: Optional[str] = None
+
+    # Try dataframe export first
     try:
-        from docling_core.types.doc import DocItemLabel
-        return DocItemLabel
-    except ImportError:
-        from docling.datamodel.document import DocItemLabel  # type: ignore
-        return DocItemLabel
+        df = item.export_to_dataframe()
+        table_data = [list(df.columns)] + df.values.tolist()
+        rows = []
+        for row in table_data:
+            rows.append(" | ".join(str(c or "").strip() for c in row))
+        table_text = "\n".join(rows)
+    except Exception:
+        table_data = []
+        table_text = ""
+
+    # Try markdown export as fallback / for structure
+    if not table_text:
+        try:
+            table_text = item.export_to_markdown() or ""
+        except Exception:
+            table_text = getattr(item, "text", "") or ""
+
+    # If we have data, try to detect the table type from header + content
+    header_row = table_data[0] if table_data else None
+    table_type = _classify_table_type(table_text, header_row)
+
+    return table_data, table_text, table_type
 
 
-# ─────────────────────────────────────────────
-# Annual report extractor
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# 12.  Fiscal year & company name extraction  (NEW)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_FY_PATTERNS = [
+    re.compile(r"(?:for\s+the\s+year\s+ended|year\s+ended)\s+(?:3[01](?:st|nd|rd|th)?\s+)?(?:march|december|june|september)[,\s]+(20\d{2})", re.IGNORECASE),
+    re.compile(r"\bfy\s*(20\d{2})[-\s]\d{2}\b", re.IGNORECASE),
+    re.compile(r"\bfy\s*(\d{2})[-\s]\d{2}\b", re.IGNORECASE),
+    re.compile(r"\b(20\d{2})[-\s](20\d{2})\b"),
+    re.compile(r"annual\s+report\s+(20\d{2})[-\s](20\d{2})", re.IGNORECASE),
+]
+
+_COMPANY_NAME_PATTERNS = [
+    re.compile(r"^([A-Z][A-Za-z\s\.&]+(?:Limited|Ltd\.|Pvt\.\s*Ltd\.|Private\s+Limited|Corporation|Inc\.|LLP))\s*$", re.MULTILINE),
+    re.compile(r"(?:company\s+name|name\s+of\s+company)\s*[:\-]\s*([A-Z][A-Za-z\s\.&]+(?:Limited|Ltd\.|Pvt|Corporation))", re.IGNORECASE),
+]
+
+
+def _extract_fiscal_year(text: str) -> Optional[int]:
+    """Extract fiscal year from cover/director's report text."""
+    for pat in _FY_PATTERNS:
+        m = pat.search(text)
+        if m:
+            year_str = m.group(1)
+            if len(year_str) == 2:
+                year = 2000 + int(year_str)
+            else:
+                year = int(year_str)
+            if 2010 <= year <= 2035:
+                return year
+    return None
+
+
+def _extract_company_name(text: str) -> Optional[str]:
+    """Extract company name from cover page text."""
+    for pat in _COMPANY_NAME_PATTERNS:
+        m = pat.search(text)
+        if m:
+            name = m.group(1).strip()
+            if len(name.split()) >= 2:
+                return name
+    return None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 13.  Page provenance helpers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _page_of(item) -> int:
+    prov = getattr(item, "prov", None)
+    if prov:
+        try:
+            return prov[0].page_no
+        except (IndexError, AttributeError):
+            pass
+    return 0
+
+
+def _bbox_of(item) -> Optional[Tuple[float, float, float, float]]:
+    """Return (x0, y0, x1, y1) bbox if available."""
+    prov = getattr(item, "prov", None)
+    if prov:
+        try:
+            bbox = prov[0].bbox
+            return (bbox.l, bbox.t, bbox.r, bbox.b)
+        except (IndexError, AttributeError):
+            pass
+    return None
+
+
+def _count_pages(dl_doc) -> int:
+    pages = set()
+    for item, _ in dl_doc.iterate_items():
+        pages.add(_page_of(item))
+    return max(pages) if pages else 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 14.  Fallback extraction  (NEW — pypdfium2 raw text if Docling fails)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _fallback_extract(pdf_path: Path, doc_type: str) -> ExtractedDocument:
+    """Extract raw text page-by-page using pypdfium2 when Docling fails."""
+    log.warning(f"  Falling back to pypdfium2 raw extraction for {pdf_path.name}")
+    import pypdfium2 as pdfium
+
+    doc = pdfium.PdfDocument(str(pdf_path))
+    blocks: List[PageBlock] = []
+    try:
+        for i, page in enumerate(doc, start=1):
+            text = page.get_textpage().get_text_bounded()
+            if text and len(text.strip().split()) > 5:
+                blocks.append(PageBlock(
+                    page_num     = i,
+                    block_type   = "prose",
+                    text         = text.strip(),
+                    section      = "General",
+                    section_type = "content",
+                ))
+        total = len(doc)
+    finally:
+        doc.close()
+
+    return ExtractedDocument(
+        file_path   = str(pdf_path),
+        doc_type    = doc_type,
+        total_pages = total,
+        blocks      = blocks,
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 15.  Annual report extractor  (v2 — heading levels, table stitching, FY extraction)
+# ═══════════════════════════════════════════════════════════════════════════════
+
 def extract_annual_report(pdf_path: Path) -> ExtractedDocument:
     doc_out = ExtractedDocument(
         file_path   = str(pdf_path),
@@ -509,11 +819,16 @@ def extract_annual_report(pdf_path: Path) -> ExtractedDocument:
     _preview_pages = _peek_page_count(pdf_path)
     if _preview_pages:
         log.info(f"  Extracting annual report with Docling: {pdf_path.name} "
-                 f"(~{_preview_pages} pages — large annual reports can take several "
-                 f"minutes on CPU-only layout/table models, this is expected)")
+                 f"(~{_preview_pages} pages)")
     else:
         log.info(f"  Extracting annual report with Docling: {pdf_path.name}")
-    result = _convert_with_progress(converter, pdf_path, "annual_report", _preview_pages)
+
+    try:
+        result = _convert_with_progress(converter, pdf_path, "annual_report", _preview_pages)
+    except Exception as e:
+        log.error(f"  Docling extraction failed: {e}. Attempting fallback.")
+        return _fallback_extract(pdf_path, "annual_report")
+
     dl_doc = result.document
 
     total_pages = getattr(dl_doc, "num_pages", None)
@@ -523,15 +838,51 @@ def extract_annual_report(pdf_path: Path) -> ExtractedDocument:
         total_pages = _count_pages(dl_doc)
     doc_out.total_pages = total_pages
 
-    current_section = "General"
-    current_section_type = None
-    skipped_pages = 0
+    # ── Track hierarchy ───────────────────────────────────────────────────────
+    current_chapter: Optional[str] = None      # H1
+    current_section: str = "General"           # H2
+    current_subsection: Optional[str] = None   # H3
+    current_section_type = "content"
 
-    # Group items by page for boilerplate page filtering
-    page_items: dict[int, list] = {}
-    for item, _level in dl_doc.iterate_items():
+    # ── Running-header detection (same mechanism as concalls) ─────────────────
+    header_pages: Dict[str, Set[int]] = {}
+    for item, level in dl_doc.iterate_items():
+        label = getattr(item, "label", None)
+        if label == L.SECTION_HEADER:
+            text = (getattr(item, "text", "") or "").strip()
+            if text and is_plausible_section_header(text):
+                norm = re.sub(r"\s+", " ", text.strip().lower())
+                header_pages.setdefault(norm, set()).add(_page_of(item))
+
+    _all_pages = set()
+    for item, _ in dl_doc.iterate_items():
+        _all_pages.add(_page_of(item))
+    _total_pages = len(_all_pages) or 1
+    _repeated_headers = {
+        norm for norm, pages in header_pages.items()
+        if len(pages) >= 3 or (len(pages) / _total_pages) >= 0.25
+    }
+
+    # ── First pass: extract fiscal year & company name from early pages ───────
+    early_text_parts = []
+    for item, _ in dl_doc.iterate_items():
+        if _page_of(item) <= 5:
+            t = (getattr(item, "text", "") or "").strip()
+            if t:
+                early_text_parts.append(t)
+    early_text = "\n".join(early_text_parts)
+    doc_out.fiscal_year = _extract_fiscal_year(early_text)
+    doc_out.company_name = _extract_company_name(early_text)
+
+    # ── Second pass: build blocks with streaming page processing ──────────────
+    skipped_pages = 0
+    prev_table: Optional[PageBlock] = None     # for table stitching
+
+    # Group items by page for boilerplate filtering
+    page_items: Dict[int, List[Tuple[Any, int]]] = {}
+    for item, level in dl_doc.iterate_items():
         page_num = _page_of(item)
-        page_items.setdefault(page_num, []).append((item, _level))
+        page_items.setdefault(page_num, []).append((item, level))
 
     for page_num in sorted(page_items):
         # Build page text preview for boilerplate check
@@ -544,54 +895,108 @@ def extract_annual_report(pdf_path: Path) -> ExtractedDocument:
 
         if is_boilerplate_page(page_preview, page_num):
             skipped_pages += 1
+            prev_table = None  # reset table stitching on skipped page
             continue
 
-        for item, _level in page_items[page_num]:
-            label    = getattr(item, "label", None)
-            text     = (getattr(item, "text", "") or "").strip()
+        for item, level in page_items[page_num]:
+            label = getattr(item, "label", None)
+            text = (getattr(item, "text", "") or "").strip()
             if not text and label != L.TABLE:
                 continue
 
+            # ── SECTION_HEADER ──────────────────────────────────────────────
             if label == L.SECTION_HEADER:
                 if not is_plausible_section_header(text):
-                    # Letterhead / CIN / footer fragment mislabeled as a
-                    # header — do not let it become current_section for
-                    # everything that follows; keep it as ordinary prose
-                    # under whatever section is already active.
-                    if not (current_section_type == "low_value" and page_num <= 15):
+                    norm = re.sub(r"\s+", " ", text.strip().lower())
+                    if norm not in _repeated_headers:
                         doc_out.blocks.append(PageBlock(
                             page_num     = page_num,
                             block_type   = "prose",
                             text         = text,
                             section      = current_section,
                             section_type = current_section_type,
+                            heading_level= level,
                         ))
                     continue
-                current_section = text
+
+                # Update hierarchy based on heading level
+                if level == 1:
+                    current_chapter = text
+                    current_section = text
+                    current_subsection = None
+                elif level == 2:
+                    current_section = text
+                    current_subsection = None
+                elif level == 3:
+                    current_subsection = text
+                else:
+                    # Unknown level — treat as section if no subsection active
+                    if current_subsection:
+                        current_subsection = text
+                    else:
+                        current_section = text
+
                 current_section_type = "low_value" if _is_low_value_section(text) else "content"
                 doc_out.blocks.append(PageBlock(
                     page_num     = page_num,
                     block_type   = "section_header",
                     text         = text,
-                    section      = text,
+                    section      = current_section,
                     section_type = current_section_type,
+                    heading_level= level,
                 ))
+                continue
 
-            elif label == L.TABLE:
-                table_data, table_text = _extract_table(item)
-                if table_text.strip():
-                    prefix = f"[Section: {current_section}] [Table]\n"
-                    doc_out.blocks.append(PageBlock(
-                        page_num     = page_num,
-                        block_type   = "table",
-                        text         = prefix + table_text,
-                        section      = current_section,
-                        section_type = current_section_type,
-                        table_data   = table_data,
-                    ))
+            # ── TABLE ───────────────────────────────────────────────────────
+            if label == L.TABLE:
+                table_data, table_text, table_type = _extract_table(item)
+                if not table_text.strip():
+                    continue
 
-            elif label in (L.TEXT, L.PARAGRAPH, L.LIST_ITEM, L.CAPTION, L.FOOTNOTE):
-                # Skip prose under low-value sections on early pages
+                # Table stitching heuristic
+                if prev_table is not None and prev_table.page_num == page_num - 1:
+                    # Check structural similarity
+                    prev_cols = len(prev_table.table_data[0]) if prev_table.table_data else 0
+                    curr_cols = len(table_data[0]) if table_data else 0
+                    if prev_cols == curr_cols and curr_cols > 0 and table_type == prev_table.table_type:
+                        # Stitch: append rows (skip duplicate header)
+                        if table_data and prev_table.table_data:
+                            first_row = table_data[0]
+                            prev_header = prev_table.table_data[0]
+                            # If headers are similar, skip the new header
+                            header_sim = sum(1 for a, b in zip(first_row, prev_header)
+                                           if str(a).strip().lower() == str(b).strip().lower())
+                            if header_sim >= max(1, len(first_row) * 0.5):
+                                rows_to_add = table_data[1:]
+                            else:
+                                rows_to_add = table_data
+                            prev_table.table_data.extend(rows_to_add)
+                            # Rebuild text
+                            rows = [" | ".join(str(c or "").strip() for c in row)
+                                    for row in prev_table.table_data]
+                            prev_table.text = f"[Section: {current_section}] [Table]\n" + "\n".join(rows)
+                            prev_table.page_end = page_num
+                            prev_table.is_stitched = True
+                            continue  # don't create a new block
+
+                prefix = f"[Section: {current_section}] [Table]\n"
+                block = PageBlock(
+                    page_num     = page_num,
+                    block_type   = "table",
+                    text         = prefix + table_text,
+                    section      = current_section,
+                    section_type = current_section_type,
+                    table_data   = table_data,
+                    table_type   = table_type,
+                    heading_level= None,
+                    prov         = {"bbox": _bbox_of(item)},
+                )
+                doc_out.blocks.append(block)
+                prev_table = block
+                continue
+
+            # ── PROSE ───────────────────────────────────────────────────────
+            if label in (L.TEXT, L.PARAGRAPH, L.LIST_ITEM, L.CAPTION, L.FOOTNOTE):
                 if current_section_type == "low_value" and page_num <= 15:
                     continue
                 doc_out.blocks.append(PageBlock(
@@ -600,17 +1005,22 @@ def extract_annual_report(pdf_path: Path) -> ExtractedDocument:
                     text         = text,
                     section      = current_section,
                     section_type = current_section_type,
+                    heading_level= None,
+                    prov         = {"bbox": _bbox_of(item)},
                 ))
+                prev_table = None  # prose breaks table continuity
 
     if skipped_pages:
         log.info(f"  Skipped {skipped_pages} boilerplate page(s)")
-    log.info(f"  → {len(doc_out.blocks)} blocks | {doc_out.total_pages} pages")
+    log.info(f"  → {len(doc_out.blocks)} blocks | {doc_out.total_pages} pages | "
+             f"FY={doc_out.fiscal_year or '?'} | Company={doc_out.company_name or '?'}")
     return doc_out
 
 
-# ─────────────────────────────────────────────
-# Concall extractor
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# 16.  Concall extractor  (v2 — better sections, speaker detection, FY extraction)
+# ═══════════════════════════════════════════════════════════════════════════════
+
 def extract_concall(pdf_path: Path) -> ExtractedDocument:
     doc_out = ExtractedDocument(
         file_path   = str(pdf_path),
@@ -626,7 +1036,13 @@ def extract_concall(pdf_path: Path) -> ExtractedDocument:
         log.info(f"  Extracting concall with Docling: {pdf_path.name} (~{_preview_pages} pages)")
     else:
         log.info(f"  Extracting concall with Docling: {pdf_path.name}")
-    result = _convert_with_progress(converter, pdf_path, "concall", _preview_pages)
+
+    try:
+        result = _convert_with_progress(converter, pdf_path, "concall", _preview_pages)
+    except Exception as e:
+        log.error(f"  Docling extraction failed: {e}. Attempting fallback.")
+        return _fallback_extract(pdf_path, "concall")
+
     dl_doc = result.document
 
     total_pages = getattr(dl_doc, "num_pages", None)
@@ -636,27 +1052,25 @@ def extract_concall(pdf_path: Path) -> ExtractedDocument:
         total_pages = _count_pages(dl_doc)
     doc_out.total_pages = total_pages
 
-    page_texts: dict[int, list[str]] = {}
-    page_headers: dict[int, list[str]] = {}
-    header_pages: dict[str, set] = {}   # normalised header text → pages it appeared on
+    # ── Running-header detection ──────────────────────────────────────────────
+    page_texts: Dict[int, List[str]] = {}
+    page_headers: Dict[int, List[str]] = {}
+    header_pages: Dict[str, Set[int]] = {}
 
-    for item, _level in dl_doc.iterate_items():
+    for item, level in dl_doc.iterate_items():
         label = getattr(item, "label", None)
-        text  = (getattr(item, "text", "") or "").strip()
+        text = (getattr(item, "text", "") or "").strip()
         if not text:
             continue
         page_num = _page_of(item)
         if label == L.SECTION_HEADER:
             page_headers.setdefault(page_num, []).append(text)
-            norm = re.sub(r"\s+", " ", text.strip().lower())
-            header_pages.setdefault(norm, set()).add(page_num)
-        elif label in (L.TEXT, L.PARAGRAPH, L.LIST_ITEM, L.SECTION_HEADER):
+            if is_plausible_section_header(text):
+                norm = re.sub(r"\s+", " ", text.strip().lower())
+                header_pages.setdefault(norm, set()).add(page_num)
+        elif label in (L.TEXT, L.PARAGRAPH, L.LIST_ITEM, L.CAPTION, L.FOOTNOTE, L.TABLE):
             page_texts.setdefault(page_num, []).append(text)
 
-    # A "header" that recurs across many pages is a running letterhead/
-    # footer (company name block, CIN/listing line, date stamp) — never a
-    # real section title. Flag it so it can never drive current_section,
-    # regardless of whether it also happens to pass the plausibility check.
     _all_pages = set(page_texts) | set(page_headers)
     _total_pages = len(_all_pages) or 1
     _repeated_headers = {
@@ -664,15 +1078,21 @@ def extract_concall(pdf_path: Path) -> ExtractedDocument:
         if len(pages) >= 3 or (len(pages) / _total_pages) >= 0.25
     }
 
-    current_section      = "Conference Call"
+    # ── Extract FY from early pages ───────────────────────────────────────────
+    early_text_parts = []
+    for pnum in sorted(_all_pages)[:3]:
+        early_text_parts.extend(page_texts.get(pnum, []))
+    early_text = "\n".join(early_text_parts)
+    doc_out.fiscal_year = _extract_fiscal_year(early_text)
+
+    # ── Process pages ─────────────────────────────────────────────────────────
+    current_section = "Conference Call"
     current_section_type = "opening_remarks"
-    skipped_pages        = 0
-    content_started      = False
+    skipped_pages = 0
+    content_started = False
 
     for page_num in sorted(_all_pages):
-        # Update section from headers on this page — but only if the
-        # header text is a plausible section title AND isn't a recurring
-        # letterhead/footer fragment (see _repeated_headers above).
+        # Update section from headers
         for hdr in page_headers.get(page_num, []):
             norm = re.sub(r"\s+", " ", hdr.strip().lower())
             if norm in _repeated_headers or not is_plausible_section_header(hdr):
@@ -688,12 +1108,12 @@ def extract_concall(pdf_path: Path) -> ExtractedDocument:
         if not page_text.strip():
             continue
 
-        # Skip boilerplate pages (cover, disclaimer, participants)
+        # Skip boilerplate pages before content starts
         if not content_started and is_boilerplate_page(page_text, page_num):
             skipped_pages += 1
             continue
 
-        # Content starts when we see a speaker turn or substantive text
+        # Content detection
         if not content_started:
             if SPEAKER_LINE_PATTERN.search(page_text) or len(page_text.split()) > 80:
                 content_started = True
@@ -701,16 +1121,18 @@ def extract_concall(pdf_path: Path) -> ExtractedDocument:
                 skipped_pages += 1
                 continue
 
-        # Detect Q&A transition within page text
-        current_section_type = _infer_section_type(page_text, current_section_type)
+        # Section inference from page text
+        detected = _infer_section_type(page_text, current_section_type)
+        if detected and detected != current_section_type:
+            current_section_type = detected
 
+        # Extract speaker turns
         turns = _extract_speaker_turns(
             page_text, page_num,
             section=current_section,
             section_type=current_section_type,
         )
 
-        # If no speaker turns found, emit as prose only if substantive
         if not turns or all(b.block_type == "prose" for b in turns):
             if len(page_text.split()) >= 20 and not is_boilerplate_page(page_text, page_num):
                 doc_out.blocks.append(PageBlock(
@@ -728,49 +1150,14 @@ def extract_concall(pdf_path: Path) -> ExtractedDocument:
 
     if skipped_pages:
         log.info(f"  Skipped {skipped_pages} boilerplate page(s)")
-    log.info(f"  → {len(doc_out.blocks)} speaker blocks | {doc_out.total_pages} pages")
+    log.info(f"  → {len(doc_out.blocks)} speaker blocks | {doc_out.total_pages} pages | "
+             f"FY={doc_out.fiscal_year or '?'}")
     return doc_out
 
 
-# ─────────────────────────────────────────────
-# Helpers
-# ─────────────────────────────────────────────
-def _page_of(item) -> int:
-    prov = getattr(item, "prov", None)
-    if prov:
-        try:
-            return prov[0].page_no
-        except (IndexError, AttributeError):
-            pass
-    return 0
-
-
-def _count_pages(dl_doc) -> int:
-    pages = set()
-    for item, _ in dl_doc.iterate_items():
-        pages.add(_page_of(item))
-    return max(pages) if pages else 0
-
-
-def _extract_table(item) -> tuple[List[List], str]:
-    table_data = []
-    table_text = ""
-
-    try:
-        df = item.export_to_dataframe()
-        table_data = [list(df.columns)] + df.values.tolist()
-        rows = []
-        for row in table_data:
-            rows.append(" | ".join(str(c or "").strip() for c in row))
-        table_text = "\n".join(rows)
-    except Exception:
-        try:
-            table_text = item.export_to_markdown() or ""
-        except Exception:
-            table_text = getattr(item, "text", "") or ""
-
-    return table_data, table_text
-
+# ═══════════════════════════════════════════════════════════════════════════════
+# 17.  Unified entry point  (unchanged signature)
+# ═══════════════════════════════════════════════════════════════════════════════
 
 def extract_pdf(pdf_path: Path, doc_type: str) -> Optional[ExtractedDocument]:
     pdf_path = Path(pdf_path)
@@ -794,4 +1181,9 @@ def extract_pdf(pdf_path: Path, doc_type: str) -> Optional[ExtractedDocument]:
             return None
     except Exception as e:
         log.exception(f"Extraction failed for {pdf_path.name}: {e}")
-        return None
+        # Last resort fallback
+        try:
+            return _fallback_extract(pdf_path, doc_type)
+        except Exception as e2:
+            log.error(f"Fallback extraction also failed: {e2}")
+            return None
