@@ -1,88 +1,32 @@
 #!/usr/bin/env python3
 """
-ingest.py
-Production ETL orchestration CLI:
-  MinIO PDFs (annual reports / concalls)
-    → Docling extract → chunk → embed → Qdrant + MySQL
+ingest.py  —  Production ETL orchestration CLI v2
 
-PDFs live in MinIO across two doc-type-specific buckets (no shared bucket,
-no year subfolder — year is parsed from the filename):
+MinIO PDFs (annual reports / concalls)
+  → Docling extract (v2: +fiscal_year, +company_name, +heading_level, +table_type)
+  → chunk (v2: semantic chunking, rich metadata, structured embedding text)
+  → embed (v2: structured query/document symmetry)
+  → Qdrant (v2: full metadata payload for intent-aware retrieval) + MySQL
+
+PDFs live in MinIO across two doc-type-specific buckets:
 
   annual-reports/{symbol_lower}/{filename}.pdf
   concall-transcripts/{symbol_lower}/{filename}.pdf
 
-The stored `minio_key` in MySQL is the full "{bucket}/{key}" path, matching
-the `object_path` convention already used by the Quant Copilot pdf_documents
-table, so it stays globally unique across both buckets.
+The stored `minio_key` in MySQL is the full "{bucket}/{key}" path.
 
 Usage:
     python ingest.py --symbol HAL
     python ingest.py --symbol HAL --type annual
     python ingest.py --symbol HAL --type concall
-    python ingest.py --all                       # ingest every object in both buckets
-    python ingest.py --all --year 2020            # ingest only PDFs from 2020
-    python ingest.py --all --batch-size 10        # process in batches of 10
-    python ingest.py --all --dry-run              # validate + report only, ingest nothing
+    python ingest.py --all
+    python ingest.py --all --year 2020
+    python ingest.py --all --batch-size 10
+    python ingest.py --all --dry-run
     python ingest.py --file annual-reports/bel/2025_Financial_Year_2025_from_bse.pdf
-                                                   # ingest exactly one object, by full
-                                                   # "{bucket}/{key}" path — no bucket listing,
-                                                   # can be repeated for multiple specific files
-    python ingest.py --stats                      # show DB stats
-    python ingest.py --list                       # list all MinIO keys available
-    python ingest.py --report                     # show the last run's validation report
-
-WHAT CHANGED IN THIS VERSION (Phase-2 orchestration pass)
-───────────────────────────────────────────────────────────
-This file remains a THIN orchestration layer — no changes to extract_pdf(),
-chunk_document(), load_chunks_to_qdrant(), or the MySQL schema. Everything
-below is new coordination logic around those existing calls:
-
-  1. Pre-flight validation — before touching MinIO or Qdrant, each object is
-     checked for: correct key layout, resolvable symbol/doc_type/year, and
-     (once downloaded) that Docling can actually open the PDF. Bad objects
-     are reported and skipped instead of blowing up the whole run.
-
-  2. Duplicate detection via content fingerprint — MinIO's ETag is the MD5
-     of the object for single-part uploads, so we get a free, download-free
-     content hash from `list_objects()`/`stat_object()`. Two different
-     minio_keys with the same ETag are the same PDF under a different name;
-     the second one is skipped and reported as a duplicate rather than
-     re-embedded. This needed no DB schema change — the fingerprint lives
-     in a small local JSON sidecar state file, not in MySQL.
-
-  3. Incremental ingestion — if a document's ETag matches what's already
-     recorded, it's skipped entirely (unchanged). If the ETag has *changed*
-     for an already-ingested minio_key (a replaced file), it's treated as
-     an update and re-ingested rather than silently skipped, without
-     touching unrelated documents or rebuilding the whole collection.
-
-  4. Batch processing + checkpointing — objects are processed in
-     configurable batches; the sidecar state file is flushed after every
-     document (not just at the end), so an interrupted run (Ctrl-C, crash,
-     OOM) can be resumed by simply re-running the same command — already
-     completed documents are skipped automatically via the existing
-     is_already_ingested()/ETag check, no separate --resume flag needed.
-
-  5. Data-quality checks — chunk count, average chunk size, chunk metadata
-     completeness (speaker/section/page presence where expected), and a
-     comparison of "chunks created" vs "chunks reported in Qdrant" are
-     computed per document and rolled into the final report as warnings
-     (not hard failures — a thin sparse annual report is legitimate, but
-     it should be visible).
-
-  6. Structured, professional logging — every document gets one aligned
-     progress line with elapsed time; a lightweight in-house progress bar
-     (no new dependency) shows overall run progress; peak memory (RSS) is
-     sampled per document when the `resource` module is available (POSIX)
-     and silently omitted on platforms where it isn't (Windows).
-
-  7. Final validation report — printed at the end AND persisted to
-     {LOG_DIR}/ingest_reports/{timestamp}.json so `--report` can redisplay
-     the most recent run without re-ingesting anything.
-
-  8. Recovery — one document's failure never aborts the batch; failures are
-     collected and the run always ends with a full failure report and a
-     non-zero (but still completed) exit path.
+    python ingest.py --stats
+    python ingest.py --list
+    python ingest.py --report
 """
 
 from __future__ import annotations
@@ -119,7 +63,9 @@ from db.database import (
     insert_chunk,
 )
 from pipeline.extract import extract_pdf
-from pipeline.loader import chunk_document, load_chunks_to_qdrant
+from pipeline.loader import chunk_document
+from pipeline.loader.chunker import build_embedding_text
+from pipeline.loader.embedder import embed_texts
 from utils.logger import get_logger
 
 log = get_logger(__name__, LOG_DIR)
@@ -133,7 +79,60 @@ except ImportError:
 
 
 # ─────────────────────────────────────────────
-# Doc-type → bucket mapping (real layout, not a single shared bucket)
+# Qdrant client (module-level singleton)
+# ─────────────────────────────────────────────
+_qdrant_client = None
+
+
+def _get_qdrant_client():
+    global _qdrant_client
+    if _qdrant_client is not None:
+        return _qdrant_client
+    try:
+        from qdrant_client import QdrantClient
+        from config.settings import QDRANT_HOST, QDRANT_PORT, QDRANT_API_KEY
+        url = f"http://{QDRANT_HOST}:{QDRANT_PORT}"
+        kwargs = {"url": url}
+        if QDRANT_API_KEY:
+            kwargs["api_key"] = QDRANT_API_KEY
+        _qdrant_client = QdrantClient(**kwargs)
+        log.info(f"Qdrant client connected → {url}")
+    except Exception as e:
+        log.warning(f"Could not initialise Qdrant client from config: {e}")
+        _qdrant_client = None
+    return _qdrant_client
+
+
+# ─────────────────────────────────────────────
+# Collection name — uses SAME names as old qdrant_loader.py
+#   annual_report → "annual_reports"
+#   concall       → "concalls"
+# This ensures retriever_v2 (which calls old qdrant_loader.query_collection)
+# reads from the SAME collections that ingest_v2 writes to.
+# ─────────────────────────────────────────────
+def _collection_name(doc_type: str) -> str:
+    from pipeline.loader.qdrant_loader import get_collection_name
+    return get_collection_name(doc_type)
+
+
+def _ensure_collection(name: str) -> None:
+    """Create collection if it doesn't exist (same logic as old qdrant_loader)."""
+    from qdrant_client.models import VectorParams, Distance
+    client = _get_qdrant_client()
+    if client is None:
+        return
+    existing = {c.name for c in client.get_collections().collections}
+    if name not in existing:
+        from config.settings import EMBEDDING_DIM
+        client.create_collection(
+            collection_name=name,
+            vectors_config=VectorParams(size=EMBEDDING_DIM, distance=Distance.COSINE),
+        )
+        log.info(f"  Created Qdrant collection '{name}' (dim={EMBEDDING_DIM}, cosine)")
+
+
+# ─────────────────────────────────────────────
+# Doc-type → bucket mapping
 # ─────────────────────────────────────────────
 DOC_TYPE_BUCKETS = {
     "annual_report": "annual-reports",
@@ -144,14 +143,7 @@ _YEAR_RE = re.compile(r"^(\d{4})")
 _VALID_SYMBOL_RE = re.compile(r"^[A-Z0-9&\-]{2,20}$")
 
 # ─────────────────────────────────────────────
-# Sidecar state — duplicate/content-hash tracking + checkpointing
-#
-# NOT a MySQL schema change: MySQL remains the source of truth for
-# "is this document ingested"; this local file is purely an ETL-run
-# optimization so we don't need to download a PDF to know we've already
-# seen its exact bytes under some other key, and so an interrupted run
-# has something cheap to resume against without re-querying MySQL for
-# every object up front.
+# Sidecar state
 # ─────────────────────────────────────────────
 _STATE_PATH = Path(LOG_DIR) / "ingest_state.json"
 _REPORT_DIR = Path(LOG_DIR) / "ingest_reports"
@@ -188,14 +180,8 @@ def _minio_client() -> Minio:
 
 # ─────────────────────────────────────────────
 # Key parsing + validation helpers
-# Key layout within a doc-type bucket: {symbol_lower}/{filename}.pdf
 # ─────────────────────────────────────────────
 def _parse_minio_key(key: str, doc_type: str, bucket: str) -> Optional[dict]:
-    """
-    Parse a MinIO object key (within a doc_type-specific bucket) into
-    (symbol, doc_type, year, title). Returns None if the key doesn't match
-    the expected layout or isn't a PDF.
-    """
     if not key.lower().endswith(".pdf"):
         return None
 
@@ -225,14 +211,10 @@ class ValidationIssue:
     minio_key: str
     field:     str
     message:   str
-    severity:  str = "error"   # "error" | "warning"
+    severity:  str = "error"
 
 
 def _validate_pdf_metadata(pdf_info: dict) -> List[ValidationIssue]:
-    """
-    Pre-flight metadata validation, run BEFORE any download or embedding
-    work happens. Catches malformed keys / unresolvable symbols cheaply.
-    """
     issues: List[ValidationIssue] = []
     key = pdf_info.get("minio_key", "?")
 
@@ -254,11 +236,6 @@ def _validate_pdf_metadata(pdf_info: dict) -> List[ValidationIssue]:
 
 
 def _quick_pdf_sanity_check(local_path: Path) -> Optional[str]:
-    """
-    Cheap "is this actually a PDF" check before handing it to the (slow)
-    Docling extraction pipeline — avoids burning minutes on a corrupt or
-    truncated download. Returns an error string, or None if OK.
-    """
     try:
         with open(local_path, "rb") as f:
             header = f.read(5)
@@ -272,22 +249,6 @@ def _quick_pdf_sanity_check(local_path: Path) -> Optional[str]:
 
 
 def _resolve_single_object(path: str, client: Optional[Minio] = None) -> dict:
-    """
-    Resolve a single explicit MinIO object into the same pdf_info shape
-    list_minio_pdfs() produces, WITHOUT listing the whole bucket.
-
-    Accepts a full "{bucket}/{key}" path — e.g.
-        annual-reports/bel/2025_Financial_Year_2025_from_bse.pdf
-    which is exactly the `minio_key` format already stored in MySQL, so this
-    is copy-pasteable straight out of `--list` or the DB.
-
-    Also accepts a bare "{symbol}/{filename}.pdf" key if --type is supplied
-    separately by the caller (see main()), since the bucket is then implied.
-
-    Raises ValueError with an actionable message on any resolution failure
-    (unknown bucket, missing object, wrong extension) — the caller decides
-    whether that's fatal for the whole run or just this one file.
-    """
     if client is None:
         client = _minio_client()
 
@@ -327,7 +288,7 @@ def _resolve_single_object(path: str, client: Optional[Minio] = None) -> dict:
 
 
 # ─────────────────────────────────────────────
-# PDF discovery from MinIO (now also captures ETag for dedup)
+# PDF discovery from MinIO
 # ─────────────────────────────────────────────
 def list_minio_pdfs(
     symbol:          Optional[str] = None,
@@ -335,7 +296,6 @@ def list_minio_pdfs(
     year:            Optional[int] = None,
     client:          Optional[Minio] = None,
 ) -> List[dict]:
-    """List all matching PDF objects across the doc-type-specific MinIO buckets."""
     if client is None:
         client = _minio_client()
 
@@ -358,8 +318,6 @@ def list_minio_pdfs(
             if year is not None and parsed.get("year") != year:
                 continue
             parsed["size_bytes"] = obj.size or 0
-            # ETag is the object's MD5 for single-part uploads — a free
-            # content fingerprint we can dedup on without downloading.
             parsed["etag"] = (obj.etag or "").strip('"')
             pdfs.append(parsed)
 
@@ -367,7 +325,6 @@ def list_minio_pdfs(
 
 
 def _download_pdf(bucket: str, key: str, client: Minio) -> Path:
-    """Download object to INGEST_TMP_DIR and return local Path."""
     INGEST_TMP_DIR.mkdir(parents=True, exist_ok=True)
     local_path = INGEST_TMP_DIR / Path(key).name
     client.fget_object(bucket, key, str(local_path))
@@ -386,9 +343,6 @@ def _peak_rss_mb() -> Optional[float]:
     if not _HAS_RESOURCE:
         return None
     try:
-        # ru_maxrss is KB on Linux, bytes on macOS — KB is the common case
-        # for the deployment target here (Linux server), so report as MB
-        # assuming KB; this is a diagnostic number, not a billing figure.
         return round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, 1)
     except Exception:
         return None
@@ -465,7 +419,6 @@ class RunReport:
         ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
         path = _REPORT_DIR / f"{ts}.json"
         path.write_text(json.dumps(asdict(self), indent=2, default=str), encoding="utf-8")
-        # Also keep a stable "latest" pointer for --report
         (_REPORT_DIR / "latest.json").write_text(
             json.dumps(asdict(self), indent=2, default=str), encoding="utf-8"
         )
@@ -483,7 +436,84 @@ def _print_last_report() -> None:
 
 
 # ─────────────────────────────────────────────
-# Core ingestion function (one PDF) — now validation + dedup + quality aware
+# Qdrant upsert helper (v2 — full metadata payload)
+# ─────────────────────────────────────────────
+def _upsert_chunks_to_qdrant(
+    chunks: List[Any],
+    doc_type: str,
+    vectors: List[List[float]],
+) -> str:
+    """Upsert chunks with full v2 metadata payload to Qdrant."""
+    collection = _collection_name(doc_type)
+    _ensure_collection(collection)
+    client = _get_qdrant_client()
+
+    if client is None:
+        raise RuntimeError("Qdrant client not available — cannot upsert vectors")
+
+    from qdrant_client.models import PointStruct
+
+    points = []
+    for chunk, vector in zip(chunks, vectors):
+        payload = {
+            # Core identity
+            "text": chunk.text,
+            "chunk_type": chunk.chunk_type,
+            "section": chunk.section,
+            "section_type": chunk.section_type,
+            "symbol": chunk.symbol,
+            "year": chunk.year,
+            "doc_type": chunk.doc_type,
+            "page_start": chunk.page_start,
+            "page_end": chunk.page_end,
+            "word_count": chunk.word_count,
+            "importance_score": chunk.importance_score,
+            "retrieval_tags": chunk.retrieval_tags,
+
+            # v2 hierarchy
+            "chapter": chunk.chapter,
+            "subsection": chunk.subsection,
+            "hierarchy_path": chunk.hierarchy_path,
+
+            # v2 financial entities
+            "financial_metrics": chunk.financial_metrics,
+            "products_mentioned": chunk.products_mentioned,
+            "business_segments": chunk.business_segments,
+            "geography_mentioned": chunk.geography_mentioned,
+            "entities_mentioned": chunk.entities_mentioned,
+            "currencies_mentioned": chunk.currencies_mentioned,
+            "fiscal_period": chunk.fiscal_period,
+            "quarter": chunk.quarter,
+
+            # v2 semantic flags
+            "forward_looking": chunk.forward_looking,
+            "historical": chunk.historical,
+            "management_opinion": chunk.management_opinion,
+            "quantitative_guidance": chunk.quantitative_guidance,
+            "contains_guidance": chunk.contains_guidance,
+            "contains_commitment": chunk.contains_commitment,
+            "contains_strategic": chunk.contains_strategic,
+            "contains_contract": chunk.contains_contract,
+            "is_duplicate": chunk.is_duplicate,
+            "is_low_information": chunk.is_low_information,
+
+            # v2 table-specific
+            "table_type": chunk.table_type,
+            "table_summary": chunk.table_summary,
+
+            # Speaker (concalls)
+            "speaker": chunk.speaker,
+            "speaker_role": chunk.speaker_role,
+        }
+        points.append(PointStruct(id=chunk.chunk_id, vector=vector, payload=payload))
+
+    client.upsert(collection_name=collection, points=points, wait=True)
+    log.info(f"  Upserted {len(points)} vectors to Qdrant collection '{collection}'")
+    return collection
+
+
+# ─────────────────────────────────────────────
+# Core ingestion function (one PDF) — v2 enhanced
 # ─────────────────────────────────────────────
 def ingest_pdf(
     pdf_info: dict,
@@ -532,7 +562,7 @@ def ingest_pdf(
                                      "error": "; ".join(i.message for i in hard_issues)})
         return "skipped_invalid"
 
-    # ── Step 0.5: duplicate content detection (free — uses ETag, no download) ──
+    # ── Step 0.5: duplicate content detection ──────────────────────────────
     content_hash_map = state.setdefault("content_hash_to_key", {})
     if not force and etag and etag in content_hash_map and content_hash_map[etag] != minio_key:
         original_key = content_hash_map[etag]
@@ -542,7 +572,7 @@ def ingest_pdf(
             report.documents_skipped += 1
         return "skipped_duplicate"
 
-    # ── Step 0.6: incremental check — unchanged since last ingestion? ──────────
+    # ── Step 0.6: incremental check ────────────────────────────────────────
     prior_etag = state.setdefault("etags", {}).get(minio_key)
     already_in_db = is_already_ingested(minio_key)
     if not force and already_in_db and prior_etag and etag and prior_etag == etag:
@@ -554,8 +584,6 @@ def ingest_pdf(
         log.info(f"  ↻ Content changed since last ingestion (ETag {prior_etag[:8]}→{etag[:8]}) "
                   f"— re-ingesting")
     elif not force and already_in_db and not prior_etag:
-        # DB says ingested but we have no local fingerprint history (first run
-        # of this state file against an existing DB) — respect DB and skip.
         log.info("  ⏭ Already ingested (per DB), skipping (use --force to re-ingest)")
         if report is not None:
             report.documents_skipped += 1
@@ -585,23 +613,22 @@ def ingest_pdf(
 
     try:
         # Step 1: Download from MinIO
-        log.info("[1/4] Downloading from MinIO...")
+        log.info("[1/5] Downloading from MinIO...")
         t_step = time.time()
         local_path = _download_pdf(bucket, key, client)
         timing["download_sec"] = round(time.time() - t_step, 2)
         log.info(f"  → {local_path} ({file_size_kb} KB) in {timing['download_sec']}s")
 
-        # Step 1.5: sanity check + fingerprint the actual bytes (belt & braces
-        # in case MinIO ETag wasn't a plain MD5, e.g. multipart uploads)
+        # Step 1.5: sanity check + fingerprint
         sanity_err = _quick_pdf_sanity_check(local_path)
         if sanity_err:
             raise ValueError(f"PDF sanity check failed: {sanity_err}")
-        if not etag or "-" in etag:  # "-" in ETag means multipart, not a plain MD5
+        if not etag or "-" in etag:
             etag = _file_md5(local_path)
             pdf_info["etag"] = etag
 
-        # Step 2: Extract (Docling)
-        log.info("[2/4] Extracting with Docling...")
+        # Step 2: Extract (Docling v2)
+        log.info("[2/5] Extracting with Docling...")
         t_step = time.time()
         extracted = extract_pdf(local_path, doc_type)
         timing["extract_sec"] = round(time.time() - t_step, 2)
@@ -610,8 +637,17 @@ def ingest_pdf(
         log.info(f"  → {len(extracted.blocks)} blocks | {extracted.total_pages} pages "
                   f"in {timing['extract_sec']}s")
 
-        # Step 3: Chunk
-        log.info("[3/4] Chunking...")
+        # v2: Use extracted fiscal_year / company_name when available
+        extracted_year = getattr(extracted, "fiscal_year", None)
+        extracted_company = getattr(extracted, "company_name", None)
+        if extracted_year and not year:
+            year = extracted_year
+            log.info(f"  → Resolved fiscal year from document content: FY{year}")
+        if extracted_company:
+            log.info(f"  → Detected company name: {extracted_company}")
+
+        # Step 3: Chunk (v2)
+        log.info("[3/5] Chunking...")
         t_step = time.time()
         chunks = chunk_document(extracted, symbol, year, title)
         timing["chunk_sec"] = round(time.time() - t_step, 2)
@@ -619,29 +655,78 @@ def ingest_pdf(
             raise ValueError("Chunker returned no chunks")
         log.info(f"  → {len(chunks)} chunks in {timing['chunk_sec']}s")
 
-        # ── Data-quality checks on the chunk set (report-only, non-fatal) ────
+        # Data-quality checks
         _check_chunk_quality(chunks, minio_key, report)
 
-        # Step 4: Embed + upsert to Qdrant
-        log.info("[4/4] Embedding + loading to Qdrant...")
+        # Step 4: Build structured embedding texts (v2)
+        log.info("[4/5] Building structured embedding texts...")
         t_step = time.time()
-        collection_name = load_chunks_to_qdrant(chunks, doc_type)
-        timing["embed_upload_sec"] = round(time.time() - t_step, 2)
+        embedding_texts = [build_embedding_text(c) for c in chunks]
+        timing["embed_build_sec"] = round(time.time() - t_step, 2)
+        log.info(f"  → {len(embedding_texts)} structured texts in {timing['embed_build_sec']}s")
 
-        # Record chunks in MySQL
+        # Step 5: Embed + upsert to Qdrant (v2)
+        log.info("[5/5] Embedding + loading to Qdrant...")
+        t_step = time.time()
+        vectors = embed_texts(embedding_texts)
+        timing["embed_sec"] = round(time.time() - t_step, 2)
+
+        t_step = time.time()
+        collection_name = _upsert_chunks_to_qdrant(chunks, doc_type, vectors)
+        timing["upload_sec"] = round(time.time() - t_step, 2)
+
+        # Record chunks in MySQL (v2: extended metadata)
         for chunk in chunks:
-            insert_chunk(
-                doc_id      = doc_id,
-                qdrant_id   = chunk.chunk_id,
-                collection  = collection_name,
-                chunk_index = chunk.chunk_index,
-                chunk_type  = chunk.chunk_type,
-                section     = chunk.section,
-                speaker     = chunk.speaker,
-                page_start  = chunk.page_start,
-                page_end    = chunk.page_end,
-                word_count  = chunk.word_count,
-            )
+            chunk_meta = {
+                "doc_id": doc_id,
+                "qdrant_id": chunk.chunk_id,
+                "collection": collection_name,
+                "chunk_index": chunk.chunk_index,
+                "chunk_type": chunk.chunk_type,
+                "section": chunk.section,
+                "speaker": chunk.speaker,
+                "page_start": chunk.page_start,
+                "page_end": chunk.page_end,
+                "word_count": chunk.word_count,
+                # v2 fields (graceful fallback if DB schema not migrated)
+                "section_type": chunk.section_type,
+                "chapter": chunk.chapter,
+                "subsection": chunk.subsection,
+                "hierarchy_path": json.dumps(chunk.hierarchy_path) if chunk.hierarchy_path else None,
+                "financial_metrics": json.dumps(chunk.financial_metrics) if chunk.financial_metrics else None,
+                "products_mentioned": json.dumps(chunk.products_mentioned) if chunk.products_mentioned else None,
+                "geography_mentioned": json.dumps(chunk.geography_mentioned) if chunk.geography_mentioned else None,
+                "currencies_mentioned": json.dumps(chunk.currencies_mentioned) if chunk.currencies_mentioned else None,
+                "forward_looking": chunk.forward_looking,
+                "historical": chunk.historical,
+                "quantitative_guidance": chunk.quantitative_guidance,
+                "contains_commitment": chunk.contains_commitment,
+                "contains_strategic": chunk.contains_strategic,
+                "contains_contract": chunk.contains_contract,
+                "is_duplicate": chunk.is_duplicate,
+                "is_low_information": chunk.is_low_information,
+                "table_type": chunk.table_type,
+                "table_summary": chunk.table_summary,
+                "importance_score": chunk.importance_score,
+                "speaker_role": chunk.speaker_role,
+            }
+            try:
+                insert_chunk(**chunk_meta)
+            except TypeError as e:
+                # DB schema hasn't been migrated for v2 fields — fall back to v1 insert
+                log.debug(f"DB schema v1 fallback for insert_chunk: {e}")
+                insert_chunk(
+                    doc_id=doc_id,
+                    qdrant_id=chunk.chunk_id,
+                    collection=collection_name,
+                    chunk_index=chunk.chunk_index,
+                    chunk_type=chunk.chunk_type,
+                    section=chunk.section,
+                    speaker=chunk.speaker,
+                    page_start=chunk.page_start,
+                    page_end=chunk.page_end,
+                    word_count=chunk.word_count,
+                )
 
         duration = time.time() - t0
         mark_document_ingested(doc_id, len(chunks), extracted.total_pages)
@@ -653,10 +738,10 @@ def ingest_pdf(
             chunks_created = len(chunks),
             duration_sec   = duration,
         )
-        log.info(f"  ✓ Done in {duration:.1f}s | {len(chunks)} chunks stored in Qdrant | "
-                 f"peak RSS {_peak_rss_mb() or 'n/a'} MB")
+        log.info(f"  ✓ Done in {duration:.1f}s | {len(chunks)} chunks stored | "
+                  f"peak RSS {_peak_rss_mb() or 'n/a'} MB")
 
-        # ── Update sidecar state (checkpoint — flushed immediately) ──────────
+        # Update sidecar state
         state["etags"][minio_key] = etag
         if etag:
             state["content_hash_to_key"][etag] = minio_key
@@ -669,6 +754,7 @@ def ingest_pdf(
             report.per_doc_timing.append({
                 "minio_key": minio_key, "duration_sec": round(duration, 2),
                 **timing, "peak_rss_mb": _peak_rss_mb(),
+                "fiscal_year": year, "company_name": extracted_company,
             })
         return "ingested"
 
@@ -712,40 +798,56 @@ def _check_chunk_quality(chunks: list, minio_key: str, report: Optional[RunRepor
 
     if avg_words and avg_words < 15:
         report.warnings.append(
-            f"{minio_key}: unusually small average chunk size ({avg_words:.0f} words) "
-            f"— check extraction quality"
+            f"{minio_key}: unusually small average chunk size ({avg_words:.0f} words)"
         )
+
     missing_section = sum(1 for c in chunks if not getattr(c, "section", None))
     if missing_section and missing_section / len(chunks) > 0.5:
         report.warnings.append(
             f"{minio_key}: {missing_section}/{len(chunks)} chunks missing section metadata"
         )
+
+    # v2: Check canonical section coverage
+    has_canonical = sum(1 for c in chunks if getattr(c, "section_type", None))
+    if has_canonical < len(chunks) * 0.3:
+        report.warnings.append(
+            f"{minio_key}: only {has_canonical}/{len(chunks)} chunks have canonical section_type — "
+            f"check extraction quality"
+        )
+
+    # v2: Check semantic flag density
+    has_flags = sum(1 for c in chunks if getattr(c, "forward_looking", False)
+                    or getattr(c, "quantitative_guidance", False)
+                    or getattr(c, "contains_commitment", False))
+    if len(chunks) > 10 and has_flags < 2:
+        report.warnings.append(
+            f"{minio_key}: very few semantic flags detected ({has_flags}/{len(chunks)}) — "
+            f"document may be mostly boilerplate"
+        )
+
+    # v2: Check duplicate rate
+    dupes = sum(1 for c in chunks if getattr(c, "is_duplicate", False))
+    if dupes > len(chunks) * 0.2:
+        report.warnings.append(
+            f"{minio_key}: high duplicate rate ({dupes}/{len(chunks)}) — "
+            f"consider deduplication tuning"
+        )
+
+    # v2: Check low-info rate
+    low_info = sum(1 for c in chunks if getattr(c, "is_low_information", False))
+    if low_info > len(chunks) * 0.3:
+        report.warnings.append(
+            f"{minio_key}: high low-information rate ({low_info}/{len(chunks)})"
+        )
+
     if len(chunks) < 3:
         report.warnings.append(
-            f"{minio_key}: only {len(chunks)} chunk(s) produced — document may be too short "
-            f"or extraction may have under-segmented it"
+            f"{minio_key}: only {len(chunks)} chunk(s) produced — document may be too short"
         )
 
 
 # ─────────────────────────────────────────────
 # Parallel batch worker
-#
-# Only helps `--all` / `--symbol` runs over MANY files — a single `--file`
-# run is already using every thread Docling was given inside one process,
-# so running it through this path buys nothing. On an i5-1240P (12 cores /
-# 16 threads) with 16GB RAM, 2 workers is the sane ceiling: each worker
-# loads its own Docling converter (~1-2GB) + embedding model, and Docling's
-# own internal thread pool is already tuned to the host in pdf_extractor.py,
-# so more than 2-3 workers just re-introduces the thread-oversubscription
-# problem this whole change is trying to avoid.
-#
-# Trade-off: each worker gets its own MinIO client and does NOT share the
-# in-memory `state` dict (etag/content-hash dedup), so cross-document
-# duplicate-content detection within a single parallel run is skipped.
-# The MySQL `is_already_ingested()` check still runs per-document inside
-# ingest_pdf(), so previously-completed documents are still safely skipped
-# on re-runs — this only weakens same-run duplicate detection, not
-# incremental/idempotent re-runs.
 # ─────────────────────────────────────────────
 def _ingest_worker(pdf_info: dict, force: bool, dry_run: bool) -> Dict[str, Any]:
     """Runs in a separate process. Returns a plain dict (must be picklable)."""
@@ -799,7 +901,7 @@ def _run_batch_parallel(
             if result["status"] == "ingested":
                 report.documents_processed += 1
             elif result["status"] == "failed":
-                pass  # failures list appended below
+                pass
             else:
                 report.documents_skipped += 1
                 if result["status"] == "skipped_duplicate":
@@ -824,7 +926,7 @@ def _run_batch_parallel(
 # CLI
 # ─────────────────────────────────────────────
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Financial RAG — Ingestion Pipeline (MinIO → Qdrant)")
+    ap = argparse.ArgumentParser(description="Financial RAG — Ingestion Pipeline (MinIO → Qdrant) v2")
     ap.add_argument("--symbol", "-s",  help="Company symbol (e.g. HAL)")
     ap.add_argument("--type", "-t", choices=["annual", "concall"], help="Filter by document type")
     ap.add_argument("--year", "-y", type=int, help="Filter by year (e.g. 2020)")
@@ -833,7 +935,6 @@ def main() -> None:
         "--file", "-f", action="append", default=None, metavar="BUCKET/KEY",
         help="Ingest one exact object by full path, e.g. "
              "'annual-reports/bel/2025_Financial_Year_2025_from_bse.pdf'. "
-             "Resolved directly via stat_object — no bucket listing required. "
              "Repeatable: --file a/x.pdf --file b/y.pdf",
     )
     ap.add_argument("--force", action="store_true", help="Re-ingest already ingested docs")
@@ -930,9 +1031,6 @@ def main() -> None:
           f"{' [DRY RUN]' if args.dry_run else ''}\n")
 
     if use_parallel:
-        # Parallel path skips the sequential batch/state-checkpoint loop below
-        # (each worker uses its own transient state — see _run_batch_parallel
-        # docstring for the dedup trade-off this implies).
         _run_batch_parallel(pdfs, args.force, args.dry_run, workers, report, total)
     else:
         for batch_start in range(0, total, batch_size):
@@ -948,8 +1046,6 @@ def main() -> None:
                 bar = _progress_bar(global_idx, total)
                 print(f"  {bar}  {status:<26} {pdf_info['minio_key']}  ({doc_elapsed:.1f}s)")
 
-            # Checkpoint the state file after every batch (also happens per-doc
-            # inside ingest_pdf on success, but this covers dry-run/skip paths too)
             _save_state(state)
             log.info(f"Batch {batch_start // batch_size + 1} complete "
                      f"({min(batch_start + batch_size, total)}/{total} documents)")
