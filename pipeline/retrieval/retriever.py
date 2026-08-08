@@ -29,6 +29,25 @@ Key improvements over v1:
   12. Speaker-aware concall retrieval — management commentary boost for
       forward-looking queries; analyst questions boost for sentiment/concern
       queries.
+
+Fixes applied
+─────────────
+FIX 1  Narrative/strategic queries ("management's strategy", "bull case and
+       bear case", "everything an investor should know") had no matching
+       entry in _SECTION_TYPE_KEYWORDS, so zero section filtering applied
+       and pure lexical/vector overlap decided ranking — which is how audit
+       committee procedure and ESG injury-rate tables ended up outranking
+       actual strategy narrative. Added "Strategy" and "Investment Thesis"
+       taxonomy entries.
+
+FIX 2  Boilerplate contamination: sections like "Risk Management Committee"
+       or "Auditor's Responsibility" share literal keywords with genuine
+       queries ("risk", "governance") and were never penalized, so they
+       routinely outscored real risk/strategy disclosure. Added
+       _compute_boilerplate_penalty(), matched against raw section heading
+       text (since ingestion doesn't reliably canonicalize these numbered
+       sub-clauses into section_type), waived automatically when the query
+       is actually about governance or ESG.
 """
 
 import re
@@ -70,7 +89,42 @@ _SECTION_TYPE_KEYWORDS = {
     "Competition":    ["competition", "competitor", "market share", "peer", "landscape"],
     "Corporate Governance": ["corporate governance", "board", "dividend", "buyback", "agm", "shareholder"],
     "ESG":            ["esg", "sustainability", "carbon", "climate", "csr", "environment"],
+    # NEW: narrative/strategic queries had no home in v2 — they fell through
+    # to plain vector search with zero section filtering, which is why
+    # "management's strategy" and "bull/bear case" queries pulled whatever
+    # boilerplate scored highest on raw keyword overlap (see boilerplate
+    # penalty list below for the other half of this fix).
+    "Strategy":       ["strategy", "strategic priorities", "long-term strategy", "vision",
+                       "management discussion", "md&a", "business outlook", "roadmap",
+                       "growth drivers", "growth strategy", "value creation"],
+    "Investment Thesis": ["bull case", "bear case", "investment thesis", "investor should know",
+                          "reasons to invest", "why invest", "invest in this company",
+                          "catalysts", "red flags", "key risks and opportunities"],
 }
+
+# Raw section-heading substrings that mark procedural / compliance / audit /
+# ESG-metric boilerplate. These sections legitimately share keywords with
+# narrative queries ("risk" ↔ Risk Management Committee, "governance" ↔
+# LODR compliance certificate) but are almost never what a "what are the
+# risks" or "bull/bear case" question actually wants. Penalized unless the
+# query explicitly targets Corporate Governance or ESG.
+_BOILERPLATE_SECTION_SIGNALS = [
+    "auditor's responsibility", "auditor's report", "auditor's response",
+    "basis for opinion", "key audit matters",
+    "management's responsibility for internal financial",
+    "committees of the board", "risk management committee", "audit committee",
+    "board independence", "certificate on non-disqualification",
+    "details of non-compliance", "additional regulatory information",
+    "wilful defaulter", "crypto currency", "essential indicators",
+    "health and safety management system",
+    "participation/inclusion/representation", "accessibility of workplaces",
+    "acknowledgements", "median remuneration",
+]
+
+# Section-type labels for which the boilerplate penalty is waived — if the
+# user is actually asking about governance or ESG, these sections ARE the
+# answer, not noise.
+_BOILERPLATE_OVERRIDE_SECTIONS = {"Corporate Governance", "ESG"}
 
 # Financial metrics vocabulary for query parsing
 _FINANCIAL_METRICS = [
@@ -399,6 +453,7 @@ class RetrievedChunk:
     section_boost: float = 0.0
     hierarchy_boost: float = 0.0
     speaker_penalty: float = 0.0
+    boilerplate_penalty: float = 0.0
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -685,6 +740,38 @@ def _compute_importance_factor(meta: Dict[str, Any]) -> float:
     return 0.7 + (importance * 0.6)
 
 
+def _compute_boilerplate_penalty(meta: Dict[str, Any], intent: Optional["QueryIntent"]) -> float:
+    """
+    Penalize procedural/compliance/audit/ESG-indicator boilerplate so it
+    stops crowding out narrative content on qualitative queries.
+
+    Root cause this fixes: sections like "Risk Management Committee" or
+    "Auditor's Responsibility" score well against queries like "what are
+    the risks" purely on lexical overlap with "risk", even though they're
+    governance procedure, not business risk disclosure. Section-type
+    metadata from ingestion doesn't reliably tag these (they're numbered/
+    lettered sub-clauses, not canonical categories), so this matches
+    directly on the raw heading text as a second line of defense.
+
+    Waived entirely if the query is actually about governance or ESG —
+    then these sections ARE the right answer.
+
+    Range: -0.18 to 0.0 (additive, applied alongside other boosts).
+    """
+    if intent and any(s in intent.inferred_section_types for s in _BOILERPLATE_OVERRIDE_SECTIONS):
+        return 0.0
+
+    section_text = str(meta.get("section", "")).lower()
+    hierarchy = meta.get("hierarchy_path", [])
+    hierarchy_text = " ".join(str(h) for h in hierarchy).lower() if hierarchy else ""
+    combined = f"{section_text} {hierarchy_text}"
+
+    if any(sig in combined for sig in _BOILERPLATE_SECTION_SIGNALS):
+        return -0.18
+
+    return 0.0
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 11.  Core annual retrieval  (v2 — intent-aware)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -734,10 +821,11 @@ def _run_annual_query(
         t_boost = _compute_table_boost(meta, intent) if intent else 0.0
         sec_boost = _compute_section_boost(meta, intent) if intent else 0.0
         h_boost = _compute_hierarchy_boost(meta, intent) if intent else 0.0
+        bp_penalty = _compute_boilerplate_penalty(meta, intent)
         imp_factor = _compute_importance_factor(meta)
 
         # Combine: fused score + additive boosts, then multiply by importance
-        final_score = (fs + r_boost + s_boost + m_boost + t_boost + sec_boost + h_boost) * imp_factor
+        final_score = (fs + r_boost + s_boost + m_boost + t_boost + sec_boost + h_boost + bp_penalty) * imp_factor
         final_score = max(0.0, min(final_score, 2.0))
 
         results.append(RetrievedChunk(
@@ -746,6 +834,7 @@ def _run_annual_query(
             recency_boost=r_boost, semantic_boost=s_boost,
             metric_boost=m_boost, table_boost=t_boost,
             section_boost=sec_boost, hierarchy_boost=h_boost,
+            boilerplate_penalty=bp_penalty,
             importance_factor=imp_factor,
         ))
 
@@ -878,10 +967,11 @@ def retrieve_concall(
         m_boost = _compute_metric_boost(meta, intent) if intent else 0.0
         sec_boost = _compute_section_boost(meta, intent) if intent else 0.0
         h_boost = _compute_hierarchy_boost(meta, intent) if intent else 0.0
+        bp_penalty = _compute_boilerplate_penalty(meta, intent)
         imp_factor = _compute_importance_factor(meta)
 
         final_score = (fs + r_boost + s_boost + m_boost + sec_boost + h_boost +
-                       speaker_boost - role_penalty) * imp_factor
+                       speaker_boost - role_penalty + bp_penalty) * imp_factor
         final_score = max(0.0, min(final_score, 2.0))
 
         results.append(RetrievedChunk(
@@ -891,6 +981,7 @@ def retrieve_concall(
             recency_boost=r_boost, semantic_boost=s_boost,
             metric_boost=m_boost, section_boost=sec_boost,
             hierarchy_boost=h_boost, speaker_penalty=role_penalty,
+            boilerplate_penalty=bp_penalty,
             importance_factor=imp_factor,
         ))
 
