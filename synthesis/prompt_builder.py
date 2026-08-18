@@ -70,6 +70,18 @@ except ModuleNotFoundError:
     FusionResult  = None   # type: ignore[assignment,misc]
     InsightType   = None   # type: ignore[assignment,misc]
 
+# FIX: _dedup_chunks lives in fusion_layer and IS applied to
+# fusion_result.annual_chunks/concall_chunks — but this file never reads
+# those fields. It renders the raw `chunks` argument passed in by the
+# caller instead, which never goes through dedup. That's why the same
+# "Disaggregated Revenue" standalone-vs-consolidated pair showed up 5-6x
+# in a single prompt's context. Import the same dedup fn and apply it here.
+try:
+    from fusion.fusion_layer import _dedup_chunks
+except ModuleNotFoundError:
+    def _dedup_chunks(chunks):              # type: ignore[no-redef]
+        return chunks
+
 try:
     from pipeline.retrieval.retriever import RetrievedChunk
 except ModuleNotFoundError:
@@ -110,6 +122,12 @@ class BuiltPrompt:
     insights_used:   int           # how many fusion insights were included
     total_chars:     int           # estimated total prompt size
     was_trimmed:     bool          # True if chunks were dropped for budget
+    # FIX: fusion_layer computes this (evidence-bundle trustworthiness,
+    # 0-1) but it was being silently dropped — never read out of
+    # ctx.get("overall_confidence"), never surfaced to the caller, so
+    # query_client.py had nothing to print except "not reported by
+    # server". Now threaded through so it can reach the CLI/API output.
+    overall_confidence: Optional[float] = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -122,15 +140,34 @@ FINANCIAL ANALYSIS RULES (follow strictly):
 A. EXACT METRIC MATCHING: If the user asks for EBIT but only EBITDA is available,
    flag it: "Note: EBIT not found; showing EBITDA (includes D&A of ₹X cr)."
    Never silently substitute one metric for another.
-B. SHOW YOUR MATH: For any growth/YoY/CAGR calculation write the formula and
-   numbers inline. Example: Revenue growth FY24→FY25 = (31,079 − 26,711) / 26,711 × 100 = +16.3%
+B. SHOW YOUR MATH — [SQL-N] DATA ONLY: For any growth/YoY/CAGR calculation
+   using [SQL-N] rows (these are already unit-normalized), write the formula
+   and numbers inline. Example: Revenue growth FY24→FY25 = (31,079 − 26,711)
+   / 26,711 × 100 = +16.3%
+B2. NEVER CONVERT UNITS YOURSELF: Figures inside [SRC-N] document excerpts
+   are NOT pre-converted — the same report may state one figure in Lakh and
+   another in Crore. Do not multiply, divide, or otherwise convert a [SRC-N]
+   number to compare it against a [SQL-N] number or another [SRC-N] number.
+   If two figures you need are in different units, do NOT compute a
+   combined or converted result — state each figure exactly as written with
+   its own unit, and say a directly comparable figure isn't available in
+   the provided context. Manual unit conversion is the single most common
+   source of serious errors in this system — treat it as forbidden, not
+   optional.
 C. CITE EVERY NUMBER: After each figure write [SQL-N] if it came from the
    structured data table, or [SRC-N] if it came from a document excerpt.
 D. CURRENCY: State amounts exactly as in source (₹ Crore / Lakh / Million).
-   Never convert unless the user asks.
+   Never convert unless the user asks — and even then, only using [SQL-N]
+   figures (see rule B2).
 E. NO HALLUCINATION: If a number is not in the provided context, write
    "Not available in provided documents." Never guess or back-calculate.
-F. RECENCY FIRST: Lead with the most recent fiscal year available."""
+F. RECENCY FIRST: Lead with the most recent fiscal year available.
+G. DON'T PAD LISTS: If asked for a specific count of items (e.g. "top 5
+   reasons", "five risks") and the context only clearly supports fewer,
+   give only the well-supported items and say how many you found. Never
+   fill remaining slots with a weak, tangential, or off-topic item just to
+   hit the requested count — e.g. an HR policy is not an investment reason
+   just because it's the 5th-best match retrieved."""
 
 _SYSTEM_PROMPT_FUSION = """\
 You are a senior equity research analyst specialising in Indian listed companies \
@@ -311,6 +348,30 @@ def _build_intent_note(query: str) -> str:
         )
     return ""
 
+
+def _build_confidence_note(overall_confidence: Optional[float]) -> str:
+    """
+    FIX: overall_confidence was computed by fusion_layer and available via
+    ctx["overall_confidence"] but never read by this file, so it never
+    reached the model or the CLI output — every query in production logs
+    showed "confidence: not reported by server". This surfaces it as a
+    calibration instruction so the model hedges appropriately, and the
+    caller can also read it back off BuiltPrompt.overall_confidence for
+    display/logging without needing to re-derive it.
+    """
+    if overall_confidence is None:
+        return ""
+    if overall_confidence >= 0.8:
+        tone = "Evidence bundle is strong — answer with normal confidence."
+    elif overall_confidence >= 0.5:
+        tone = ("Evidence bundle is moderate — hedge claims that rely on a "
+                "single unconfirmed source and note where corroboration is thin.")
+    else:
+        tone = ("Evidence bundle is weak (low source agreement / many gaps) — "
+                "be explicit about uncertainty and avoid definitive claims "
+                "not directly backed by [SQL-N] or a clear [SRC-N] statement.")
+    return f"\nEVIDENCE CONFIDENCE: {overall_confidence:.2f}/1.0. {tone}"
+
 """
 synthesis/prompt_builder.py  — EBITDA proxy patch
 
@@ -480,6 +541,15 @@ class PromptBuilder:
 
         ctx = fusion_result.to_context_dict()
 
+        # FIX: dedup the chunks actually being rendered. fusion_result's own
+        # .annual_chunks/.concall_chunks are deduped, but this function
+        # renders the raw `chunks` argument the caller passed in — which
+        # bypassed dedup entirely. This is why the same "Disaggregated
+        # Revenue" disclosure (standalone vs consolidated, same page range)
+        # was showing up 5-6 times in one prompt, crowding out everything
+        # else the model could have cited.
+        chunks = _dedup_chunks(chunks)
+
         # ── 1. SQL table (always kept whole) ──────────────────────────────────
         sql_block     = _render_sql_table(ctx.get("metric_table", []))
         sql_rows_used = len(ctx.get("metric_table", []))
@@ -495,11 +565,13 @@ class PromptBuilder:
         insights_used   = len(all_insights)
 
         # ── 3. Budget: how much space left for vector chunks? ─────────────────
+        overall_confidence = ctx.get("overall_confidence")   # FIX: was dropped
         system_prompt  = _SYSTEM_PROMPT_FUSION
         notes          = (
             _build_gap_flag_note(resolved_years, explicit_years)
             + _build_intent_note(query)
             + _build_metric_note(query)
+            + _build_confidence_note(overall_confidence)
         )
         fixed_chars    = (
             len(system_prompt)
@@ -556,17 +628,18 @@ class PromptBuilder:
         log.info(
             f"[prompt_builder] fusion path | sql_rows={sql_rows_used} "
             f"chunks={len(safe_chunks)}/{len(chunks)} insights={insights_used} "
-            f"chars={total_chars:,} trimmed={was_trimmed}"
+            f"confidence={overall_confidence} chars={total_chars:,} trimmed={was_trimmed}"
         )
 
         return BuiltPrompt(
-            system_prompt  = system_prompt,
-            user_prompt    = user_prompt,
-            sql_rows_used  = sql_rows_used,
-            chunks_used    = len(safe_chunks),
-            insights_used  = insights_used,
-            total_chars    = total_chars,
-            was_trimmed    = was_trimmed,
+            system_prompt       = system_prompt,
+            user_prompt         = user_prompt,
+            sql_rows_used       = sql_rows_used,
+            chunks_used         = len(safe_chunks),
+            insights_used       = insights_used,
+            total_chars         = total_chars,
+            was_trimmed         = was_trimmed,
+            overall_confidence  = overall_confidence,
         )
 
     # ── Vector-only path (legacy / no SQL data) ───────────────────────────────
@@ -586,6 +659,9 @@ class PromptBuilder:
             + _build_intent_note(query)
             + _build_metric_note(query)
         )
+
+        # FIX: same dedup gap as the fusion path — apply here too.
+        chunks = _dedup_chunks(chunks)
 
         fixed_chars  = len(system_prompt) + len(query) + len(notes) + 400
         chunk_budget = max(0, self.max_context_chars - fixed_chars)
@@ -610,7 +686,9 @@ class PromptBuilder:
             f"INSTRUCTIONS:\n"
             f"- Answer using ONLY the context above.\n"
             f"- Cite every number with [SRC-N].\n"
-            f"- Show explicit calculations for any growth/trend figures.\n"
+            f"- Show explicit calculations only when both figures share the same unit "
+            f"as written in the excerpt — never convert Lakh/Crore/Million yourself "
+            f"(see rule B2).\n"
             f"- Use a Markdown table for multi-year comparisons.\n"
             f"- Flag only explicitly-requested missing years (see GAP FLAG above).\n"
         )

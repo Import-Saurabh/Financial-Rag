@@ -70,6 +70,18 @@ BUG 4  49 SQL sub_types had no entry in _METRIC_SIGNALS → unit="" for
        every one of them (total_assets, pe, pb, eps, dso, rsi, …).
        The full table is now expanded to cover every SQL-backed sub_type
        defined in SUBTYPE_TABLE_MAP, with correct unit labels.
+
+FIX 5  Section-diversity cap (_enforce_section_diversity): _dedup_chunks
+       only removes near-IDENTICAL text (e.g. overlapping chunk windows).
+       It correctly leaves standalone vs consolidated financial statements
+       alone — same section title, different numbers, genuinely distinct
+       shingle sets. Left uncapped, that meant one section (e.g.
+       "Disaggregated revenue information" repeated across standalone/
+       consolidated/multiple pages) could consume most of the context
+       budget, starving out risk/strategy/segment content that was
+       retrieved but never made it past the chunk-budget trim. Now caps
+       each section to its top-N highest-scoring chunks before the prompt
+       builder ever sees them.
 """
 
 from __future__ import annotations
@@ -559,6 +571,68 @@ def _dedup_chunks(chunks: List["RetrievedChunk"]) -> List["RetrievedChunk"]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# FIX: Section-diversity cap (complements _dedup_chunks, doesn't replace it)
+#
+# _dedup_chunks only catches near-IDENTICAL text — e.g. adjacent overlapping
+# chunk windows. It correctly does NOT merge standalone vs consolidated
+# financial statements: both are titled "A. Disaggregated revenue
+# information", share nearly identical boilerplate phrasing, but report
+# DIFFERENT numbers — so shingle-Jaccard rightly treats them as distinct.
+#
+# The problem this leaves unfixed (seen directly in production logs): with
+# no cap, retrieval fan-in filled 10 of 12 context slots with that one
+# section restated across standalone/consolidated/multiple pages, leaving
+# genuinely different content (risk factors, strategy, segments) with zero
+# room in the context — even though those chunks existed and were retrieved,
+# they lost the trim/budget cut to five near-identical copies of one table.
+#
+# This caps how many chunks with the same section heading survive, keeping
+# the highest-scoring N per section — so both standalone and consolidated
+# are still available, just not at the expense of every other topic.
+# ─────────────────────────────────────────────────────────────────────────────
+_MAX_CHUNKS_PER_SECTION = 3
+
+
+def _section_key(chunk: "RetrievedChunk") -> str:
+    """
+    Canonical grouping key for diversity capping. Prefers the raw section
+    heading (what ingestion actually populates reliably — see the numbered/
+    lettered headings visible in production logs), falls back to the last
+    hierarchy_path entry, then chunk_type, so every chunk gets *some* key
+    rather than silently skipping the cap.
+    """
+    meta = chunk.metadata
+    heading = str(meta.get("section", "")).strip().lower()
+    if heading:
+        return heading
+    hierarchy = meta.get("hierarchy_path", [])
+    if hierarchy:
+        return str(hierarchy[-1]).strip().lower()
+    return str(meta.get("chunk_type", "unknown"))
+
+
+def _enforce_section_diversity(
+    chunks: List["RetrievedChunk"],
+    max_per_section: int = _MAX_CHUNKS_PER_SECTION,
+) -> List["RetrievedChunk"]:
+    """
+    Keep at most `max_per_section` highest-scoring chunks per section key.
+    Chunks are otherwise preserved in score order.
+    """
+    ordered = sorted(chunks, key=lambda c: c.score, reverse=True)
+    counts: Dict[str, int] = {}
+    kept: List["RetrievedChunk"] = []
+    for c in ordered:
+        key = _section_key(c)
+        n = counts.get(key, 0)
+        if n >= max_per_section:
+            continue
+        counts[key] = n + 1
+        kept.append(c)
+    return kept
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Core fusion logic
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -612,6 +686,25 @@ class FusionLayer:
             log.info(
                 f"[fusion] dedup removed {n_annual_raw - len(annual_chunks)} annual + "
                 f"{n_concall_raw - len(concall_chunks)} concall near-duplicate chunks"
+            )
+
+        # FIX: section-diversity cap — catches the case dedup can't: same
+        # section title (e.g. standalone vs consolidated statements), near-
+        # identical boilerplate, but genuinely different numbers, so
+        # shingle-Jaccard correctly leaves them as separate chunks. Without
+        # this cap they were filling most of the context budget by
+        # themselves. Also run before claim extraction so redundant copies
+        # of one section don't inflate "source agreement" confidence on
+        # cross-referenced insights.
+        n_annual_pre_div, n_concall_pre_div = len(annual_chunks), len(concall_chunks)
+        annual_chunks  = _enforce_section_diversity(annual_chunks)
+        concall_chunks = _enforce_section_diversity(concall_chunks)
+        if (n_annual_pre_div - len(annual_chunks)) or (n_concall_pre_div - len(concall_chunks)):
+            log.info(
+                f"[fusion] section-diversity cap removed "
+                f"{n_annual_pre_div - len(annual_chunks)} annual + "
+                f"{n_concall_pre_div - len(concall_chunks)} concall chunks "
+                f"(same-section redundancy, max {_MAX_CHUNKS_PER_SECTION}/section)"
             )
 
         # ── Step 3: extract numeric claims from BOTH vector channels ───────────
