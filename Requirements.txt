@@ -6,16 +6,10 @@ diskcache
 # ── PDF extraction ──────────────────────────────
 pdfplumber>=0.10.0
 
-# ── Embeddings + Re-ranker (free, local, CPU) ──
-sentence-transformers>=2.7.0
-torch>=2.0.0          # CPU-only is fine, ~200MB smaller install
+# ── Knowledge Base (OpenKB + PageIndex) ────────
+openkb
 
-# ── Vector DB (free, local, persistent on disk) ─
-chromadb>=0.5.0
-tf-keras
 # ── Utilities ──────────────────────────────────
 numpy>=1.24.0
-qdrant-client
 minio
 mysql-connector-python
-optimum[onnxruntime]
