@@ -5,7 +5,6 @@ MySQL metadata store — shared across both RAG pipelines.
 Tables:
   rag_companies      — company master
   rag_documents      — one row per PDF file (stored in MinIO)
-  rag_chunks         — one row per chunk (links MySQL ↔ Qdrant)
   rag_ingestion_log  — track what has been processed
 
 Prefixed with `rag_` to coexist safely with the ETL schema (sm_*, price_*, etc.)
@@ -61,26 +60,6 @@ _SCHEMA_STMTS = [
         INDEX idx_rag_doc_symbol (symbol),
         INDEX idx_rag_doc_type   (doc_type),
         INDEX idx_rag_doc_ingested (ingested)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS rag_chunks (
-        id           INT AUTO_INCREMENT PRIMARY KEY,
-        doc_id       INT NOT NULL,
-        qdrant_id    VARCHAR(36) UNIQUE NOT NULL,
-        collection   VARCHAR(100) NOT NULL,
-        chunk_index  INT NOT NULL,
-        chunk_type   VARCHAR(30),
-        section      VARCHAR(500),
-        speaker      VARCHAR(200),
-        page_start   INT,
-        page_end     INT,
-        word_count   INT DEFAULT 0,
-        created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT fk_rag_chunk_doc FOREIGN KEY (doc_id)
-            REFERENCES rag_documents(id),
-        INDEX idx_rag_chunk_doc    (doc_id),
-        INDEX idx_rag_chunk_qdrant (qdrant_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """,
     """
@@ -249,46 +228,6 @@ def is_already_ingested(minio_key: str) -> bool:
 
 
 # ─────────────────────────────────────────────
-# Chunks
-# ─────────────────────────────────────────────
-def insert_chunk(
-    doc_id:      int,
-    qdrant_id:   str,
-    collection:  str,
-    chunk_index: int,
-    chunk_type:  str  = "prose",
-    section:     str  = None,
-    speaker:     str  = None,
-    page_start:  int  = None,
-    page_end:    int  = None,
-    word_count:  int  = 0,
-):
-    with get_conn() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            """INSERT IGNORE INTO rag_chunks
-               (doc_id, qdrant_id, collection, chunk_index, chunk_type,
-                section, speaker, page_start, page_end, word_count)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-            (doc_id, qdrant_id, collection, chunk_index, chunk_type,
-             section, speaker, page_start, page_end, word_count),
-        )
-        cur.close()
-
-
-def get_chunks_for_doc(doc_id: int) -> List[Dict]:
-    with get_conn() as conn:
-        cur = conn.cursor(dictionary=True)
-        cur.execute(
-            "SELECT * FROM rag_chunks WHERE doc_id=%s ORDER BY chunk_index",
-            (doc_id,),
-        )
-        rows = cur.fetchall()
-        cur.close()
-        return rows
-
-
-# ─────────────────────────────────────────────
 # Ingestion log
 # ─────────────────────────────────────────────
 def log_ingestion(
@@ -323,8 +262,7 @@ def get_stats() -> Dict[str, Any]:
         cur.execute("SELECT COUNT(*) FROM rag_documents WHERE ingested=1")
         docs = cur.fetchone()[0]
 
-        cur.execute("SELECT COUNT(*) FROM rag_chunks")
-        chunks = cur.fetchone()[0]
+        
 
         cur.execute(
             "SELECT doc_type, COUNT(*) FROM rag_documents "
@@ -336,6 +274,6 @@ def get_stats() -> Dict[str, Any]:
         return {
             "companies":          companies,
             "documents_ingested": docs,
-            "total_chunks":       chunks,
+            
             "by_type":            by_type,
         }
