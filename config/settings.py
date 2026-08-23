@@ -72,14 +72,6 @@ MINIO_SECURE     = os.getenv("MINIO_SECURE",     "false").lower() == "true"
 MINIO_BUCKET     = os.getenv("MINIO_BUCKET",     "quant-docs")
 
 
-# ─────────────────────────────────────────────
-# Qdrant  (vector store — replaces ChromaDB)
-# ─────────────────────────────────────────────
-QDRANT_HOST             = os.getenv("QDRANT_HOST",     "localhost")
-QDRANT_PORT             = int(os.getenv("QDRANT_PORT", "6333"))
-QDRANT_API_KEY          = os.getenv("QDRANT_API_KEY",  "")   # empty = no auth (local)
-QDRANT_ANNUAL_COLLECTION  = "annual_reports"
-QDRANT_CONCALL_COLLECTION = "concalls"
 
 
 # ─────────────────────────────────────────────
@@ -96,7 +88,6 @@ GROQ_TEMPERATURE    = 0.1
 # Embeddings
 # ─────────────────────────────────────────────
 # FinLang/finance-embeddings-investopedia → 768-dim vectors.
-# ⚠  Changing EMBEDDING_MODEL requires dropping Qdrant collections + re-ingesting.
 EMBEDDING_MODEL      = "FinLang/finance-embeddings-investopedia"
 EMBEDDING_DIM        = 768
 EMBEDDING_BATCH_SIZE = 64
