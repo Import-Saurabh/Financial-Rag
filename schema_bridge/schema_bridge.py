@@ -76,11 +76,7 @@ from decomposer.atomic_decomposer import (
     SUBTYPE_TABLE_MAP,
     ORPHANED_SUBTYPES,   # [FIX] sub_types with no backing table/column anywhere
 )
-from pipeline.retrieval.retriever import (
-    RetrievedChunk,
-    retrieve_annual,
-    retrieve_concall,
-)
+from rag.retriever_openkb import RetrievedChunk
 from utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -358,10 +354,12 @@ def _execute_sql_atom(atom: AtomicNeed, db_config: Dict[str, Any]) -> SqlAtomRes
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Vector executor
+# Vector executor (OpenKB)
 # ─────────────────────────────────────────────────────────────────────────────
 def _execute_vector_atom(atom: AtomicNeed) -> VectorAtomResult:
-    """Run a ChromaDB vector query for one atom, return VectorAtomResult."""
+    """Run an OpenKB vector query for one atom, return VectorAtomResult."""
+    from rag.retriever_openkb import OpenKBRetriever
+    
     query  = atom.metric        # human-readable label is a good base query
     raw    = atom.raw_text or ""
     if raw and raw.lower() not in query.lower():
@@ -369,16 +367,38 @@ def _execute_vector_atom(atom: AtomicNeed) -> VectorAtomResult:
 
     symbol = atom.symbol or (atom.symbols[0] if atom.symbols else None)
     years  = atom.years or None
+    
+    if symbol:
+        query = f"{symbol} {query}"
+    if years:
+        query = f"{query} {' '.join(str(y) for y in years)}"
 
     try:
-        if atom.need_type == NeedType.FORWARD_LOOKING or \
-                (atom.sql_table or "").startswith("chromadb:concalls"):
-            chunks = retrieve_concall(query, symbol=symbol, years=years)
-        else:
-            # QUALITATIVE or fallback
-            chunks = retrieve_annual(query, symbol=symbol, years=years)
+        retriever = OpenKBRetriever(wiki_dir="data/openkb_wiki")
+        raw_results = retriever.retrieve(query)
+        
+        # Wrap the dicts into RetrievedChunk so downstream code doesn't break
+        chunks = []
+        for i, res in enumerate(raw_results):
+            meta = {
+                "symbol": symbol,
+                "year": years[0] if years else "",
+                # Rough heuristic for doc_type if needed by legacy prompts
+                "doc_type": "concall" if atom.need_type == NeedType.FORWARD_LOOKING else "annual_report",
+                "section": res.get("section_title", ""),
+                "page_start": res.get("page_number", ""),
+                "chunk_id": f"openkb_{i}",
+                "source_file": res.get("source_file", "")
+            }
+            c = RetrievedChunk(
+                chunk_id=meta["chunk_id"],
+                text=res.get("text", ""),
+                score=res.get("score", 0.0),
+                metadata=meta
+            )
+            chunks.append(c)
 
-        log.info(f"  [bridge] {atom.sub_type}: {len(chunks)} chunk(s) from vector store")
+        log.info(f"  [bridge] {atom.sub_type}: {len(chunks)} chunk(s) from OpenKB")
         return VectorAtomResult(atom=atom, chunks=chunks)
 
     except Exception as e:
