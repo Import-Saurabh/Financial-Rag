@@ -69,7 +69,7 @@ except ModuleNotFoundError:
     _HAS_BUILDER = False
 
 try:
-    from pipeline.retrieval.retriever import RetrievedChunk
+    from rag.retriever_openkb import RetrievedChunk
 except ModuleNotFoundError:
     from dataclasses import dataclass as _dc, field as _f
     @_dc
