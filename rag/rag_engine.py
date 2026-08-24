@@ -36,7 +36,7 @@ from config.settings import (
     GROQ_API_KEY, GROQ_MODEL, GROQ_FALLBACK_MODEL,
     GROQ_MAX_TOKENS, GROQ_TEMPERATURE,
 )
-from pipeline.retrieval.retriever import RetrievedChunk
+from rag.retriever_openkb import RetrievedChunk
 from utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -165,84 +165,66 @@ def build_provider_catalogue() -> List[ProviderEntry]:
 
     # ── Groq (fast, free tier, limited context) ───────────────────────────────
     if groq_key:
-        cat.append(ProviderEntry(
-            id="groq-llama", label="Groq — llama-3.3-70b-versatile ★ FASTEST",
-            provider="groq", model=GROQ_MODEL,
-            api_key=groq_key, api_url=GROQ_API_URL,
-            context_note="~5.5k tok (free cap)",
-        ))
-        cat.append(ProviderEntry(
-            id="groq-llama-8b", label="Groq — llama-3.1-8b-instant (fast fallback)",
-            provider="groq", model="llama-3.1-8b-instant",
-            api_key=groq_key, api_url=GROQ_API_URL,
-            context_note="6k tok, fastest",
-        ))
+        cat.extend([
+            ProviderEntry(
+                id="groq-llama3-70b", label="Groq — Llama 3.3 70B Versatile",
+                provider="groq", model="llama-3.3-70b-versatile",
+                api_key=groq_key, api_url=GROQ_API_URL,
+                context_note="Fast, Free",
+            ),
+            ProviderEntry(
+                id="groq-llama3-8b", label="Groq — Llama 3 8B",
+                provider="groq", model="llama3-8b-8192",
+                api_key=groq_key, api_url=GROQ_API_URL,
+                context_note="Fast, Free",
+            ),
+            ProviderEntry(
+                id="groq-deepseek-r1", label="Groq — DeepSeek R1 Llama 70B",
+                provider="groq", model="deepseek-r1-distill-llama-70b",
+                api_key=groq_key, api_url=GROQ_API_URL,
+                context_note="Reasoning, Free",
+            ),
+            ProviderEntry(
+                id="groq-gemma2-9b", label="Groq — Gemma 2 9B IT",
+                provider="groq", model="gemma2-9b-it",
+                api_key=groq_key, api_url=GROQ_API_URL,
+                context_note="Fast, Free",
+            ),
+            ProviderEntry(
+                id="groq-mixtral", label="Groq — Mixtral 8x7B",
+                provider="groq", model="mixtral-8x7b-32768",
+                api_key=groq_key, api_url=GROQ_API_URL,
+                context_note="Free",
+            ),
+        ])
 
-    # ── OpenRouter free-tier models (verified working slugs) ─────────────────
-        # ── OpenRouter free-tier models (verified working slugs as of 2026-05) ──
     if or_key:
         cat.extend([
             ProviderEntry(
-                id="or-gemini", label="OpenRouter — Gemini 2.0 Flash [FREE]",
-                provider="openrouter", model="google/gemini-2.0-flash-001",
-                api_key=or_key, api_url=OPENROUTER_API_URL,
-                context_note="1M ctx, FREE",
-            ),
-            ProviderEntry(
-                id="or-llama70b", label="OpenRouter — Llama 3.3 70B Instruct [FREE]",
+                id="or-llama3-70b-free", label="OpenRouter — Llama 3.3 70B [FREE]",
                 provider="openrouter", model="meta-llama/llama-3.3-70b-instruct:free",
                 api_key=or_key, api_url=OPENROUTER_API_URL,
                 context_note="131k ctx, FREE",
             ),
-
-        ])
-        # Claude via OpenRouter (paid)
-        cat.extend([
             ProviderEntry(
-                id="or-claude-haiku", label="OpenRouter — Claude 3.5 Haiku (via OR, paid)",
-                provider="openrouter", model="anthropic/claude-3.5-haiku",
+                id="or-gemini2-flash-free", label="OpenRouter — Gemini 2.0 Flash Lite [FREE]",
+                provider="openrouter", model="google/gemini-2.0-flash-lite-preview-02-05:free",
                 api_key=or_key, api_url=OPENROUTER_API_URL,
-                context_note="100k ctx, paid",
+                context_note="1M ctx, FREE",
             ),
             ProviderEntry(
-                id="or-claude-haiku-3", label="OpenRouter — Claude 3 Haiku (via OR, paid)",
-                provider="openrouter", model="anthropic/claude-3-haiku",
+                id="or-deepseek-r1-free", label="OpenRouter — DeepSeek R1 [FREE]",
+                provider="openrouter", model="deepseek/deepseek-r1:free",
                 api_key=or_key, api_url=OPENROUTER_API_URL,
-                context_note="50k ctx, paid",
-            ),
-        ])
-
-    # ── Claude direct API (Anthropic) ─────────────────────────────────────────
-    if anthropic_key:
-        cat.extend([
-            ProviderEntry(
-                id="claude-haiku", label="Claude 3.5 Haiku (Anthropic direct)",
-                provider="anthropic", model="claude-3-5-haiku-20241022",
-                api_key=anthropic_key, api_url="https://api.anthropic.com/v1/messages",
-                context_note="200k ctx, fast",
+                context_note="128k ctx, FREE",
             ),
             ProviderEntry(
-                id="claude-sonnet", label="Claude 3.5 Sonnet (Anthropic direct)",
-                provider="anthropic", model="claude-3-5-sonnet-20241022",
-                api_key=anthropic_key, api_url="https://api.anthropic.com/v1/messages",
-                context_note="200k ctx, best",
+                id="or-qwen25-coder-free", label="OpenRouter — Qwen 2.5 Coder 32B [FREE]",
+                provider="openrouter", model="qwen/qwen-2.5-coder-32b-instruct:free",
+                api_key=or_key, api_url=OPENROUTER_API_URL,
+                context_note="32k ctx, FREE",
             ),
         ])
-
-    # ── Gemini direct API ─────────────────────────────────────────────────────
-    if gemini_key:
-        cat.append(ProviderEntry(
-            id="gemini", label="Google Gemini — gemini-2.0-flash (direct API)",
-            provider="gemini", model="gemini-2.0-flash",
-            api_key=gemini_key, api_url=GEMINI_API_URL,
-            context_note="1M ctx, 15 RPM free",
-        ))
-        cat.append(ProviderEntry(
-            id="gemini-lite", label="Google Gemini — gemini-2.0-flash-lite (direct API)",
-            provider="gemini", model="gemini-2.0-flash-lite",
-            api_key=gemini_key, api_url=GEMINI_API_URL,
-            context_note="1M ctx, faster",
-        ))
 
     # ── NVIDIA NIM (slow — warn users) ───────────────────────────────────────
     if nv_key:
@@ -424,10 +406,10 @@ def validate_all_providers(catalogue: Optional[List["ProviderEntry"]] = None) ->
 
         ok, err = validate_provider(entry)
         if ok:
-            log.info(f"[validate] {entry.id}: ✓ healthy")
+            log.info(f"[validate] {entry.id}: OK healthy")
             healthy.append(entry)
         else:
-            log.warning(f"[validate] {entry.id}: ✗ unhealthy — {err}")
+            log.warning(f"[validate] {entry.id}: X unhealthy — {err}")
 
     _HEALTHY_PROVIDERS = healthy
     _VALIDATION_TS     = time.time()
@@ -456,7 +438,7 @@ def pick_provider_interactive(catalogue: List[ProviderEntry]) -> ProviderEntry:
     W_LABEL = 46; W_NOTE = 18
     border  = "─" * (W_LABEL + W_NOTE + 10)
     print(f"\n┌{border}┐")
-    print(f"│  🤖  Select LLM Provider  (✓ = validated healthy){' ' * (len(border) - 50)}│")
+    print(f"│  🤖  Select LLM Provider  (OK = validated healthy){' ' * (len(border) - 50)}│")
     print(f"├────┬{'─'*W_LABEL}┬{'─'*W_NOTE}┤")
     print(f"│ #  │ {'Provider / Model'.ljust(W_LABEL-1)}│ {'Context / Notes'.ljust(W_NOTE-1)}│")
     print(f"├────┼{'─'*W_LABEL}┼{'─'*W_NOTE}┤")
@@ -827,18 +809,17 @@ YOUR RULES:
 
 def _build_context_legacy(chunks: List[RetrievedChunk]) -> str:
     def sort_key(c):
-        yr  = c.metadata.get("year", 0)
-        typ = 0 if c.metadata.get("doc_type") == "annual_report" else 1
+        yr  = getattr(c, "year", 0)
+        typ = 0 if getattr(c, "doc_type", "") == "annual_report" else 1
         return (-yr, typ)
     sep   = "\n\n" + "─" * 60 + "\n\n"
     parts = []
     for i, chunk in enumerate(sorted(chunks, key=sort_key), 1):
-        meta      = chunk.metadata
-        doc_label = "Annual Report" if meta.get("doc_type") == "annual_report" else "Concall Transcript"
-        section   = (meta.get("section") or meta.get("speaker") or "")[:60]
+        doc_label = "Annual Report" if getattr(chunk, "doc_type", "") == "annual_report" else "Concall Transcript"
+        section   = (getattr(chunk, "section", "") or getattr(chunk, "speaker", "") or "")[:60]
         tag = (
-            f"[Source {i} | {meta.get('symbol','')} | {doc_label} | "
-            f"FY{meta.get('year','')} | {section} | Page {meta.get('page_start','')}]"
+            f"[Source {i} | {getattr(chunk, 'symbol', '')} | {doc_label} | "
+            f"FY{getattr(chunk, 'year', '')} | {section} | Page {getattr(chunk, 'page_start', '')}]"
         )
         parts.append(f"{tag}\n{chunk.text.strip()}")
     return sep.join(parts)
@@ -933,6 +914,7 @@ def generate_answer(
     t0        = time.time()
     last_err  = None
 
+
     for entry in entries:
         log.info(f"  → {entry.label}")
 
@@ -1003,23 +985,23 @@ def generate_answer(
             usage   = result.get("usage", {})
 
             log.info(
-                f"  LLM ✓ [{entry.label}]: "
+                f"  LLM OK [{entry.label}]: "
                 f"{usage.get('completion_tokens', 0)} tokens | "
                 f"{latency:.1f}s | {len(safe_chunks)}/{len(chunks)} chunks"
             )
 
-            return RAGResponse(
+            resp_obj = RAGResponse(
                 answer        = answer,
                 model_used    = entry.label,
                 chunks_used   = len(safe_chunks),
                 sources       = [
                     {
-                        "symbol":   c.metadata.get("symbol"),
-                        "year":     c.metadata.get("year"),
-                        "doc_type": c.metadata.get("doc_type"),
-                        "section":  (c.metadata.get("section") or c.metadata.get("speaker", ""))[:50],
-                        "page":     c.metadata.get("page_start"),
-                        "score":    round(c.score, 4),
+                        "symbol":   getattr(c, "symbol", ""),
+                        "year":     getattr(c, "year", ""),
+                        "doc_type": getattr(c, "doc_type", ""),
+                        "section":  (getattr(c, "section", "") or getattr(c, "speaker", ""))[:50],
+                        "page":     getattr(c, "page_start", ""),
+                        "score":    round(getattr(c, "importance_score", 0.0), 4),
                     }
                     for c in safe_chunks
                 ],
@@ -1029,6 +1011,10 @@ def generate_answer(
                 insights      = n_insights,
                 pipeline_mode = pipeline_mode,
             )
+
+
+            return resp_obj
+
 
         except (requests.HTTPError, Exception) as e:
             status  = getattr(getattr(e, "response", None), "status_code", "ERR")
