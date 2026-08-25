@@ -28,7 +28,7 @@ This version:
      placeholder, so the client degrades gracefully if server.py doesn't
      (yet) emit a given diagnostic.
   2. Adds a rich diagnostics/debug surface: --debug, --trace, --show-atoms,
-     --show-plan, --show-retrieval, --show-reranker, --show-fusion,
+     --show-plan, --show-retrieval, --show-fusion,
      --show-prompt, --show-context — each toggles one section of the report
      without forcing the user to wade through everything every time.
   3. Times the request from the client side (wall clock) in addition to
@@ -65,7 +65,7 @@ except ImportError:
     print("[error] pip install requests")
     sys.exit(1)
 
-SERVER_URL = "http://localhost:8001"
+SERVER_URL = "http://127.0.0.1:5000"
 REQUEST_TIMEOUT_SEC = 175
 
 
@@ -236,17 +236,6 @@ def _print_retrieval(data: Dict[str, Any]) -> None:
     print(f"  SQL rows returned             : {sql_rows}")
 
 
-def _print_reranker(data: Dict[str, Any]) -> None:
-    print("\n" + _hr())
-    print("RERANKER")
-    print(_hr())
-    print(f"  Model / backend    : {_g(data, 'reranker', 'backend')}")
-    print(f"  Candidates in      : {_g(data, 'reranker', 'candidates_in')}")
-    print(f"  Candidates out     : {_g(data, 'reranker', 'candidates_out')}")
-    print(f"  Score range        : {_g(data, 'reranker', 'score_range')}")
-    print(f"  Low-confidence flag: {_g(data, 'reranker', 'low_confidence')}")
-
-
 def _print_fusion(data: Dict[str, Any]) -> None:
     print("\n" + _hr())
     print("FUSION")
@@ -407,7 +396,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--show-atoms",     action="store_true", help="Show atomic decomposition")
     parser.add_argument("--show-plan",      action="store_true", help="Show retrieval plan / intent")
     parser.add_argument("--show-retrieval", action="store_true", help="Show retrieval channel stats")
-    parser.add_argument("--show-reranker",  action="store_true", help="Show reranker stats")
     parser.add_argument("--show-fusion",    action="store_true", help="Show fusion insights summary")
     parser.add_argument("--show-prompt",    action="store_true", help="Show the exact prompt sent to the LLM")
     parser.add_argument("--show-context",   action="store_true", help="Show the raw structured context object")
@@ -419,8 +407,7 @@ def _resolve_show_flags(args: argparse.Namespace) -> None:
     if args.trace:
         args.debug = True
     if args.debug:
-        for flag in ("show_atoms", "show_plan", "show_retrieval",
-                     "show_reranker", "show_fusion"):
+        for flag in ("show_atoms", "show_plan", "show_retrieval", "show_fusion"):
             setattr(args, flag, True)
 
 
@@ -532,8 +519,7 @@ def main() -> None:
         _print_atoms(data)
     if args.show_retrieval:
         _print_retrieval(data)
-    if args.show_reranker:
-        _print_reranker(data)
+
     if args.show_fusion:
         _print_fusion(data)
     if args.show_prompt:

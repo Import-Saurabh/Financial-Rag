@@ -83,7 +83,7 @@ except ModuleNotFoundError:
         return chunks
 
 try:
-    from pipeline.retrieval.retriever import RetrievedChunk
+    from rag.retriever_openkb import RetrievedChunk
 except ModuleNotFoundError:
     from dataclasses import dataclass as _dc, field as _f
     @_dc
@@ -170,23 +170,22 @@ G. DON'T PAD LISTS: If asked for a specific count of items (e.g. "top 5
    just because it's the 5th-best match retrieved."""
 
 _SYSTEM_PROMPT_FUSION = """\
-You are a senior equity research analyst specialising in Indian listed companies \
-(BSE/NSE).
+You are an expert equity research analyst with a natural, human-like conversational tone.
+You specialise in Indian listed companies (BSE/NSE).
 
 You receive three types of pre-processed context:
   [SQL]      Hard numbers directly from a structured financial database.
-             These are ground truth — always prefer them over prose.
+             These are ground truth.
   [EXCERPTS] Ranked passages from annual reports and concall transcripts.
              Use these for qualitative colour and management commentary.
-  [INSIGHTS] Pre-detected contradictions, confirmations, and guidance flags
-             surfaced by the cross-referencing layer.
-             Highlight these prominently in your answer.
+  [INSIGHTS] Pre-detected contradictions, confirmations, and guidance flags.
 
 ANSWER FORMAT:
-1. If comparing metrics across years → use a Markdown table.
-2. If summarising management commentary → use bullet points with speaker names.
-3. If a contradiction insight is present → start your answer with a ⚠ callout.
-4. Always end with a "Sources" line listing the [SQL-N] / [SRC-N] tags used.
+1. Make your answer sound natural, insightful, and easy to read. Avoid robotic structuring unless data clearly warrants a table.
+2. If comparing metrics across years, feel free to use a Markdown table or clear bullet points.
+3. If summarising management commentary, use bullet points with speaker names.
+4. If a contradiction insight is present, start your answer with a callout.
+5. Always end with a 'Sources used:' line. For documents, cite the source and the page number clearly (e.g., [SRC-1, Page 45]).
 
 """ + _FINANCIAL_RULES
 
@@ -294,22 +293,34 @@ def _render_insights(insights: List[Dict]) -> str:
     return "\n".join(lines)
 
 
-def _render_chunks(chunks: List["RetrievedChunk"], start_index: int = 1) -> str:
-    """Render vector chunks as labelled [SRC-N] blocks."""
+def _render_chunks(chunks: List[Any], start_index: int = 1) -> str:
+    """Render OpenKB tree evidence or legacy vector chunks as labelled [SRC-N] blocks."""
     if not chunks:
         return ""
     lines = [_VECTOR_HDR]
     for i, chunk in enumerate(chunks, start_index):
-        meta    = chunk.metadata
-        symbol  = meta.get("symbol", "")
-        year    = meta.get("year", "")
-        dt      = "AR" if meta.get("doc_type") == "annual_report" else "CC"
-        section = (meta.get("section") or meta.get("speaker", ""))[:50]
-        page    = meta.get("page_start", "?")
-        score   = round(chunk.score, 4)
-        header  = f"[SRC-{i}] {symbol} FY{year} [{dt}] | {section} | p.{page} | score={score}"
+        if isinstance(chunk, dict):
+            # OpenKB evidence
+            file = chunk.get("source_file", "")
+            page = chunk.get("page_number", "?")
+            section = chunk.get("section_title", "")[:50]
+            score = round(chunk.get("score", 0.0), 4)
+            text = chunk.get("text", "")
+            header = f"[SRC-{i}] {file} | {section} | p.{page} | OpenKB-score={score}"
+        else:
+            # Legacy RetrievedChunk
+            meta    = chunk.metadata
+            symbol  = meta.get("symbol", "")
+            year    = meta.get("year", "")
+            dt      = "AR" if meta.get("doc_type") == "annual_report" else "CC"
+            section = (meta.get("section") or meta.get("speaker", ""))[:50]
+            page    = meta.get("page_start", "?")
+            score   = round(chunk.score, 4)
+            text    = chunk.text
+            header  = f"[SRC-{i}] {symbol} FY{year} [{dt}] | {section} | p.{page} | score={score}"
+            
         lines.append(header)
-        lines.append(textwrap.fill(chunk.text[:1200], width=100))
+        lines.append(textwrap.fill(text[:1200], width=100))
         lines.append("")
     return "\n".join(lines)
 
@@ -618,10 +629,8 @@ class PromptBuilder:
             f"INSTRUCTIONS:\n"
             f"- Use [SQL-N] data as ground truth; cite it after every number.\n"
             f"- Use [SRC-N] excerpts for qualitative context and management commentary.\n"
-            f"- If ⚠ CONTRADICTION insights are present, lead with them.\n"
-            f"- Show YoY % calculations explicitly (formula + numbers).\n"
-            f"- Use a Markdown table for multi-year comparisons.\n"
-            f"- End with a concise 'Sources used: [SQL-1], [SRC-2], ...' line.\n"
+            f"- Be conversational and analytical. Avoid sounding like a rigid bot.\n"
+            f"- End with a concise 'Sources used: [SQL-1], [SRC-2, Page 45], ...' line.\n"
         )
 
         total_chars = len(system_prompt) + len(user_prompt)
@@ -742,9 +751,9 @@ class PromptBuilder:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _trim_chunks(
-    chunks: List["RetrievedChunk"],
+    chunks: List[Any],
     char_budget: int,
-) -> tuple:  # (List[RetrievedChunk], bool was_trimmed)
+) -> tuple:  # (List[Any], bool was_trimmed)
     """
     Keep top-ranked chunks until char_budget is consumed.
     Returns (kept_chunks, was_trimmed).
@@ -757,7 +766,11 @@ def _trim_chunks(
     used  = 0
     # ~250 chars per chunk for header + separators
     for chunk in chunks:
-        cost = len(chunk.text) + 250
+        if isinstance(chunk, dict):
+            cost = len(chunk.get("text", "")) + 250
+        else:
+            cost = len(chunk.text) + 250
+            
         if used + cost > char_budget:
             break
         kept.append(chunk)

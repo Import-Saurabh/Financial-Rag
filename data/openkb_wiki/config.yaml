@@ -1,0 +1,9 @@
+llm:
+  model: gemini/gemini-3.6-flash
+  temperature: 0.0
+pageindex:
+  threshold: 20
+  max_depth: 10
+compilation:
+  enable_cross_references: true
+  lint_after_add: true

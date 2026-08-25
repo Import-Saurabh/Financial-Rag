@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "operation": "add",
+  "status": "active",
+  "kb_dir": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki",
+  "backup_dir": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\.openkb\\staging\\rollback-5fa287b0a94246199c639616cfe50968",
+  "details": {
+    "file_hash": "5d37ec43edf8feac1bb37da1e7fe2e41628dc5c1d360e04b3a74753715c23f66",
+    "name": "2025_Aug_2025_Transcript.pdf",
+    "doc_name": "2025_Aug_2025_Transcript"
+  },
+  "attempts": 0,
+  "entries": [
+    {
+      "target": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\.openkb\\hashes.json",
+      "backup": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\.openkb\\staging\\rollback-5fa287b0a94246199c639616cfe50968\\.openkb\\hashes.json"
+    },
+    {
+      "target": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\.openkb\\pageindex.db",
+      "backup": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\.openkb\\staging\\rollback-5fa287b0a94246199c639616cfe50968\\.openkb\\pageindex.db"
+    },
+    {
+      "target": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\.openkb\\pageindex.db-wal",
+      "backup": null
+    },
+    {
+      "target": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\.openkb\\pageindex.db-shm",
+      "backup": null
+    },
+    {
+      "target": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\.openkb\\pageindex.db-journal",
+      "backup": null
+    },
+    {
+      "target": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\wiki\\summaries\\2025_Aug_2025_Transcript.md",
+      "backup": null
+    },
+    {
+      "target": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\wiki\\sources\\2025_Aug_2025_Transcript.json",
+      "backup": null
+    },
+    {
+      "target": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\wiki\\sources\\images\\2025_Aug_2025_Transcript",
+      "backup": null
+    },
+    {
+      "target": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\wiki\\concepts",
+      "backup": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\.openkb\\staging\\rollback-5fa287b0a94246199c639616cfe50968\\wiki\\concepts"
+    },
+    {
+      "target": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\wiki\\entities",
+      "backup": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\.openkb\\staging\\rollback-5fa287b0a94246199c639616cfe50968\\wiki\\entities"
+    },
+    {
+      "target": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\wiki\\index.md",
+      "backup": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\.openkb\\staging\\rollback-5fa287b0a94246199c639616cfe50968\\wiki\\index.md"
+    },
+    {
+      "target": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\wiki\\log.md",
+      "backup": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\.openkb\\staging\\rollback-5fa287b0a94246199c639616cfe50968\\wiki\\log.md"
+    },
+    {
+      "target": "C:\\Users\\hp\\Downloads\\Financial-Rag\\data\\openkb_wiki\\raw\\2025_Aug_2025_Transcript.pdf",
+      "backup": null
+    }
+  ]
+}
