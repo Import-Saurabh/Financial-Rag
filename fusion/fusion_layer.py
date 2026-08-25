@@ -96,7 +96,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # sys.path) this import would raise ModuleNotFoundError.  We fall back to a
 # minimal dataclass stub that is API-compatible with the real class.
 try:
-    from pipeline.retrieval.retriever import RetrievedChunk
+    from rag.retriever_openkb import RetrievedChunk
 except ModuleNotFoundError:
     @dataclass
     class RetrievedChunk:                          # type: ignore[no-redef]
