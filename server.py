@@ -27,7 +27,7 @@ USAGE:
     python server.py
 
     # Terminal 2 — query it (replace your old query.py calls)
-    curl -X POST http://localhost:8001/query \
+    curl -X POST http://localhost:5000/query \
       -H "Content-Type: application/json" \
       -d '{"query": "ADANIPORTS revenue FY25", "symbol": "ADANIPORTS", "provider": "groq"}'
 
@@ -122,34 +122,7 @@ async def lifespan(app: FastAPI):
     log.info("[server] Warming models...")
     t0 = time.perf_counter()
 
-    # Warm embedder — triggers model load on first call and caches it
-    # Uses embed_query (the actual export) not get_embedder which doesn't exist
-    try:
-        from pipeline.loader.embedder import embed_query
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, embed_query, "warmup")
-        log.info("[server] Embedder warm ✓")
-    except Exception as e:
-        log.warning(f"[server] Embedder warm failed: {e}")
-
-    # Warm reranker (runs in background thread via its own warmup,
-    # but we block here to ensure it's done before the first request)
-    try:
-        from pipeline.retrieval.reranker import _ensure_model
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, _ensure_model)
-        log.info("[server] Reranker warm ✓")
-    except Exception as e:
-        log.warning(f"[server] Reranker warm failed: {e}")
-
-    # Warm Qdrant connection
-    try:
-        from pipeline.loader.qdrant_loader import get_qdrant_client
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, get_qdrant_client)
-        log.info("[server] Qdrant warm ✓")
-    except Exception as e:
-        log.warning(f"[server] Qdrant warm failed: {e}")
+    # Reranker removed (relies on OpenKB)
 
     # Warm the synthesis pipeline (decomposer + MySQL SchemaBridge + fusion).
     # This is the atomic/SQL pipeline. It's optional at runtime (rag_engine.py
@@ -161,7 +134,7 @@ async def lifespan(app: FastAPI):
         loop = asyncio.get_event_loop()
         pipeline = await loop.run_in_executor(None, _get_synthesis_pipeline)
         if pipeline is not None:
-            log.info("[server] SynthesisPipeline (MySQL atomic pipeline) warm ✓")
+            log.info("[server] SynthesisPipeline (MySQL atomic pipeline) warm OK")
         else:
             log.warning(
                 "[server] SynthesisPipeline unavailable at startup — queries will "
@@ -359,34 +332,20 @@ async def query_endpoint(req: QueryRequest):
         raise HTTPException(status_code=504, detail=msg)
     except Exception as e:
         log.error(f"[server] Query failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=5000, detail=str(e))
 
 
 def _run_query(req: QueryRequest) -> dict:
     """
     Synchronous query execution — runs in a thread pool so it doesn't
-    block the event loop. All heavy objects (embedder, reranker, qdrant)
-    are already warm from lifespan startup.
+    block the event loop.
     """
-    from pipeline.retrieval.retriever import retrieve_with_years
-    from pipeline.retrieval.reranker  import rerank_separate, rerank
-    from rag.rag_engine               import generate_answer
+    from rag.retriever_openkb import OpenKBRetriever
+    from rag.rag_engine import generate_answer
 
     # ── Retrieval ─────────────────────────────────────────────────────────────
-    raw, resolved_years, explicit_years = retrieve_with_years(
-        query    = req.query,
-        doc_type = req.doc_type,
-        symbol   = req.symbol,
-        year     = req.year,
-    )
-
-    # ── Reranking ─────────────────────────────────────────────────────────────
-    if req.doc_type == "both" and isinstance(raw, tuple):
-        annual_chunks, concall_chunks = raw
-        chunks = rerank_separate(req.query, annual_chunks, concall_chunks)
-    else:
-        candidates = raw if not isinstance(raw, tuple) else raw[0]
-        chunks = rerank(req.query, candidates, req.doc_type)
+    retriever = OpenKBRetriever()
+    chunks = retriever.retrieve(req.query, top_k=5)
 
     # ── Answer generation ─────────────────────────────────────────────────────
     response = generate_answer(
@@ -394,8 +353,8 @@ def _run_query(req: QueryRequest) -> dict:
         chunks         = chunks,
         doc_type       = req.doc_type,
         symbol         = req.symbol,
-        resolved_years = resolved_years,
-        explicit_years = explicit_years,
+        resolved_years = [req.year] if req.year else None,
+        explicit_years = [req.year] if req.year else None,
         provider_id    = req.provider if req.provider != "auto" else None,
         auto           = req.provider == "auto",
     )
@@ -438,7 +397,7 @@ async def providers_validate():
         from rag.rag_engine import build_provider_catalogue
         cat = build_provider_catalogue()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Cannot load catalogue: {e}")
+        raise HTTPException(status_code=5000, detail=f"Cannot load catalogue: {e}")
 
     if _httpx is None:
         raise HTTPException(status_code=501, detail="pip install httpx to use this endpoint")
@@ -460,13 +419,11 @@ async def providers_validate():
 
 @app.get("/health")
 async def health():
-    from pipeline.retrieval.reranker import _MODEL_CACHE, _MODEL_READY
     return {
-        "status":          "ok",
-        "reranker_warm":   _MODEL_CACHE is not None,
-        "reranker_ready":  _MODEL_READY.is_set(),
-        "slow_providers":  list(_SLOW_PROVIDERS),
+        "status":             "ok",
+        "slow_providers":     list(_SLOW_PROVIDERS),
         "remapped_providers": _PROVIDER_REMAP,
+        "mode":               "openkb",
         "server_timeout_sec": _QUERY_TIMEOUT_SEC,
     }
 
@@ -476,7 +433,7 @@ async def health():
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    port = int(os.getenv("FINRAG_PORT", "8000"))
+    port = int(os.getenv("FINRAG_PORT", "5000"))
     log.info(f"[server] Starting FinRAG server on port {port}")
     try:
         uvicorn.run(
