@@ -6,8 +6,6 @@ from .database import (
     mark_document_failed,
     get_pending_documents,
     is_already_ingested,
-    insert_chunk,
-    get_chunks_for_doc,
     log_ingestion,
     get_stats,
 )
