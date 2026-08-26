@@ -576,6 +576,9 @@ def ingest_pdf(
                     elif "groq" in llm_model.lower():
                         m = re.search(r'GROQ_API_KEY=["\']?([^"\'\n]+)["\']?', env_content)
                         if m: new_key = m.group(1)
+                    elif "deepseek" in llm_model.lower():
+                        m = re.search(r'DEEPSEEK_API_KEY=["\']?([^"\'\n]+)["\']?', env_content)
+                        if m: new_key = m.group(1)
                         
                     if new_key:
                         env_content = re.sub(r'export LLM_API_KEY=.*|LLM_API_KEY=.*', f'export LLM_API_KEY="{new_key}"', env_content)
