@@ -86,6 +86,8 @@ _MODEL_CTX: Dict[str, int] = {
     # ── OpenRouter — DeepSeek (free) ─────────────────────────────────────────
     "deepseek/deepseek-r1:free":                 30_000,
     "deepseek/deepseek-chat-v3-0324:free":       30_000,
+    # ── DeepSeek (Direct) ────────────────────────────────────────────────────
+    "deepseek-v4-flash":                        128_000,
     # ── OpenRouter — Claude via OR (paid — needs key with credits) ────────────
     "anthropic/claude-3-haiku":                  50_000,
     "anthropic/claude-3.5-haiku":               100_000,
@@ -162,6 +164,7 @@ def build_provider_catalogue() -> List[ProviderEntry]:
     nv_key        = os.getenv("NVIDIA_API_KEY", "")
     anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
     ollama_url    = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    deepseek_key  = os.getenv("DEEPSEEK_API_KEY", "")
 
     # ── Groq (fast, free tier, limited context) ───────────────────────────────
     if groq_key:
@@ -233,6 +236,15 @@ def build_provider_catalogue() -> List[ProviderEntry]:
             provider="nvidia", model="meta/llama-3.3-70b-instruct",
             api_key=nv_key, api_url=NVIDIA_API_URL,
             context_note="128k ctx, slow",
+        ))
+
+    # ── DeepSeek (Direct) ────────────────────────────────────────────────────
+    if deepseek_key:
+        cat.append(ProviderEntry(
+            id="deepseek", label="DeepSeek — v4-flash",
+            provider="deepseek", model="deepseek-v4-flash",
+            api_key=deepseek_key, api_url="https://api.deepseek.com/chat/completions",
+            context_note="Concurrency Limit: 500",
         ))
 
     # ── Local Ollama (autodiscovered) ─────────────────────────────────────────
