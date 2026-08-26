@@ -1,0 +1,4 @@
+language: en
+model: deepseek/deepseek-v4-flash
+pageindex_threshold: 0.5
+concurrency: 500

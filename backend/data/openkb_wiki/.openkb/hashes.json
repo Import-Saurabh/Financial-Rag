@@ -1,0 +1,26 @@
+{
+  "75dc8d7d109a909bf2dd4ddd7684f5fedcc012e304a54c1ecb5f4282c1e7ea31": {
+    "name": "2025_Financial_Year_2025_from_bse_part1.pdf",
+    "doc_name": "2025_Financial_Year_2025_from_bse_part1",
+    "type": "long_pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2025_Financial_Year_2025_from_bse_part1.pdf",
+    "raw_path": "raw/2025_Financial_Year_2025_from_bse_part1.pdf",
+    "doc_id": "4239f5c8-f12f-4ae1-b892-df7da0c854c6"
+  },
+  "86547d640abf12a8a4ba3ac98268c818354abfbd004b4a038afe733801fb7730": {
+    "name": "2025_Financial_Year_2025_from_bse_part2.pdf",
+    "doc_name": "2025_Financial_Year_2025_from_bse_part2",
+    "type": "long_pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2025_Financial_Year_2025_from_bse_part2.pdf",
+    "raw_path": "raw/2025_Financial_Year_2025_from_bse_part2.pdf",
+    "doc_id": "f300d639-0d46-412e-97c7-a4d383b6429e"
+  },
+  "5d37ec43edf8feac1bb37da1e7fe2e41628dc5c1d360e04b3a74753715c23f66": {
+    "name": "2025_Aug_2025_Transcript.pdf",
+    "doc_name": "2025_Aug_2025_Transcript",
+    "type": "long_pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2025_Aug_2025_Transcript.pdf",
+    "raw_path": "raw/2025_Aug_2025_Transcript.pdf",
+    "doc_id": "93eb1ea0-9d75-4eb6-be0f-4663ebb0c730"
+  }
+}

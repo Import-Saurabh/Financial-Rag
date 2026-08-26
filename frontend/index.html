@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial RAG - Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .typing-indicator span {
+            animation: blink 1.4s infinite both;
+            height: 6px; width: 6px; background: #3b82f6; border-radius: 50%; display: inline-block; margin: 0 1px;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
+        
+        pre { background: #f4f4f5; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; }
+        code { font-family: monospace; }
+    </style>
+</head>
+<body class="bg-gray-50 flex h-screen text-gray-800 font-sans">
+    
+    <!-- Sidebar -->
+    <div class="w-64 bg-gray-900 text-white flex flex-col">
+        <div class="p-4 flex items-center justify-between border-b border-gray-800">
+            <h1 class="font-bold text-lg">FinRAG</h1>
+            <a href="login.html" class="text-xs bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded">Admin</a>
+        </div>
+        <div class="p-4 flex-1 overflow-y-auto">
+            <button class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-md py-2 px-4 flex items-center justify-center gap-2 mb-6" onclick="location.reload()">
+                <i class="fas fa-plus"></i> New Chat
+            </button>
+            <div class="text-xs text-gray-500 uppercase font-semibold mb-3">Today</div>
+            <div class="text-sm text-gray-300 truncate mb-2 hover:bg-gray-800 p-2 rounded cursor-pointer">Apollo MS Q1 FY26 Order Book</div>
+            <div class="text-sm text-gray-300 truncate mb-2 hover:bg-gray-800 p-2 rounded cursor-pointer">Financial Highlights FY25</div>
+        </div>
+    </div>
+
+    <!-- Main Chat Area -->
+    <div class="flex-1 flex flex-col bg-white">
+        <!-- Messages -->
+        <div id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-6">
+            <!-- Welcome Message -->
+            <div class="flex gap-4 max-w-4xl mx-auto mt-8">
+                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
+                    <i class="fas fa-robot text-sm"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold mb-1">Financial RAG Assistant</h3>
+                    <p class="text-gray-700">Hello! I am connected to your OpenKB knowledge base. Ask me about the ingested financial documents, such as the Apollo Micro Systems concall.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 border-t border-gray-200">
+            <div class="max-w-4xl mx-auto relative">
+                <textarea id="prompt-input" rows="1" class="w-full bg-gray-100 border border-gray-300 rounded-lg pl-4 pr-12 py-3 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none overflow-hidden" placeholder="Ask about order books, revenues, or programs..." onkeydown="handleEnter(event)"></textarea>
+                <button id="send-btn" class="absolute right-2 bottom-2 p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div class="text-center text-xs text-gray-400 mt-2">Financial RAG can make mistakes. Verify important financial figures.</div>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const inputField = document.getElementById('prompt-input');
+        const sendBtn = document.getElementById('send-btn');
+        let chatHistory = [];
+
+        // Auto-resize textarea
+        inputField.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight < 200 ? this.scrollHeight : 200) + 'px';
+        });
+
+        function handleEnter(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const text = inputField.value.trim();
+            if (!text) return;
+            
+            // Add user message
+            appendMessage('user', text);
+            inputField.value = '';
+            inputField.style.height = 'auto';
+            
+            // Add assistant loading
+            const msgId = 'msg-' + Date.now();
+            appendLoading(msgId);
+            
+            chatHistory.push({ role: 'user', content: text });
+            
+            try {
+                // We request streaming from our new FastAPI route
+                const response = await fetch('/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: "openkb",
+                        messages: chatHistory,
+                        stream: true
+                    })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let content = "";
+                
+                // Remove loading indicator
+                const msgDiv = document.getElementById(msgId);
+                msgDiv.innerHTML = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                if (data.choices && data.choices[0].delta && data.choices[0].delta.content) {
+                                    content += data.choices[0].delta.content;
+                                    msgDiv.innerHTML = formatMarkdown(content);
+                                    chatBox.scrollTop = chatBox.scrollHeight;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+                
+                chatHistory.push({ role: 'assistant', content: content });
+                
+            } catch (error) {
+                document.getElementById(msgId).innerHTML = '<span class="text-red-500">Error connecting to server. Make sure the backend is running.</span>';
+            }
+        }
+
+        function appendMessage(role, content) {
+            const isUser = role === 'user';
+            const icon = isUser ? '<i class="fas fa-user text-sm"></i>' : '<i class="fas fa-robot text-sm"></i>';
+            const bgClass = isUser ? 'bg-gray-200 text-gray-700' : 'bg-blue-600 text-white';
+            const name = isUser ? 'You' : 'Financial RAG Assistant';
+            
+            const html = `
+            <div class="flex gap-4 max-w-4xl mx-auto ${isUser ? 'flex-row-reverse' : ''}">
+                <div class="w-8 h-8 rounded-full ${bgClass} flex items-center justify-center flex-shrink-0">
+                    ${icon}
+                </div>
+                <div class="${isUser ? 'text-right' : ''} w-full">
+                    <h3 class="font-bold mb-1">${name}</h3>
+                    <div class="text-gray-800 ${isUser ? 'bg-gray-100 p-3 rounded-2xl inline-block' : 'prose max-w-none'}">${isUser ? content : formatMarkdown(content)}</div>
+                </div>
+            </div>`;
+            chatBox.insertAdjacentHTML('beforeend', html);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function appendLoading(id) {
+            const html = `
+            <div class="flex gap-4 max-w-4xl mx-auto">
+                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
+                    <i class="fas fa-robot text-sm"></i>
+                </div>
+                <div class="w-full">
+                    <h3 class="font-bold mb-1">Financial RAG Assistant</h3>
+                    <div id="${id}" class="text-gray-800 prose max-w-none">
+                        <div class="typing-indicator"><span></span><span></span><span></span></div>
+                    </div>
+                </div>
+            </div>`;
+            chatBox.insertAdjacentHTML('beforeend', html);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        
+        // Very simple markdown parser for bold, lists, and code blocks
+        function formatMarkdown(text) {
+            let html = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\[\[(.*?)\]\]/g, '<span class="text-blue-600 cursor-pointer hover:underline">[$1]</span>')
+                .replace(/\n/g, '<br/>');
+            
+            return html;
+        }
+    </script>
+</body>
+</html>
