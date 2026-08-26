@@ -81,6 +81,7 @@ FALLBACK_PROVIDERS = [
     {"id": "ollama-llama3.1-latest",  "label": "Ollama local — llama3.1:latest",            "note": "4.9 GB, local"},
     {"id": "ollama-phi3-latest",      "label": "Ollama local — phi3:latest",                "note": "2.2 GB, local"},
     {"id": "groq-llama-8b",           "label": "Groq — llama-3.1-8b-instant (fast fallback)", "note": "6k tok"},
+    {"id": "deepseek",                "label": "DeepSeek — v4-flash",                        "note": "Concurrency Limit: 500"},
 ]
 
 
