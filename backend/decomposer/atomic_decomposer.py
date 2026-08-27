@@ -1,51 +1,4 @@
-"""
-decomposer/atomic_decomposer.py  — patched
-
-Bug fixes applied in this version
-───────────────────────────────────
-[BUG-EBITDA-CAGR]
-  When the user asks for EBITDA CAGR / YoY / multi-year, the decomposer
-  correctly identifies sub_type="ebitda" which maps to the `fundamentals`
-  table.  However `fundamentals` stores only the LATEST snapshot (no per-year
-  rows).  This means the bridge returns 0 rows for historical EBITDA queries
-  and the LLM has nothing to work with.
-
-  FIX: A new sub_type "ebitda_derived" is added that maps to
-  `annual_results` columns (operating_profit + depreciation = EBITDA proxy).
-  The bridge will fetch these per-year rows and the prompt_builder instructs
-  the LLM to compute EBITDA = operating_profit + depreciation and then
-  calculate CAGR/YoY on its own.
-
-  The rule engine now emits TWO atoms for EBITDA CAGR queries:
-    1. ebitda       → fundamentals  (current snapshot, catches the latest value)
-    2. ebitda_proxy → annual_results (per-year operating_profit + depreciation)
-
-[BUG-YOY-MULTI-YEAR]
-  "YoY net profit growth and Revenue growth for FY2023-25" was resolving to
-  year=[2023] only (the first year mentioned), so the bridge only fetched
-  FY2023 data and the LLM couldn't compute YoY.
-
-  FIX: _extract_year_range() now detects "YYYY-YY" and "FY23-25" patterns
-  and expands them to the full year list.  "FY2023-25" → [2023, 2024, 2025].
-
-[BUG-CAGR-YEAR-PARSE]
-  "3-year CAGR from FY23 to FY25" was not extracting [2023, 2025].
-  FIX: Added a "FYxx to FYxx" / "FYxx-FYxx" capture pattern.
-
-[BUG-SYMBOL-NOT-INJECTED]
-  When symbol is passed from query.py → rag_engine → pipeline → decomposer,
-  atoms produced by rule-based decompose() had symbol=None if the symbol
-  wasn't in the query text.  The SynthesisPipeline was supposed to inject it
-  but the injection was only done for SQL atoms, not vector atoms.
-
-  FIX: AtomicDecomposer.decompose() now accepts an optional `symbol` param
-  and stamps it onto every atom that has symbol=None.
-
-All other rule patterns and LLM fallback logic are unchanged.
-"""
-
 from __future__ import annotations
-
 import json
 import os
 import re
@@ -730,7 +683,8 @@ def _llm_decompose(
             atoms.append(atom)
         return atoms
 
-    except Exception:
+    except Exception as e:
+        log.error(f"LLM Decompose Error: {e}")
         return []
 
 
@@ -755,16 +709,16 @@ class AtomicDecomposer:
         model:          Optional[str] = None,
         min_rule_atoms: int = 1,
     ):
-        self.api_key  = api_key  or os.getenv("GROQ_API_KEY", "") \
+        self.api_key  = api_key  or os.getenv("DEEPSEEK_API_KEY", "") \
                                  or os.getenv("OPENROUTER_API_KEY", "")
         self.api_url  = api_url  or (
-            "https://api.groq.com/openai/v1/chat/completions"
-            if os.getenv("GROQ_API_KEY")
+            "https://api.deepseek.com/chat/completions"
+            if os.getenv("DEEPSEEK_API_KEY")
             else "https://openrouter.ai/api/v1/chat/completions"
         )
         self.model    = model or (
-            "llama3-8b-8192"
-            if os.getenv("GROQ_API_KEY")
+            "deepseek-chat"
+            if os.getenv("DEEPSEEK_API_KEY")
             else "qwen/qwen3-8b:free"
         )
         self.min_rule_atoms = min_rule_atoms
