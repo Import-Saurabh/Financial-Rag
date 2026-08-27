@@ -1,45 +1,3 @@
-"""
-server.py  — FastAPI wrapper around query.py
-─────────────────────────────────────────────
-Fixes BUG-1: new PID (new process) per query.
-
-YOUR ACTUAL PROBLEM (from logs):
-  Every query shows a new PID:  PID 14212, PID 10396, PID 23948...
-  Python process dies after query.py exits.
-  ALL singletons die with it: embedder, reranker, Qdrant connection.
-  Next query pays full cold-start: ~36s embed + ~9s reranker = 45s before
-  a single token is scored.
-
-THE FIX:
-  Run this server once. It stays alive. All models load on first request
-  and are reused for every subsequent query. From query 2 onward:
-    - Embedder: 0s (already loaded)
-    - Reranker model: 0s (already loaded)
-    - Qdrant: 0s (already connected)
-    - Reranking (INT8 + parallel): ~8-15s
-    - LLM: ~2-3s
-    - Total: ~10-18s per query
-
-USAGE:
-    pip install fastapi uvicorn
-
-    # Terminal 1 — start server once, keep it running
-    python server.py
-
-    # Terminal 2 — query it (replace your old query.py calls)
-    curl -X POST http://localhost:5000/query \
-      -H "Content-Type: application/json" \
-      -d '{"query": "ADANIPORTS revenue FY25", "symbol": "ADANIPORTS", "provider": "groq"}'
-
-    # Or use the thin CLI wrapper so your workflow barely changes:
-    python query_client.py --symbol ADANIPORTS "revenue FY25"
-
-STARTUP TIME:
-    First request after server start: ~45s (models loading)
-    Every subsequent request: ~10-18s
-    Server restart: only happens when YOU restart it (not between queries)
-"""
-
 from __future__ import annotations
 
 import os
@@ -67,6 +25,9 @@ class ChatCompletionRequest(BaseModel):
     model: str = "openkb"
     messages: list[ChatMessage]
     stream: bool = False
+    symbol: Optional[str] = None
+    doc_type: str = "both"
+    year: Optional[int] = None
 
 
 from fastapi.staticfiles import StaticFiles
@@ -354,7 +315,7 @@ async def query_endpoint(req: QueryRequest):
         raise HTTPException(status_code=504, detail=msg)
     except Exception as e:
         log.error(f"[server] Query failed: {e}", exc_info=True)
-        raise HTTPException(status_code=5000, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def _run_query(req: QueryRequest) -> dict:
@@ -419,7 +380,7 @@ async def providers_validate():
         from rag.rag_engine import build_provider_catalogue
         cat = build_provider_catalogue()
     except Exception as e:
-        raise HTTPException(status_code=5000, detail=f"Cannot load catalogue: {e}")
+        raise HTTPException(status_code=500, detail=f"Cannot load catalogue: {e}")
 
     if _httpx is None:
         raise HTTPException(status_code=501, detail="pip install httpx to use this endpoint")
@@ -466,10 +427,10 @@ async def openai_chat_completions(req: ChatCompletionRequest):
     # Create the internal request object
     internal_req = QueryRequest(
         query=user_msg,
-        doc_type="both",
-        symbol=None,
-        provider="auto",
-        year=None
+        doc_type=req.doc_type,
+        symbol=req.symbol,
+        provider=req.model,
+        year=req.year
     )
     
     loop = asyncio.get_running_loop()
@@ -477,6 +438,13 @@ async def openai_chat_completions(req: ChatCompletionRequest):
     result = await asyncio.wait_for(future, timeout=_QUERY_TIMEOUT_SEC)
     
     answer = result["answer"]
+    sources = result.get("sources", [])
+    
+    if sources:
+        answer += "\n\n### Sources\n"
+        for i, src in enumerate(sources, 1):
+            doc = "Annual Report" if src.get("doc_type") == "annual_report" else "Concall"
+            answer += f"- **[SRC-{i}]** {src.get('symbol', '')} {doc} FY{src.get('year', '')} (Page {src.get('page', '')})\n"
     
     if req.stream:
         async def event_generator():
