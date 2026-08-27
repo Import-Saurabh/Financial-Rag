@@ -1,39 +1,3 @@
-"""
-synthesis/pipeline.py
-
-Orchestrates the full intent-decomposition → retrieval → fusion →
-prompt-building chain that sits *between* the reranker and the LLM call.
-
-                    ┌──────────────────────────────────┐
-  top_chunks  ─────▶│                                  │
-  raw query   ─────▶│   SynthesisPipeline.run()        │──▶ BuiltPrompt
-  symbol/years ────▶│                                  │     (system + user)
-                    └──────────────────────────────────┘
-                         │            │          │
-                   Decomposer    SchemaBridge  FusionLayer
-                   (atoms)       (SQL+vec)     (insights)
-                                               PromptBuilder
-
-Design decisions
-────────────────
-1. FULLY OPTIONAL — if any upstream component is unavailable (missing DB,
-   import error, MySQL unreachable) the pipeline gracefully degrades to
-   the vector-only prompt path so query.py never crashes.
-
-2. SYMBOL FROM CHUNKS — if no symbol is passed explicitly, it is inferred
-   from the metadata of the highest-scoring chunk.
-
-3. FREE MODELS ONLY — provider-id and model name are forwarded from
-   rag_engine so the prompt builder can size itself correctly.  No
-   hard-coded Claude/GPT references anywhere.
-
-4. NO NEW CLI FLAGS — query.py detects the new pipeline automatically.
-   Old --provider / --auto flags still work.
-
-5. THREAD SAFE — SchemaBridge already uses ThreadPoolExecutor internally;
-   this wrapper is stateless.
-"""
-
 from __future__ import annotations
 
 import os
@@ -85,52 +49,36 @@ except ModuleNotFoundError:
     import logging
     log = logging.getLogger(__name__)
 
-# ── MySQL connectivity — the structured financial tables now live in the ─────
-#    same containerized MySQL instance as everything else (config/settings.py:
-#    DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_PASSWORD).
-try:
-    from config.settings import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
-    _HAS_DB_SETTINGS = True
-except (ImportError, AttributeError):
-    _HAS_DB_SETTINGS = False
+# ── API connectivity ────────────────────────────────────────────────────────
+import os
+import httpx
+
+MCP_BASE = os.getenv("FINANCIAL_MCP_BASE", "http://localhost:8100")
+
+_MCP_REACHABLE_CACHE: Optional[bool] = None
+_MCP_REACHABLE_CHECKED_AT: float = 0.0
+_MCP_REACHABLE_TTL_SEC: float = 30.0
 
 
-_DB_REACHABLE_CACHE: Optional[bool] = None
-_DB_REACHABLE_CHECKED_AT: float = 0.0
-_DB_REACHABLE_TTL_SEC: float = 30.0   # re-probe at most every 30s, not once-ever
-
-
-def _mysql_reachable() -> bool:
-    """Cheap connectivity probe — used only for pipeline-mode gating, not
-    for actual queries (SchemaBridge owns the real pooled connection).
-
-    Cached for _DB_REACHABLE_TTL_SEC (30s) rather than for the life of the
-    process. A permanent cache meant a container-startup race (MySQL not up
-    yet when the first query landed) would lock the pipeline into
-    vector-only mode until the app was manually restarted, even though
-    MySQL came up seconds later. A short TTL lets it self-heal on the next
-    query instead.
-    """
-    global _DB_REACHABLE_CACHE, _DB_REACHABLE_CHECKED_AT
+def _api_reachable() -> bool:
+    """Cheap connectivity probe — used only for pipeline-mode gating."""
+    global _MCP_REACHABLE_CACHE, _MCP_REACHABLE_CHECKED_AT
     now = time.time()
-    if _DB_REACHABLE_CACHE is not None and (now - _DB_REACHABLE_CHECKED_AT) < _DB_REACHABLE_TTL_SEC:
-        return _DB_REACHABLE_CACHE
-    if not _HAS_DB_SETTINGS:
-        _DB_REACHABLE_CACHE = False
-        _DB_REACHABLE_CHECKED_AT = now
-        return False
+    if _MCP_REACHABLE_CACHE is not None and (now - _MCP_REACHABLE_CHECKED_AT) < _MCP_REACHABLE_TTL_SEC:
+        return _MCP_REACHABLE_CACHE
+
     try:
-        import mysql.connector
-        conn = mysql.connector.connect(
-            host=DB_HOST, port=DB_PORT, database=DB_NAME,
-            user=DB_USER, password=DB_PASSWORD, connection_timeout=3,
-        )
-        conn.close()
-        _DB_REACHABLE_CACHE = True
+        # Ping the root to check if the server is up (it will return 404, but instantly)
+        # Avoid GET /sse as it holds the stream open and times out
+        httpx.get(MCP_BASE, timeout=2.0)
+        _MCP_REACHABLE_CACHE = True
+    except httpx.HTTPStatusError:
+        _MCP_REACHABLE_CACHE = True  # 404 means it's up
     except Exception:
-        _DB_REACHABLE_CACHE = False
-    _DB_REACHABLE_CHECKED_AT = now
-    return _DB_REACHABLE_CACHE
+        _MCP_REACHABLE_CACHE = False
+
+    _MCP_REACHABLE_CHECKED_AT = now
+    return _MCP_REACHABLE_CACHE
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -170,7 +118,7 @@ def _pipeline_available() -> bool:
     """True only when every component is importable AND MySQL is reachable."""
     if not (_HAS_DECOMPOSER and _HAS_BRIDGE and _HAS_FUSION and _HAS_BUILDER):
         return False
-    if not _mysql_reachable():
+    if not _api_reachable():
         return False
     return True
 
@@ -229,7 +177,7 @@ class SynthesisPipeline:
         return self._decomposer
 
     def _get_bridge(self) -> Optional[Any]:
-        if not (_HAS_BRIDGE and _mysql_reachable()):
+        if not (_HAS_BRIDGE and _api_reachable()):
             return None
         if self._bridge is None:
             self._bridge = SchemaBridge(
@@ -311,11 +259,10 @@ class SynthesisPipeline:
                 warnings.append("decomposer not importable — using vector-only path")
             elif not _HAS_BRIDGE:
                 warnings.append("schema_bridge not importable — using vector-only path")
-            elif not _HAS_DB_SETTINGS:
-                warnings.append("DB_HOST/DB_NAME/... not set in config.settings — using vector-only path")
-            elif not _mysql_reachable():
+
+            elif not _api_reachable():
                 warnings.append(
-                    f"MySQL unreachable at {DB_HOST}:{DB_PORT}/{DB_NAME} — using vector-only path"
+                    f"MCP Server unreachable at {MCP_BASE} — using vector-only path"
                 )
             else:
                 warnings.append("fusion layer unavailable — using vector-only path")
