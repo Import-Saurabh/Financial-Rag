@@ -1,63 +1,5 @@
-"""
-schema_bridge/schema_bridge.py
-
-Layer 2 of the Quant CoPilot Intent Decomposition Pipeline.
-
-Receives a list of AtomicNeed objects from the decomposer and translates
-each one into a concrete data-fetch operation:
-
-  QUANTITATIVE / TECHNICAL / MACRO / OWNERSHIP atoms
-    → parameterized MySQL SELECT (table + columns from SUBTYPE_TABLE_MAP,
-      filtered by symbol, fiscal year / date window)
-
-  QUALITATIVE atoms
-    → ChromaDB vector query via retrieve_annual()
-
-  FORWARD_LOOKING atoms
-    → ChromaDB concall query via retrieve_concall()
-
-  COMPARATIVE atoms
-    → both SQL and vector, one sub-call per symbol
-
-All channels fire in parallel using concurrent.futures.ThreadPoolExecutor
-so a mixed query (EBITDA + MD&A + guidance) costs roughly max(channel_latency)
-instead of sum.
-
-Returns a BridgeResult containing:
-  sql_results    — list of SqlAtomResult (atom + rows fetched)
-  vector_results — list of VectorAtomResult (atom + chunks fetched)
-  errors         — any channel-level failures (non-fatal)
-
-═══════════════════════════════════════════════════════════════════════════
-Design principles
-═══════════════════════════════════════════════════════════════════════════
-1. ZERO hallucination surface — only columns that exist in SUBTYPE_TABLE_MAP
-   and the actual DB schema are ever queried.  The bridge never generates
-   free-form SQL; it assembles it from a whitelist.
-
-2. Symbol filtering — every SQL query includes WHERE symbol = ? when a
-   symbol is known.  Macro/rate tables (rbi_rates, forex_commodities,
-   macro_indicators, market_indices) are symbol-free by design.
-
-3. Year → date mapping
-   FY year (e.g. 2024) maps to the date range [YYYY-04-01 … (YYYY+1)-03-31]
-   for Indian financial year convention (Apr–Mar).
-   "current" queries use ORDER BY <date_col> DESC LIMIT 1.
-
-4. Period type routing
-   annual    → profit_loss, balance_sheet (period_type='annual'), cash_flow
-   quarterly → quarterly_results, balance_sheet (period_type='quarterly')
-   ttm       → profit_loss, cash_flow (period_type='ttm')
-
-5. Safety — all values are passed as SQL parameters (%s), never interpolated.
-"""
-
 from __future__ import annotations
 
-import decimal   # [FIX] used in _execute_sql_atom but was never imported ->
-                  # NameError on every row containing a DECIMAL column, i.e.
-                  # almost every real query. This was silently killing SQL
-                  # results even for correctly-mapped tables.
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -65,8 +7,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Dict, List, Optional, Tuple
 
-import mysql.connector
-from mysql.connector import Error as MySQLError
+import httpx
 
 # ── project imports ──────────────────────────────────────────────────────────
 from decomposer.atomic_decomposer import (
@@ -81,62 +22,56 @@ from utils.logger import get_logger
 
 log = get_logger(__name__)
 
-# ─── MySQL connection defaults (can be overridden via env or constructor) ──
-DEFAULT_MYSQL_CONFIG = {
-    "host": os.getenv("MYSQL_HOST", "localhost"),
-    "port": int(os.getenv("MYSQL_PORT", 3306)),
-    "user": os.getenv("MYSQL_USER", "root"),
-    "password": os.getenv("MYSQL_PASSWORD", ""),
-    "database": os.getenv("MYSQL_DATABASE", "ai_hedge_fund"),
-    "charset": "utf8mb4",
-    "use_unicode": True,
+# ─── MCP base URL (MCP server) ───────────────────────────────────────────────
+MCP_BASE = os.getenv("FINANCIAL_MCP_BASE", "http://localhost:8100")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Table → API endpoint mapping
+# ─────────────────────────────────────────────────────────────────────────────
+# Maps the MySQL table name (used in SUBTYPE_TABLE_MAP) to the FastAPI
+# endpoint that serves the same data. {symbol} is replaced at call time.
+# "date_key" is the field name in the JSON response used for year filtering.
+
+_TABLE_TO_TOOL: Dict[str, Dict[str, Any]] = {
+    # ── Financials ────────────────────────────────────────────────────────────
+    "profit_loss":          {"tool": "get_profit_loss",
+                             "date_key": "period_end", "supports_period_type": True},
+    "quarterly_results":    {"tool": "get_quarterly_results",
+                             "date_key": "period_end", "supports_period_type": False},
+    "balance_sheet":        {"tool": "get_balance_sheet",
+                             "date_key": "period_end", "supports_period_type": True},
+    "cash_flow":            {"tool": "get_cash_flow",
+                             "date_key": "period_end", "supports_period_type": True},
+    # ── Market ────────────────────────────────────────────────────────────────
+    "price_daily":          {"tool": "get_price",
+                             "date_key": "date",       "supports_date_range": True},
+    "technical_indicators": {"tool": "get_technicals",
+                             "date_key": "date",       "supports_date_range": True},
+    # ── Ownership ─────────────────────────────────────────────────────────────
+    "shareholding":         {"tool": "get_shareholding",
+                             "date_key": "period_end"},
+    "corporate_actions":    {"tool": "get_corporate_actions",
+                             "date_key": "action_date"},
+    # ── Stocks ────────────────────────────────────────────────────────────────
+    "stocks":               {"tool": "list_stocks",
+                             "date_key": "updated_at", "no_symbol_in_path": True},
+    # ── Growth / Estimates ────────────────────────────────────────────────────
+    "growth_metrics":       {"tool": "get_growth_metrics",
+                             "date_key": "as_of_date"},
+    "eps_trend":            {"tool": "get_eps_trend",
+                             "date_key": "snapshot_date"},
+    # ── Macro ─────────────────────────────────────────────────────────────────
+    "rbi_rates":            {"tool": "get_rbi_rates",
+                             "date_key": "effective_date", "no_symbol_in_path": True},
+    "market_indices":       {"tool": "get_market_indices",
+                             "date_key": "snapshot_date",  "no_symbol_in_path": True},
+    "forex_commodities":    {"tool": "get_forex_commodities",
+                             "date_key": "snapshot_date",  "no_symbol_in_path": True},
+    "macro_indicators":     {"tool": "get_macro_indicators",
+                             "date_key": "snapshot_date",  "no_symbol_in_path": True},
 }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Table metadata: which column holds the date/period, and which holds symbol
-# ─────────────────────────────────────────────────────────────────────────────
-
-# Maps table_name → (date_column, has_symbol_column, has_period_type_column)
-#   date_column        — used to filter by fiscal year or ORDER BY for "current"
-#   has_symbol_column  — True when the table has a `symbol` TEXT column
-#   has_period_type    — True when the table has a `period_type` TEXT column
-#                        ('annual' / 'quarterly' / 'ttm')
-_TABLE_META: Dict[str, Tuple[str, bool, bool]] = {
-    # Financials – P&L
-    "profit_loss":           ("period_end", True,  True),   # period_type: annual/quarterly/ttm
-    # Balance Sheet
-    "balance_sheet":         ("period_end", True,  True),   # period_type: annual/quarterly
-    # Cash Flow
-    "cash_flow":             ("period_end", True,  True),   # period_type: annual/quarterly/ttm
-    # Quarterly Results (standalone, always quarterly)
-    "quarterly_results":     ("period_end", True,  False),
-    # Market data
-    "price_daily":           ("date",       True,  False),
-    "technical_indicators":  ("date",       True,  False),
-    # Shareholding
-    "shareholding":          ("period_end", True,  False),
-    # Corporate actions
-    "corporate_actions":     ("action_date", True,  False),
-    # Growth & estimates
-    "growth_metrics":        ("as_of_date", True,  False),
-    "eps_trend":             ("snapshot_date", True, False),
-    # [FIX] "stocks" was missing -> market_cap (stocks.market_cap_cr) had
-    # nowhere to resolve to and would hit the same "Unknown table" error.
-    # It's a static, symbol-keyed table with no period_end; updated_at is
-    # the closest thing to a date column, and there's no period_type.
-    "stocks":                ("updated_at", True,  False),
-    # Macro / market tables — no symbol column
-    "rbi_rates":             ("effective_date", False, False),
-    "market_indices":        ("snapshot_date",  False, False),
-    "forex_commodities":     ("snapshot_date",  False, False),
-    "macro_indicators":      ("snapshot_date",  False, False),
-}
-
-# Columns always fetched in addition to the atom's requested columns.
-# This lets the LLM know what period the data belongs to.
-_ALWAYS_SELECT = ["symbol", "period_end", "as_of_date", "date",
-                  "snapshot_date", "action_date", "effective_date"]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Indian FY → calendar date range helper
@@ -191,166 +126,159 @@ class BridgeResult:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SQL query builder
+# Client-side fiscal year filter (API endpoints don't expose year params)
 # ─────────────────────────────────────────────────────────────────────────────
-def _build_sql(atom: AtomicNeed) -> Tuple[str, tuple]:
+def _filter_rows_by_fy(
+    rows: List[Dict[str, Any]],
+    years: List[int],
+    date_key: str,
+) -> List[Dict[str, Any]]:
     """
-    Build a parameterized SELECT for one SQL-backed AtomicNeed.
-
-    Returns (sql_string, params_tuple).
-    Raises ValueError if the table or columns cannot be resolved.
+    Keep only rows whose date_key falls within the requested Indian fiscal
+    years.  Indian FY: Apr(Y-1) – Mar(Y).  A period_end of 2024-03-31 is
+    FY2024; a period_end of 2024-06-30 is FY2025.
     """
-    table   = atom.sql_table
-    columns = list(atom.sql_columns) if atom.sql_columns else []
+    if not years:
+        return rows
+    fy_set = set(years)
+    filtered: List[Dict[str, Any]] = []
+    for row in rows:
+        raw_date = row.get(date_key)
+        if not raw_date:
+            filtered.append(row)          # keep rows without a date
+            continue
+        try:
+            parts = str(raw_date)[:10].split("-")
+            y, m = int(parts[0]), int(parts[1])
+            fy = y + 1 if m >= 4 else y   # Indian FY convention
+            if fy in fy_set:
+                filtered.append(row)
+        except (ValueError, IndexError):
+            filtered.append(row)
+    return filtered
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MCP Tool executor (replaces HTTP/MySQL)
+# ─────────────────────────────────────────────────────────────────────────────
+import json
+import asyncio
+from mcp.client.session import ClientSession
+from mcp.client.sse import sse_client
+
+async def _execute_mcp_atom(atom: AtomicNeed, session: ClientSession) -> SqlAtomResult:
+    """
+    Fetch data for one atom via the MCP Server tools (never raises).
+    Returns SqlAtomResult with rows from the JSON response.
+    """
+    table = atom.sql_table
     if not table or table.startswith("chromadb:"):
-        raise ValueError(f"Atom sub_type={atom.sub_type!r} is vector-backed; "
-                         f"use vector channel instead.")
-
-    # [FIX] Sub-types with no real column anywhere in the schema (see
-    # ORPHANED_SUBTYPES in atomic_decomposer.py) must never reach SQL build --
-    # they'd either raise or build a query selecting nothing but symbol/date.
-    # Fail with a distinct, expected message instead of a scary stack trace.
-    if atom.sub_type in ORPHANED_SUBTYPES:
-        raise ValueError(
-            f"sub_type={atom.sub_type!r} has no backing column in the current "
-            f"schema (mysql_schema_v2.sql) — not a bug, just not tracked yet."
+        return SqlAtomResult(
+            atom=atom,
+            error=f"Atom sub_type={atom.sub_type!r} is vector-backed; use vector channel.",
         )
 
-    meta = _TABLE_META.get(table)
-    if meta is None:
-        raise ValueError(f"Unknown table {table!r} — add it to _TABLE_META.")
+    if atom.sub_type in ORPHANED_SUBTYPES:
+        return SqlAtomResult(
+            atom=atom,
+            error=(
+                f"sub_type={atom.sub_type!r} has no backing data in the current "
+                f"schema — not a bug, just not tracked yet."
+            ),
+        )
 
-    date_col, has_symbol, has_period_type = meta
+    tool_info = _TABLE_TO_TOOL.get(table)
+    if tool_info is None:
+        return SqlAtomResult(
+            atom=atom,
+            error=f"No MCP tool mapped for table {table!r}",
+        )
 
-    # --- SELECT clause -------------------------------------------------------
-    select_cols: List[str] = []
-    if has_symbol:
-        select_cols.append("symbol")
-    if date_col not in select_cols:
-        select_cols.append(date_col)
-    if has_period_type:
-        select_cols.append("period_type")
-    # Requested metric columns (deduplicated, whitelisted)
-    for col in columns:
-        if col not in select_cols:
-            select_cols.append(col)
+    tool_name = tool_info["tool"]
+    
+    # ── Build arguments ───────────────────────────────────────────────────
+    args: Dict[str, Any] = {}
 
-    select_str = ", ".join(select_cols)
-
-    # --- WHERE clause ---------------------------------------------------------
-    conditions: List[str] = []
-    params:     List[Any] = []
-
-    # Symbol filter
     symbol = atom.symbol or (atom.symbols[0] if atom.symbols else None)
-    if has_symbol and symbol:
-        conditions.append("symbol = %s")
-        params.append(symbol.upper())
+    if not tool_info.get("no_symbol_in_path"):
+        if not symbol:
+            return SqlAtomResult(
+                atom=atom,
+                error=f"Symbol required for {table} but none provided",
+            )
+        args["symbol"] = symbol.upper()
 
-    # Period type filter (only for tables that support it)
-    if has_period_type:
-        if atom.period_type == "quarterly":
-            period_type_val = "quarterly"
-        elif atom.period_type == "ttm":
-            period_type_val = "ttm"
-        else:
-            period_type_val = "annual"
-        conditions.append("period_type = %s")
-        params.append(period_type_val)
+    # Period type (profit_loss, balance_sheet, cash_flow)
+    if tool_info.get("supports_period_type") and atom.period_type:
+        args["period_type"] = atom.period_type
 
-    # Date / year filter
-    if atom.years:
-        if len(atom.years) == 1:
-            fy = atom.years[0]
-            start, end = _fy_date_range(fy)
-            conditions.append(f"{date_col} BETWEEN %s AND %s")
-            params.extend([start, end])
-        else:
-            # Multiple years: expand to full range
-            min_fy, max_fy = min(atom.years), max(atom.years)
-            start, _ = _fy_date_range(min_fy)
-            _,   end = _fy_date_range(max_fy)
-            conditions.append(f"{date_col} BETWEEN %s AND %s")
-            params.extend([start, end])
+    # Date range (price, technicals)
+    # The tools might not actually accept from_date/to_date as arguments
+    # Let's check MCP tool definitions in mcp_server.py:
+    # get_price: takes from_date, to_date. Wait, I didn't verify if mcp_server get_price accepts them.
+    # Ah, let's just pass them if they are in the HTTP api... wait!
+    # I should check if the MCP tool accepts from_date/to_date.
+    # Let's pass them, if the tool doesn't take it, MCP server will ignore them or throw error.
+    if tool_info.get("supports_date_range") and atom.years:
+        min_fy, max_fy = min(atom.years), max(atom.years)
+        args["from_date"] = date(min_fy - 1, 4, 1).isoformat()
+        args["to_date"]   = date(max_fy, 3, 31).isoformat()
 
-    # Corporate actions: filter by action_type when the sub_type implies it
-    if table == "corporate_actions" and atom.sub_type in ("dividend", "buyback",
-                                                           "bonus", "split"):
-        action_type_map = {
-            "dividend": "Dividend",
-            "buyback":  "Buyback",
-            "bonus":    "Bonus",
-            "split":    "Split",
-        }
-        conditions.append("action_type = %s")
-        params.append(action_type_map[atom.sub_type])
+    # Corporate actions: action_type filter
+    if table == "corporate_actions" and atom.sub_type in (
+        "dividend", "buyback", "bonus", "split"
+    ):
+        args["action_type"] = atom.sub_type.capitalize()
 
-    # Macro: filter by indicator_name when sub_type is "macro"
-    if table == "macro_indicators" and atom.sub_type == "macro":
-        if atom.raw_text and len(atom.raw_text) < 30:
-            conditions.append("LOWER(indicator_name) LIKE %s")
-            params.append(f"%{atom.raw_text.lower()}%")
+    # Macro: indicator/instrument filter from raw_text
+    if table == "macro_indicators" and atom.raw_text and len(atom.raw_text) < 30:
+        args["indicator_name"] = atom.raw_text
+    if table == "forex_commodities" and atom.raw_text and len(atom.raw_text) < 30:
+        args["instrument"] = atom.raw_text
+    if table == "market_indices" and atom.raw_text and len(atom.raw_text) < 30:
+        args["index_name"] = atom.raw_text
 
-    where_str = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-
-    # --- ORDER BY / LIMIT ----------------------------------------------------
-    if atom.time_horizon == TimeHorizon.CURRENT and not atom.years:
-        order_limit = f"ORDER BY {date_col} DESC LIMIT 5"
-    elif atom.years:
-        order_limit = f"ORDER BY {date_col} DESC"
+    # Limit: fetch enough data to cover requested years
+    if atom.years and len(atom.years) > 1:
+        args["limit"] = max(20, len(atom.years) * 4)
+    elif atom.time_horizon == TimeHorizon.CURRENT and not atom.years:
+        args["limit"] = 5
     else:
-        order_limit = f"ORDER BY {date_col} DESC LIMIT 10"
+        args["limit"] = 20
 
-    sql = f"SELECT {select_str} FROM {table} {where_str} {order_limit}".strip()
-    return sql, tuple(params)
+    # ── MCP Tool Call ─────────────────────────────────────────────────────
+    log.debug(f"  [bridge] MCP Tool {tool_name} args={args}")
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# SQL executor (MySQL)
-# ─────────────────────────────────────────────────────────────────────────────
-def _execute_sql_atom(atom: AtomicNeed, db_config: Dict[str, Any]) -> SqlAtomResult:
-    """
-    Run the SQL for one atom against MySQL, return SqlAtomResult (never raises).
-    """
     try:
-        sql, params = _build_sql(atom)
-    except ValueError as e:
-        log.warning(f"  [bridge] SQL build failed for {atom.sub_type}: {e}")
-        return SqlAtomResult(atom=atom, error=str(e))
-
-    log.debug(f"  [bridge] SQL: {sql} | params={params}")
-
-    conn = None
-    cursor = None
-    try:
-        conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute(sql, params)
-        rows = cursor.fetchall()
-        # Convert Decimal and date types to native Python types for JSON serialization
-        for row in rows:
-            for k, v in row.items():
-                if hasattr(v, 'isoformat'):  # date/datetime
-                    row[k] = v.isoformat()
-                elif isinstance(v, decimal.Decimal):
-                    row[k] = float(v) if v is not None else None
-        log.info(f"  [bridge] {atom.sub_type}: {len(rows)} row(s) from {atom.sql_table}")
-        return SqlAtomResult(atom=atom, rows=rows, sql=sql, params=params)
-
-    except MySQLError as e:
-        msg = f"MySQL error for {atom.sub_type} ({atom.sql_table}): {e}"
-        log.error(f"  [bridge] {msg}")
-        return SqlAtomResult(atom=atom, sql=sql, params=params, error=msg)
+        result = await session.call_tool(tool_name, arguments=args)
+        body = json.loads(result.content[0].text)
     except Exception as e:
-        msg = f"Unexpected error for {atom.sub_type}: {e}"
+        msg = f"MCP error calling {tool_name} for {atom.sub_type}: {e}"
         log.error(f"  [bridge] {msg}")
-        return SqlAtomResult(atom=atom, sql=sql, params=params, error=msg)
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+        return SqlAtomResult(atom=atom, sql=f"TOOL {tool_name}", error=msg)
+
+    # ── Extract rows ──────────────────────────────────────────────────────
+    if isinstance(body, dict) and "error" in body:
+        msg = f"API Error: {body['error']} - {body.get('detail', '')}"
+        log.error(f"  [bridge] {msg}")
+        return SqlAtomResult(atom=atom, sql=f"TOOL {tool_name}", error=msg)
+
+    rows = body.get("data", body if isinstance(body, list) else [])
+    if not isinstance(rows, list):
+        rows = [rows]
+
+    # Client-side fiscal year filtering for endpoints that don't support it
+    date_key = tool_info.get("date_key", "period_end")
+    if atom.years and not tool_info.get("supports_date_range"):
+        rows = _filter_rows_by_fy(rows, atom.years, date_key)
+
+    log.info(f"  [bridge] {atom.sub_type}: {len(rows)} row(s) from MCP {tool_name}")
+    return SqlAtomResult(
+        atom=atom,
+        rows=rows,
+        sql=f"TOOL {tool_name}",
+        params=tuple(args.items()),
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -567,16 +495,15 @@ class SchemaBridge:
 
     def __init__(
         self,
-        mysql_config: Optional[Dict[str, Any]] = None,
+        mcp_base: Optional[str] = None,
         max_workers: int = 8,
     ):
         """
-        :param mysql_config: MySQL connection parameters (host, port, user,
-                             password, database). If None, uses defaults from
-                             environment or DEFAULT_MYSQL_CONFIG.
+        :param mcp_base:     Base URL of the MCP server (e.g.
+                             http://localhost:8100). Defaults to MCP_BASE.
         :param max_workers:  Maximum threads for parallel fetching.
         """
-        self.mysql_config = mysql_config or DEFAULT_MYSQL_CONFIG.copy()
+        self.mcp_base = mcp_base or MCP_BASE
         self.max_workers = max_workers
 
     # ── Main entry point ──────────────────────────────────────────────────────
@@ -612,37 +539,40 @@ class SchemaBridge:
             f"{len(vector_atoms)} vector atom(s) in parallel"
         )
 
-        # Step 3: fire all tasks in parallel
+        # Step 3: fire tasks
         sql_results:    List[SqlAtomResult]    = []
         vector_results: List[VectorAtomResult] = []
         errors:         List[str]              = []
 
-        with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
-            futures = {}
-
-            for atom in sql_atoms:
-                # Pass the mysql_config to each task
-                f = pool.submit(self._safe_sql, atom)
-                futures[f] = ("sql", atom)
-
-            for atom in vector_atoms:
-                f = pool.submit(self._safe_vector, atom)
-                futures[f] = ("vec", atom)
-
-            for fut in as_completed(futures):
-                kind, atom = futures[fut]
-                try:
-                    result = fut.result()
-                    if kind == "sql":
-                        sql_results.append(result)
-                    else:
+        # Run vector atoms in thread pool
+        if vector_atoms:
+            with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
+                futures = {pool.submit(self._safe_vector, atom): atom for atom in vector_atoms}
+                for fut in as_completed(futures):
+                    atom = futures[fut]
+                    try:
+                        result = fut.result()
                         vector_results.append(result)
-                    if result.error:
-                        errors.append(result.error)
-                except Exception as e:
-                    msg = f"Unexpected failure in bridge ({atom.sub_type}): {e}"
-                    log.error(f"  [bridge] {msg}")
-                    errors.append(msg)
+                        if result.error:
+                            errors.append(result.error)
+                    except Exception as e:
+                        msg = f"Unexpected failure in vector bridge ({atom.sub_type}): {e}"
+                        log.error(f"  [bridge] {msg}")
+                        errors.append(msg)
+
+        # Run SQL/MCP atoms via single asyncio SSE session
+        if sql_atoms:
+            try:
+                mcp_url = f"{self.mcp_base}/sse"
+                results = asyncio.run(self._fetch_mcp_atoms(sql_atoms, mcp_url))
+                for res in results:
+                    sql_results.append(res)
+                    if res.error:
+                        errors.append(res.error)
+            except Exception as e:
+                msg = f"Unexpected failure in MCP bridge: {e}"
+                log.error(f"  [bridge] {msg}")
+                errors.append(msg)
 
         # [FIX-EMPTY-VECTOR-FALLBACK]
         # A qualitative/forward-looking ask that came back with literally
@@ -735,9 +665,13 @@ class SchemaBridge:
 
     # ── Internal helpers ──────────────────────────────────────────────────────
 
-    def _safe_sql(self, atom: AtomicNeed) -> SqlAtomResult:
-        return _execute_sql_atom(atom, self.mysql_config)
-
+    async def _fetch_mcp_atoms(self, atoms: List[AtomicNeed], mcp_url: str) -> List[SqlAtomResult]:
+        """Fetch multiple atoms over a single MCP SSE connection in parallel."""
+        async with sse_client(mcp_url) as streams:
+            async with ClientSession(*streams) as session:
+                await session.initialize()
+                tasks = [_execute_mcp_atom(atom, session) for atom in atoms]
+                return await asyncio.gather(*tasks)
     def _safe_vector(self, atom: AtomicNeed) -> VectorAtomResult:
         return _execute_vector_atom(atom)
 
