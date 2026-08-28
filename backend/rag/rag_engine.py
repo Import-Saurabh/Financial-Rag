@@ -1,30 +1,3 @@
-"""
-rag/rag_engine.py  — patched to use SynthesisPipeline (Layer 5)
-
-What changed from the previous version
-────────────────────────────────────────
-[SYNTHESIS] generate_answer() now creates a SynthesisPipeline and calls
-            .run() *after* chunk trimming.  The pipeline attempts:
-
-              1. Atomic decomposer   → typed AtomicNeed list
-              2. Schema bridge       → SQL rows + vector chunks (parallel)
-              3. Fusion layer        → metric table + contradiction insights
-              4. PromptBuilder       → structured (system, user) pair
-                                       with SQL table, insight callouts,
-                                       and [SRC-N] / [SQL-N] citation anchors
-
-            If any step fails (missing DB, import error, network) the
-            pipeline degrades gracefully to the vector-only prompt path
-            that was already in place — so all existing queries keep working.
-
-[FREE MODELS] No hard-coded Claude/GPT.  Provider catalogue (Groq, OpenRouter
-              Qwen, Gemini, NVIDIA NIM, Ollama) is unchanged.  The prompt
-              builder sizes itself to the chosen model automatically.
-
-Everything else (provider picker, retry logic, Gemini native call, context
-trimmer, RAGResponse) is exactly as before.
-"""
-
 import os
 import time
 from typing import List, Optional, Dict, Tuple
@@ -167,90 +140,27 @@ def build_provider_catalogue() -> List[ProviderEntry]:
     deepseek_key  = os.getenv("DEEPSEEK_API_KEY", "")
 
     # ── Groq (fast, free tier, limited context) ───────────────────────────────
-    if groq_key:
-        cat.extend([
-            ProviderEntry(
-                id="groq-llama3-70b", label="Groq — Llama 3.3 70B Versatile",
-                provider="groq", model="llama-3.3-70b-versatile",
-                api_key=groq_key, api_url=GROQ_API_URL,
-                context_note="Fast, Free",
-            ),
-            ProviderEntry(
-                id="groq-llama3-8b", label="Groq — Llama 3 8B",
-                provider="groq", model="llama3-8b-8192",
-                api_key=groq_key, api_url=GROQ_API_URL,
-                context_note="Fast, Free",
-            ),
-            ProviderEntry(
-                id="groq-deepseek-r1", label="Groq — DeepSeek R1 Llama 70B",
-                provider="groq", model="deepseek-r1-distill-llama-70b",
-                api_key=groq_key, api_url=GROQ_API_URL,
-                context_note="Reasoning, Free",
-            ),
-            ProviderEntry(
-                id="groq-gemma2-9b", label="Groq — Gemma 2 9B IT",
-                provider="groq", model="gemma2-9b-it",
-                api_key=groq_key, api_url=GROQ_API_URL,
-                context_note="Fast, Free",
-            ),
-            ProviderEntry(
-                id="groq-mixtral", label="Groq — Mixtral 8x7B",
-                provider="groq", model="mixtral-8x7b-32768",
-                api_key=groq_key, api_url=GROQ_API_URL,
-                context_note="Free",
-            ),
-        ])
 
-    if or_key:
-        cat.extend([
-            ProviderEntry(
-                id="or-llama3-70b-free", label="OpenRouter — Llama 3.3 70B [FREE]",
-                provider="openrouter", model="meta-llama/llama-3.3-70b-instruct:free",
-                api_key=or_key, api_url=OPENROUTER_API_URL,
-                context_note="131k ctx, FREE",
-            ),
-            ProviderEntry(
-                id="or-gemini2-flash-free", label="OpenRouter — Gemini 2.0 Flash Lite [FREE]",
-                provider="openrouter", model="google/gemini-2.0-flash-lite-preview-02-05:free",
-                api_key=or_key, api_url=OPENROUTER_API_URL,
-                context_note="1M ctx, FREE",
-            ),
-            ProviderEntry(
-                id="or-deepseek-r1-free", label="OpenRouter — DeepSeek R1 [FREE]",
-                provider="openrouter", model="deepseek/deepseek-r1:free",
-                api_key=or_key, api_url=OPENROUTER_API_URL,
-                context_note="128k ctx, FREE",
-            ),
-            ProviderEntry(
-                id="or-qwen25-coder-free", label="OpenRouter — Qwen 2.5 Coder 32B [FREE]",
-                provider="openrouter", model="qwen/qwen-2.5-coder-32b-instruct:free",
-                api_key=or_key, api_url=OPENROUTER_API_URL,
-                context_note="32k ctx, FREE",
-            ),
-        ])
-
-    # ── NVIDIA NIM (slow — warn users) ───────────────────────────────────────
-    if nv_key:
-        cat.append(ProviderEntry(
-            id="nvidia", label="NVIDIA NIM — llama-3.3-70b-instruct ⚠ SLOW (~90s)",
-            provider="nvidia", model="meta/llama-3.3-70b-instruct",
-            api_key=nv_key, api_url=NVIDIA_API_URL,
-            context_note="128k ctx, slow",
-        ))
-
-    # ── DeepSeek (Direct) ────────────────────────────────────────────────────
     if deepseek_key:
-        cat.append(ProviderEntry(
-            id="deepseek", label="DeepSeek — v4-flash",
-            provider="deepseek", model="deepseek-v4-flash",
-            api_key=deepseek_key, api_url="https://api.deepseek.com/chat/completions",
-            context_note="Concurrency Limit: 500",
-        ))
-
-    # ── Local Ollama (autodiscovered) ─────────────────────────────────────────
-    cat.extend(_discover_ollama(ollama_url))
-
+        cat.append(
+            ProviderEntry(
+                id="deepseek", label="DeepSeek - v4-flash",
+                provider="deepseek", model="deepseek-chat",
+                api_key=deepseek_key, api_url="https://api.deepseek.com/chat/completions",
+                context_note="64k ctx",
+            )
+        )
+    if or_key:
+        cat.append(
+            ProviderEntry(
+                id="or-free", label="OpenRouter - Auto Free Model",
+                provider="openrouter", model="openrouter/free",
+                api_key=or_key, api_url=OPENROUTER_API_URL,
+                context_note="Auto-routed Free Model",
+            )
+        )
     return cat
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -790,6 +700,7 @@ YOUR RULES:
 5. CITE EVERY NUMBER: After each data point write [FY<year>, AR, Page <n>].
 6. FLAG GAPS — ONLY FOR EXPLICITLY REQUESTED YEARS.
 7. NO HALLUCINATION.
+8. HUMAN-LIKE TONE: Ensure your response is highly conversational, natural, and human-like in tone. Do not sound robotic.
 
 """ + _FINANCIAL_STATEMENT_RULES
 
@@ -801,7 +712,8 @@ YOUR RULES:
 2. FORWARD-LOOKING PRIORITY: Prioritise guidance / outlook phrases.
 3. QUOTE ACCURATELY: Name the speaker and their role.
 4. FLAG GAPS — ONLY FOR EXPLICITLY REQUESTED YEARS.
-5. USE ONLY CONTEXT."""
+5. USE ONLY CONTEXT.
+6. HUMAN-LIKE TONE: Ensure your response is highly conversational, natural, and human-like in tone. Do not sound robotic."""
 
 COMBINED_SYSTEM_PROMPT = """\
 You are a senior equity research analyst with access to both annual reports
@@ -815,6 +727,7 @@ YOUR RULES:
 5. CITE SOURCES: [FY<year>, AR/CC, Page <n>] after each data point.
 6. FLAG MISSING DATA — ONLY FOR EXPLICITLY REQUESTED YEARS.
 7. NO HALLUCINATION.
+8. HUMAN-LIKE TONE: Ensure your response is highly conversational, natural, and human-like in tone. Do not sound robotic.
 
 """ + _FINANCIAL_STATEMENT_RULES
 
