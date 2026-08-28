@@ -1,62 +1,3 @@
-"""
-synthesis/prompt_builder.py
-
-Layer 5 of the Quant CoPilot Intent Decomposition Pipeline.
-
-Takes a FusionResult (structured context from Layer 4) plus the original
-raw vector chunks and assembles a single (system_prompt, user_prompt) pair
-ready to pass straight into rag_engine._call_with_retry().
-
-Design goals
-────────────
-1. FREE-MODEL FRIENDLY
-   Prompts are written for sub-10B models (Qwen3-8B, Qwen3-30B, llama-3.3-70b
-   on Groq/OpenRouter) — no chain-of-thought forcing, no JSON-output demands,
-   clear numbered rules the model can follow in one pass.
-
-2. STRUCTURED CONTEXT FIRST
-   SQL metric table is rendered as a compact ASCII table at the top of the
-   user prompt so even tiny-context models (Groq ~5.5k tok) see hard numbers
-   before prose chunks.  Vector chunks follow in ranked order.
-
-3. CITATION ANCHORS
-   Every chunk is tagged [SRC-N] and every SQL row is tagged [SQL-N].
-   The system prompt instructs the model to cite using these tags so the
-   caller can parse sources without regex.
-
-4. INSIGHT CALLOUTS
-   Contradictions, confirmations, and forward-guidance insights from the
-   fusion layer are surfaced as ⚠ / ✓ / → callout blocks so the analyst
-   LLM notices them without having to re-discover them.
-
-5. TOKEN-BUDGET AWARE
-   build() accepts a max_context_chars budget.  SQL table is always kept
-   whole.  Vector chunks are trimmed from the bottom (lowest score) if the
-   budget is exceeded.  The builder never silently drops SQL data.
-
-6. LEGACY COMPATIBLE
-   When FusionResult is None (pure vector-only path) the builder falls back
-   to the same prompt format as the existing rag_engine so no code change is
-   needed in query.py for the transition period.
-
-Public API
-──────────
-    from synthesis.prompt_builder import PromptBuilder, BuiltPrompt
-
-    builder = PromptBuilder()
-    built   = builder.build(
-        query          = "What is ADANIPORTS revenue growth FY23-25?",
-        fusion_result  = fusion_result,   # may be None
-        chunks         = top_chunks,      # List[RetrievedChunk]
-        doc_type       = "both",
-        resolved_years = [2023, 2024, 2025],
-        explicit_years = [2023, 2024, 2025],
-    )
-
-    # Pass straight to rag_engine
-    result = _call_with_retry(built.system_prompt, built.user_prompt, entry)
-"""
-
 from __future__ import annotations
 
 import textwrap
@@ -163,11 +104,9 @@ E. NO HALLUCINATION: If a number is not in the provided context, write
    "Not available in provided documents." Never guess or back-calculate.
 F. RECENCY FIRST: Lead with the most recent fiscal year available.
 G. DON'T PAD LISTS: If asked for a specific count of items (e.g. "top 5
-   reasons", "five risks") and the context only clearly supports fewer,
-   give only the well-supported items and say how many you found. Never
-   fill remaining slots with a weak, tangential, or off-topic item just to
-   hit the requested count — e.g. an HR policy is not an investment reason
-   just because it's the 5th-best match retrieved."""
+   drivers"), and you only find 3, only list 3. Do not pad the list with
+   filler.
+H. HUMAN-LIKE TONE: Ensure your response is highly conversational, natural, and human-like in tone. Do not sound robotic."""
 
 _SYSTEM_PROMPT_FUSION = """\
 You are an expert equity research analyst with a natural, human-like conversational tone.

@@ -29,9 +29,8 @@ year_input = st.sidebar.text_input("Year (Optional)")
 
 st.sidebar.markdown("""
 **Architecture:**
-1. **Retrieval**: Searches Qdrant Vector DB
-2. **Reranking**: Uses local cross-encoder
-3. **Generation**: Uses selected LLM
+1. **Retrieval**: OpenKB PageIndex tree 
+2. **Generation**: Uses selected LLM
 """)
 
 tab1, tab2 = st.tabs(["💬 Query Interface", "⚙️ Admin Dashboard"])

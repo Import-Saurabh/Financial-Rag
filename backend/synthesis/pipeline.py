@@ -203,7 +203,7 @@ class SynthesisPipeline:
             return symbol.upper()
         for c in chunks:
             sym = c.metadata.get("symbol")
-            if sym:
+            if sym and str(sym).upper() != "UNKNOWN":
                 return str(sym).upper()
         return None
 
