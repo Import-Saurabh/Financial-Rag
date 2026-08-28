@@ -543,6 +543,13 @@ def _is_ebitda_multi_year_query(query: str, years: List[int]) -> bool:
 def _rule_based_decompose(query: str, symbol: Optional[str] = None) -> List[AtomicNeed]:
     q_lower  = query.lower()
     years    = _extract_years(query)
+
+    if symbol is None:
+        # Extract potential stock ticker (e.g. APOLLO, TCS, RELIANCE) if present
+        m = re.search(r'\b([A-Z]{3,15})\b', query)
+        if m:
+            symbol = m.group(1)
+            
     horizon  = (
         TimeHorizon.FORWARD_LOOKING
         if any(kw in q_lower for kw in ["outlook", "guidance", "expect", "h1 fy", "h2 fy",
