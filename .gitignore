@@ -93,3 +93,10 @@ models/
 *.pt
 *.pth
 *.safetensors
+# Graphify outputs and environments
+graphify-out/
+.graphify_cache/
+.graphify_analysis.json
+.graphify_labels.json
+.env
+
