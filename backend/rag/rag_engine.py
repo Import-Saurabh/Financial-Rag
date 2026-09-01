@@ -139,17 +139,37 @@ def build_provider_catalogue() -> List[ProviderEntry]:
     ollama_url    = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     deepseek_key  = os.getenv("DEEPSEEK_API_KEY", "")
 
-    # ── Groq (fast, free tier, limited context) ───────────────────────────────
+    # ── Groq (fast, free tier, 128k context) ──────────────────────────────────
+    if groq_key:
+        cat.append(
+            ProviderEntry(
+                id="groq-llama", label="Groq - Llama 3.3 70B Versatile",
+                provider="groq", model="llama-3.3-70b-versatile",
+                api_key=groq_key, api_url=GROQ_API_URL,
+                context_note="128k ctx",
+            )
+        )
+        cat.append(
+            ProviderEntry(
+                id="groq-llama8b", label="Groq - Llama 3.1 8B Instant",
+                provider="groq", model="llama-3.1-8b-instant",
+                api_key=groq_key, api_url=GROQ_API_URL,
+                context_note="128k ctx",
+            )
+        )
 
+    # ── DeepSeek Direct ───────────────────────────────────────────────────────
     if deepseek_key:
         cat.append(
             ProviderEntry(
-                id="deepseek", label="DeepSeek - v4-flash",
+                id="deepseek", label="DeepSeek - Chat Direct",
                 provider="deepseek", model="deepseek-chat",
                 api_key=deepseek_key, api_url="https://api.deepseek.com/chat/completions",
                 context_note="64k ctx",
             )
         )
+
+    # ── OpenRouter ────────────────────────────────────────────────────────────
     if or_key:
         cat.append(
             ProviderEntry(
@@ -159,7 +179,43 @@ def build_provider_catalogue() -> List[ProviderEntry]:
                 context_note="Auto-routed Free Model",
             )
         )
+        cat.append(
+            ProviderEntry(
+                id="or-nemotron-nano", label="OpenRouter - Nemotron 3 Nano Reasoning (Free)",
+                provider="openrouter", model="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+                api_key=or_key, api_url=OPENROUTER_API_URL,
+                context_note="Free / 128k ctx",
+            )
+        )
+        cat.append(
+            ProviderEntry(
+                id="or-nemotron-lightning", label="OpenRouter - Nemotron 3.5 Lightning (Free)",
+                provider="openrouter", model="nvidia/nemotron-3.5-lightning:free",
+                api_key=or_key, api_url=OPENROUTER_API_URL,
+                context_note="Free / 128k ctx",
+            )
+        )
+        cat.append(
+            ProviderEntry(
+                id="or-deepseek", label="OpenRouter - DeepSeek Chat",
+                provider="openrouter", model="deepseek/deepseek-chat",
+                api_key=or_key, api_url=OPENROUTER_API_URL,
+                context_note="64k ctx",
+            )
+        )
+
+    # ── Gemini Direct ─────────────────────────────────────────────────────────
+    if gemini_key:
+        cat.append(
+            ProviderEntry(
+                id="gemini-flash", label="Gemini - 2.0 Flash",
+                provider="gemini", model="gemini-2.0-flash",
+                api_key=gemini_key, api_url=GEMINI_API_URL,
+                context_note="1M ctx",
+            )
+        )
     return cat
+
 
 
 
@@ -261,6 +317,8 @@ def validate_provider(entry: "ProviderEntry") -> Tuple[bool, str]:
 
         headers = {"Authorization": f"Bearer {entry.api_key}"}
         if entry.provider == "openrouter":
+            if entry.model == "openrouter/free":
+                return True, ""
             headers["HTTP-Referer"] = "https://github.com/Import-Saurabh/FinancialRag"
             headers["X-Title"]      = "FinancialRAG"
 
@@ -269,13 +327,14 @@ def validate_provider(entry: "ProviderEntry") -> Tuple[bool, str]:
             return False, f"Auth error ({r.status_code}) — check API key"
         r.raise_for_status()
 
-        # For OpenRouter, verify the specific free model is available
+        # For OpenRouter, verify the specific model is available
         if entry.provider == "openrouter":
             ids = [m.get("id", "") for m in r.json().get("data", [])]
-            if ids and entry.model not in ids:
+            if ids and entry.model not in ids and (entry.model + ":free") not in ids:
                 return False, f"Model '{entry.model}' not listed on OpenRouter"
 
         return True, ""
+
 
     except requests.exceptions.Timeout:
         return False, "Timed out during validation"
@@ -672,6 +731,7 @@ class RAGResponse:
     sql_rows:      int  = 0
     insights:      int  = 0
     pipeline_mode: str  = "vector_only"
+    charts:        List[dict] = field(default_factory=list)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -790,6 +850,110 @@ def _build_user_prompt_legacy(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Source list builder — prefers SQL-derived sources over mismatched vector chunks
+# ─────────────────────────────────────────────────────────────────────────────
+def _build_sources_list(
+    chunks: List[RetrievedChunk],
+    synthesis_result=None,
+    symbol: Optional[str] = None,
+) -> List[dict]:
+    """
+    Build a deduplicated sources list.
+
+    Priority order:
+      1. SQL-derived sources (from SynthesisResult atoms / bridge results)
+      2. Vector chunks that match the resolved symbol
+      3. Remaining vector chunks (only if nothing else matched)
+
+    This prevents the user seeing "APOLLO Concall FY2026" when querying HAL.
+    """
+    sources: List[dict] = []
+    seen = set()  # (symbol, year, doc_type) dedup key
+
+    resolved_sym = (symbol or "").upper().strip()
+
+    # --- 1. SQL-derived sources (most authoritative) ---
+    if synthesis_result is not None:
+        sr = synthesis_result
+        sql_rows_used = getattr(sr, "sql_rows", 0) or 0
+        atoms = getattr(sr, "atoms", []) or []
+        if sql_rows_used > 0 and atoms:
+            for atom in atoms:
+                a_sym = getattr(atom, "symbol", "") or resolved_sym
+                a_years = getattr(atom, "years", []) or []
+                sub_type = getattr(atom, "sub_type", "")
+                # Determine doc_type from sub_type
+                if sub_type in ("shareholding", "shareholding_pattern", "ownership"):
+                    a_doc = "shareholding"
+                else:
+                    a_doc = "sql_data"
+                for yr in (a_years or [0]):
+                    key = (a_sym.upper(), yr, a_doc)
+                    if key not in seen:
+                        seen.add(key)
+                        sources.append({
+                            "symbol": a_sym.upper(),
+                            "year": yr,
+                            "doc_type": a_doc,
+                            "section": f"SQL: {sub_type}",
+                            "page": "",
+                            "score": 1.0,
+                        })
+        # If we have SQL but no atoms with years, add a generic SQL source
+        if sql_rows_used > 0 and not sources and resolved_sym:
+            sources.append({
+                "symbol": resolved_sym,
+                "year": "",
+                "doc_type": "sql_data",
+                "section": "Structured Database",
+                "page": "",
+                "score": 1.0,
+            })
+
+    # --- 2. Vector chunks (prefer matching symbol) ---
+    matching_chunks = []
+    other_chunks = []
+    for c in chunks:
+        c_sym = (getattr(c, "symbol", "") or "").upper()
+        if resolved_sym and c_sym == resolved_sym:
+            matching_chunks.append(c)
+        else:
+            other_chunks.append(c)
+
+    # Add matching symbol chunks first
+    for c in matching_chunks:
+        key = (getattr(c, "symbol", "").upper(), getattr(c, "year", 0), getattr(c, "doc_type", ""))
+        if key not in seen:
+            seen.add(key)
+            sources.append({
+                "symbol":   getattr(c, "symbol", ""),
+                "year":     getattr(c, "year", ""),
+                "doc_type": getattr(c, "doc_type", ""),
+                "section":  (getattr(c, "section", "") or getattr(c, "speaker", ""))[:50],
+                "page":     getattr(c, "page_start", ""),
+                "score":    round(getattr(c, "importance_score", 0.0), 4),
+            })
+
+    # Only add non-matching chunks if we have ZERO sources at all (complete fallback)
+    # This prevents showing "APOLLO Concall FY2026" when the user asked about HAL
+    if not sources:
+        for c in other_chunks:
+            key = (getattr(c, "symbol", "").upper(), getattr(c, "year", 0), getattr(c, "doc_type", ""))
+            if key not in seen:
+                seen.add(key)
+                sources.append({
+                    "symbol":   getattr(c, "symbol", ""),
+                    "year":     getattr(c, "year", ""),
+                    "doc_type": getattr(c, "doc_type", ""),
+                    "section":  (getattr(c, "section", "") or getattr(c, "speaker", ""))[:50],
+                    "page":     getattr(c, "page_start", ""),
+                    "score":    round(getattr(c, "importance_score", 0.0), 4),
+                })
+
+    return sources
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Main entry point  [SYNTHESIS-PATCHED]
 # ─────────────────────────────────────────────────────────────────────────────
 def generate_answer(
@@ -818,10 +982,15 @@ def generate_answer(
     # Back-compat aliases
     if resolved_years is None and years is not None:
         resolved_years = years
-    if explicit_years is None:
-        explicit_years = resolved_years or []
+    catalogue = build_provider_catalogue()
+    entries   = get_provider(catalogue, provider_id, auto)
+    t0        = time.time()
+    last_err  = None
 
-    if not chunks:
+    # Check if pipeline is available to try SQL resolution
+    pipeline = _get_synthesis_pipeline()
+
+    if not chunks and pipeline is None:
         return RAGResponse(
             answer=(
                 "No relevant documents found for this query.\n"
@@ -834,10 +1003,6 @@ def generate_answer(
             sources=[], tokens_used=0, latency_sec=0.0,
         )
 
-    catalogue = build_provider_catalogue()
-    entries   = get_provider(catalogue, provider_id, auto)
-    t0        = time.time()
-    last_err  = None
 
 
     for entry in entries:
@@ -845,6 +1010,8 @@ def generate_answer(
 
         # ── [SYNTHESIS] Build (system, user) via the pipeline ─────────────────
         pipeline = _get_synthesis_pipeline()
+        charts   = []
+        sr       = None
 
         if pipeline is not None:
             try:
@@ -862,6 +1029,7 @@ def generate_answer(
                 pipeline_mode = sr.pipeline_mode
                 sql_rows      = sr.sql_rows
                 n_insights    = sr.insights
+                charts        = getattr(sr, "charts", [])
                 safe_chunks   = chunks   # pipeline manages its own budget
 
                 if sr.warnings:
@@ -871,7 +1039,7 @@ def generate_answer(
                 log.info(
                     f"  [synthesis] mode={pipeline_mode} | "
                     f"sql_rows={sql_rows} insights={n_insights} "
-                    f"chunks_used={sr.chunks_used}"
+                    f"chunks_used={sr.chunks_used} charts={len(charts)}"
                 )
 
             except Exception as exc:
@@ -901,13 +1069,17 @@ def generate_answer(
             pipeline_mode = "vector_only"
             sql_rows      = 0
             n_insights    = 0
+            charts        = []
 
         # ── LLM call ──────────────────────────────────────────────────────────
         try:
             result  = _call_with_retry(system_prompt, user_prompt, entry)
             latency = time.time() - t0
-            answer  = result["choices"][0]["message"]["content"]
+            choice  = result.get("choices", [{}])[0]
+            msg     = choice.get("message", {})
+            answer  = msg.get("content") or msg.get("reasoning") or ""
             usage   = result.get("usage", {})
+
 
             log.info(
                 f"  LLM OK [{entry.label}]: "
@@ -919,22 +1091,13 @@ def generate_answer(
                 answer        = answer,
                 model_used    = entry.label,
                 chunks_used   = len(safe_chunks),
-                sources       = [
-                    {
-                        "symbol":   getattr(c, "symbol", ""),
-                        "year":     getattr(c, "year", ""),
-                        "doc_type": getattr(c, "doc_type", ""),
-                        "section":  (getattr(c, "section", "") or getattr(c, "speaker", ""))[:50],
-                        "page":     getattr(c, "page_start", ""),
-                        "score":    round(getattr(c, "importance_score", 0.0), 4),
-                    }
-                    for c in safe_chunks
-                ],
+                sources       = _build_sources_list(safe_chunks, sr, symbol),
                 tokens_used   = usage.get("total_tokens", 0),
                 latency_sec   = round(latency, 2),
                 sql_rows      = sql_rows,
                 insights      = n_insights,
                 pipeline_mode = pipeline_mode,
+                charts        = charts,
             )
 
 
