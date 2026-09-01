@@ -58,6 +58,16 @@ SUBTYPE_TABLE_MAP: Dict[str, tuple] = {
     "eps_q":            ("quarterly_results", ["eps"]),
     "tax":              ("profit_loss",       ["tax_pct"]),
 
+    # ── Financial statements ──────────────────────────────────────────────────
+    "profit_loss":      ("profit_loss",       ["sales", "expenses", "operating_profit", "opm_pct", "other_income", "interest", "depreciation", "profit_before_tax", "tax_pct", "net_profit", "eps"]),
+    "pnl":              ("profit_loss",       ["sales", "expenses", "operating_profit", "opm_pct", "other_income", "interest", "depreciation", "profit_before_tax", "tax_pct", "net_profit", "eps"]),
+    "income_statement": ("profit_loss",       ["sales", "expenses", "operating_profit", "opm_pct", "other_income", "interest", "depreciation", "profit_before_tax", "tax_pct", "net_profit", "eps"]),
+    "balance_sheet":    ("balance_sheet",     ["equity_capital", "reserves", "total_equity", "borrowings", "other_liabilities", "total_liabilities", "fixed_assets", "cwip", "investments", "other_assets", "inventories", "trade_receivables", "cash_equivalents", "total_assets", "net_debt"]),
+    "balancesheet":     ("balance_sheet",     ["equity_capital", "reserves", "total_equity", "borrowings", "other_liabilities", "total_liabilities", "fixed_assets", "cwip", "investments", "other_assets", "inventories", "trade_receivables", "cash_equivalents", "total_assets", "net_debt"]),
+    "quarterly":        ("quarterly_results", ["sales", "expenses", "operating_profit", "opm_pct", "other_income", "interest", "depreciation", "profit_before_tax", "tax_pct", "net_profit", "eps"]),
+    "quarterly_results":("quarterly_results", ["sales", "expenses", "operating_profit", "opm_pct", "other_income", "interest", "depreciation", "profit_before_tax", "tax_pct", "net_profit", "eps"]),
+    "quarterly_statement": ("quarterly_results", ["sales", "expenses", "operating_profit", "opm_pct", "other_income", "interest", "depreciation", "profit_before_tax", "tax_pct", "net_profit", "eps"]),
+
     # ── Balance sheet ─────────────────────────────────────────────────────────
     "total_assets":     ("balance_sheet",     ["total_assets"]),
     "total_equity":     ("balance_sheet",     ["total_equity", "equity_capital", "reserves"]),
@@ -71,7 +81,10 @@ SUBTYPE_TABLE_MAP: Dict[str, tuple] = {
     "fixed_assets":     ("balance_sheet",     ["fixed_assets"]),
     "investments":      ("balance_sheet",     ["investments"]),
 
+
     # ── Cash flow ─────────────────────────────────────────────────────────────
+    "cash_flow":        ("cash_flow",         ["cfo", "cfi", "cff", "capex", "free_cash_flow", "net_cash_flow"]),
+    "cashflow":         ("cash_flow",         ["cfo", "cfi", "cff", "capex", "free_cash_flow", "net_cash_flow"]),
     "ocf":              ("cash_flow",         ["cfo"]),
     "cfi":              ("cash_flow",         ["cfi"]),
     "cff":              ("cash_flow",         ["cff"]),
@@ -150,11 +163,16 @@ SUBTYPE_TABLE_MAP: Dict[str, tuple] = {
     # [FIX] "ownership"/"ownership_history" were never real tables -> the
     # actual table is `shareholding`, and its %-columns are named directly
     # (fii_pct/dii_pct), not fii_fpi_pct/fii_net_buy_cr which don't exist.
-    "promoter":         ("shareholding",      ["promoter_pct"]),
-    "fii":              ("shareholding",      ["fii_pct"]),
-    "dii":              ("shareholding",      ["dii_pct"]),
-    "institutional":    ("shareholding",      ["total_institutional_pct"]),
-    "shareholders":     ("shareholding",      ["num_shareholders"]),
+    "shareholding":         ("shareholding",      ["promoter_pct", "fii_pct", "dii_pct", "public_pct", "total_institutional_pct", "num_shareholders"]),
+    "shareholding_pattern": ("shareholding",      ["promoter_pct", "fii_pct", "dii_pct", "public_pct", "total_institutional_pct", "num_shareholders"]),
+    "ownership":            ("shareholding",      ["promoter_pct", "fii_pct", "dii_pct", "public_pct", "total_institutional_pct", "num_shareholders"]),
+    "promoter":             ("shareholding",      ["promoter_pct"]),
+    "fii":                  ("shareholding",      ["fii_pct"]),
+    "dii":                  ("shareholding",      ["dii_pct"]),
+    "institutional":        ("shareholding",      ["total_institutional_pct"]),
+    "institutional_stake":  ("shareholding",      ["total_institutional_pct", "fii_pct", "dii_pct"]),
+    "public":               ("shareholding",      ["public_pct"]),
+    "shareholders":         ("shareholding",      ["num_shareholders"]),
 
     # ── Corporate actions ─────────────────────────────────────────────────────
     "dividend":         ("corporate_actions", ["value"]),
@@ -238,15 +256,16 @@ def _extract_years(query: str) -> List[int]:
     Handles:
       FY25, FY2025, 2025
       FY23-25, FY2023-25, FY23 to FY25, FY2023 to FY2025
+      between FY23 and FY25, from FY23 to FY25, FY23 and FY25
       "financial year 2023-25", "FY23-FY25"
     """
     q = query.upper()
     years: set = set()
 
-    # ── Explicit range: "FY23-25", "FY2023-25", "FY23-FY25" ─────────────────
-    # Pattern: FY\d{2,4}[-–to]+(?:FY)?\d{2,4}
+    # ── Explicit range: "between FY23 and FY25", "from FY23 to FY25", "FY23-25", "FY23-FY25" ──
     for m in re.finditer(
-        r"FY(\d{2,4})\s*[-–to]+\s*(?:FY)?(\d{2,4})", q
+        r"(?:BETWEEN|FROM)?\s*(?:FY|FINANCIAL\s+YEAR)?\s*(\d{2,4})\s*(?:TO|-|–|AND|THROUGH|UNTIL|TILL)\s*(?:FY|FINANCIAL\s+YEAR)?\s*(\d{2,4})",
+        q
     ):
         y1 = _normalise_fy(m.group(1))
         y2 = _normalise_fy(m.group(2))
@@ -337,6 +356,18 @@ _RULES: List[tuple] = [
     (r"\b(eps\s+revision)\b",
      NeedType.QUANTITATIVE, "eps_revision", "EPS Revision", None),
 
+    # Balance sheet statement & items
+    (r"\b(balance[\s\-]?sheets?(?:\s+(?:items?|statement|numbers?|data))?|bs\s+statement)\b",
+     NeedType.QUANTITATIVE, "balance_sheet", "Balance Sheet Statement", None),
+
+    # Profit & Loss statement & items
+    (r"\b(profit\s*(?:and|&)\s*loss(?:\s+(?:items?|statement|numbers?|data))?|p[&/]l(?:\s+(?:statement|items?))?|income\s+statement)\b",
+     NeedType.QUANTITATIVE, "profit_loss", "Profit & Loss Statement", None),
+
+    # Quarterly statement & items
+    (r"\b(quarterly\s+results?|quarterly\s+statements?|quarterly\s+numbers?|quarterly\s+performance)\b",
+     NeedType.QUANTITATIVE, "quarterly", "Quarterly Results Statement", None),
+
     # Balance sheet
     (r"\b(total\s+assets?)\b",
      NeedType.QUANTITATIVE, "total_assets", "Total Assets", None),
@@ -346,7 +377,7 @@ _RULES: List[tuple] = [
      NeedType.QUANTITATIVE, "net_debt", "Net Debt", None),
     (r"\b(total\s+(?:debt|borrowings?)|long[\s\-]term\s+debt|lt\s+borrowings?|borrowings?(?:\s+and)?)\b",
      NeedType.QUANTITATIVE, "borrowings", "Total Borrowings", None),
-    (r"\b(cash\s+(?:and\s+(?:cash\s+)?equivalents?)?|cash\s+on\s+hand)\b",
+    (r"\b(cash\s+(?:and\s+(?:cash\s+)?equivalents?|on\s+hand|and\s+bank|balance)|\bcash\s+equivalents?)\b",
      NeedType.QUANTITATIVE, "cash", "Cash & Equivalents", None),
     (r"\b(trade\s+receivables?|debtors?)\b",
      NeedType.QUANTITATIVE, "trade_receivables", "Trade Receivables", None),
@@ -359,7 +390,10 @@ _RULES: List[tuple] = [
     (r"\b(investments?)\b",
      NeedType.QUANTITATIVE, "investments", "Investments", None),
 
+
     # Cash flow
+    (r"\b(cash[\s\-]?flows?|cashflow|cash\s+flow\s+statements?)\b",
+     NeedType.QUANTITATIVE, "cash_flow", "Cash Flow Statement", None),
     (r"\b(ocf|operating\s+cash\s+flow|cash\s+from\s+operations?|cfo)\b",
      NeedType.QUANTITATIVE, "ocf", "Operating Cash Flow", None),
     (r"\b(capex|capital\s+expenditure|cap(?:ital)?\s+ex)\b",
@@ -474,14 +508,18 @@ _RULES: List[tuple] = [
      NeedType.MACRO, "market_index", "Market Index", TimeHorizon.CURRENT),
 
     # Ownership
+    (r"\b(shareholding(?:\s+pattern|\s+distribution)?|ownership\s+(?:pattern|breakdown|structure)|promoter\s+(?:and|&)\s+institutional)\b",
+     NeedType.OWNERSHIP, "shareholding", "Shareholding Pattern", TimeHorizon.CURRENT),
+    (r"\b(institutional\s+(?:stake|holding|ownership))\b",
+     NeedType.OWNERSHIP, "institutional_stake", "Institutional Stake", TimeHorizon.CURRENT),
     (r"\b(promoter\s+(?:holding|stake|pledging?|ownership))\b",
      NeedType.OWNERSHIP, "promoter", "Promoter Holding", None),
     (r"\b(fii\s+(?:holding|stake|buying|selling|flow)|foreign\s+institutional)\b",
      NeedType.OWNERSHIP, "fii", "FII Holding", None),
     (r"\b(dii\s+(?:holding|stake|buying|selling|flow)|domestic\s+institutional)\b",
      NeedType.OWNERSHIP, "dii", "DII Holding", None),
-    (r"\b(institutional\s+(?:holding|ownership))\b",
-     NeedType.OWNERSHIP, "institutional", "Institutional Holding", None),
+    (r"\b(public\s+(?:holding|stake|shareholding))\b",
+     NeedType.OWNERSHIP, "public", "Public Holding", None),
 
     # Corporate actions
     (r"\b(dividends?(?:\s+(?:history|declared|per\s+share|paid))?|dps)\b",
@@ -500,16 +538,14 @@ _RULES: List[tuple] = [
      NeedType.QUALITATIVE, "mda", "MD&A", None),
     (r"\b(business\s+(?:overview|model|strategy|segment))\b",
      NeedType.QUALITATIVE, "business_overview", "Business Overview", None),
-    (r"\b(strategy|strategic\s+(?:plan|initiative|direction))\b",
-     NeedType.QUALITATIVE, "strategy", "Strategy", None),
-    (r"\b(outlook|guidance|demand\s+environment|going\s+forward|forecast|expect)\b",
-     NeedType.FORWARD_LOOKING, "concall_outlook", "Outlook / Guidance", TimeHorizon.FORWARD_LOOKING),
-    (r"\b(management\s+(?:commentary|view|stance)|concall|earnings\s+call)\b",
-     NeedType.FORWARD_LOOKING, "concall_mgmt", "Management Commentary", TimeHorizon.FORWARD_LOOKING),
-    (r"\b(capex\s+(?:guidance|plan|target))\b",
-     NeedType.FORWARD_LOOKING, "concall_capex", "Capex Guidance", TimeHorizon.FORWARD_LOOKING),
-    (r"\b(margin\s+(?:guidance|target|outlook))\b",
-     NeedType.FORWARD_LOOKING, "concall_margin", "Margin Guidance", TimeHorizon.FORWARD_LOOKING),
+    (r"\b(guidance|outlook|forward[\s\-]looking|target|forecast|future\s+outlook)\b",
+     NeedType.QUALITATIVE, "guidance", "Management Guidance", TimeHorizon.FORWARD_LOOKING),
+    (r"\b(esg|sustainability|corporate\s+governance|csr|emission|carbon)\b",
+     NeedType.QUALITATIVE, "esg", "ESG & Sustainability", None),
+    (r"\b(order\s*book|orders?|pipeline|contract\s*wins?|backlog)\b",
+     NeedType.QUALITATIVE, "order_book", "Order Book", None),
+    (r"\b(capex\s+(?:plan|guidance|announcement)|capital\s+expenditure\s+plan)\b",
+     NeedType.QUALITATIVE, "capex_plans", "Capex Plans", TimeHorizon.FORWARD_LOOKING),
 ]
 
 # Compile once
@@ -536,19 +572,72 @@ def _is_ebitda_multi_year_query(query: str, years: List[int]) -> bool:
     return has_ebitda and is_multi_year
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Rule-based decomposer
-# ─────────────────────────────────────────────────────────────────────────────
+_KNOWN_COMPANY_SYMBOLS: Dict[str, str] = {
+    "apollo": "APOLLO",
+    "apollo micro": "APOLLO",
+    "apollo micro systems": "APOLLO",
+    "apollomicro": "APOLLO",
+    "bel": "BEL",
+    "bharat electronics": "BEL",
+    "bharat electronics limited": "BEL",
+    "hal": "HAL",
+    "hindustan aeronautics": "HAL",
+    "hindustan aeronautics limited": "HAL",
+    "reliance": "RELIANCE",
+    "ril": "RELIANCE",
+    "reliance industries": "RELIANCE",
+    "datapattns": "DATAPATTNS",
+    "data patterns": "DATAPATTNS",
+    "adaniports": "ADANIPORTS",
+    "adani ports": "ADANIPORTS",
+    "tcs": "TCS",
+    "tata consultancy": "TCS",
+    "infy": "INFY",
+    "infosys": "INFY",
+    "hdfc": "HDFCBANK",
+    "hdfc bank": "HDFCBANK",
+    "hdfcbank": "HDFCBANK",
+    "icicibank": "ICICIBANK",
+    "icici bank": "ICICIBANK",
+    "sbi": "SBIN",
+    "sbin": "SBIN",
+}
+
+_EXCLUDED_TICKER_WORDS = frozenset({
+    "CAGR", "EBITDA", "EBIT", "PAT", "PBT", "OPM", "ROE", "ROCE", "ROA", "EPS",
+    "FCF", "CFO", "CFI", "CFF", "FY", "USD", "INR", "RBI", "GDP", "CPI", "WPI",
+    "IIP", "RSI", "MACD", "SMA", "EMA", "ATR", "ADX", "VWAP", "OBV", "PE", "PB",
+    "EV", "DSO", "DIO", "DPO", "CCC", "CWIP", "AND", "THE", "FOR", "WHAT", "SHOW",
+    "LIST", "GIVE", "TELL", "FROM", "WITH", "THIS", "LAST", "CURRENT", "COMPARE",
+    "BETWEEN", "GROWTH", "TREND", "FREE", "NET", "TOTAL", "CASH", "FLOW", "CASHFLOW"
+})
+
 
 def _rule_based_decompose(query: str, symbol: Optional[str] = None) -> List[AtomicNeed]:
     q_lower  = query.lower()
     years    = _extract_years(query)
 
-    if symbol is None:
-        # Extract potential stock ticker (e.g. APOLLO, TCS, RELIANCE) if present
-        m = re.search(r'\b([A-Z]{3,15})\b', query)
-        if m:
-            symbol = m.group(1)
+    # 1. Query text takes precedence for symbol extraction
+    query_sym = None
+    for alias, sym in _KNOWN_COMPANY_SYMBOLS.items():
+        if re.search(r'\b' + re.escape(alias) + r'\b', q_lower):
+            query_sym = sym
+            break
+
+    if not query_sym:
+        for m in re.finditer(r'\b([A-Z]{2,15})\b', query):
+            cand = m.group(1)
+            if cand not in _EXCLUDED_TICKER_WORDS:
+                query_sym = cand
+                break
+
+    if query_sym:
+        symbol = query_sym
+    elif symbol is not None:
+        if symbol.lower() in _KNOWN_COMPANY_SYMBOLS:
+            symbol = _KNOWN_COMPANY_SYMBOLS[symbol.lower()]
+        else:
+            symbol = symbol.upper()
             
     horizon  = (
         TimeHorizon.FORWARD_LOOKING
@@ -559,14 +648,22 @@ def _rule_based_decompose(query: str, symbol: Optional[str] = None) -> List[Atom
 
     # [FIX] period_type was hardcoded to "annual" below regardless of query
     # content -> "what is the profit THIS QUARTER" would silently fetch
-    # annual data. Detect quarter-phrasing here and (a) set period_type so
-    # tables that support it (profit_loss/cash_flow/balance_sheet) filter
-    # correctly, and (b) remap sub_types that have a dedicated quarterly
-    # table (revenue->revenue_q, net_profit->net_profit_q, eps->eps_q).
+    # annual data. Detect quarter-phrasing (including common typos like
+    # qurarter/quater/qtr) and (a) set period_type, and (b) remap sub_types
+    # to their quarterly equivalents.
     is_quarterly = bool(re.search(
         r"\b(this\s+quarter|last\s+quarter|latest\s+quarter|current\s+quarter|"
-        r"quarterly|q[1-4]\s*fy?\s*\d{0,4}|qoq)\b", q_lower))
-    _QUARTERLY_REMAP = {"revenue": "revenue_q", "net_profit": "net_profit_q", "eps": "eps_q"}
+        r"quarterly|quarter|qurarter|quater|qtr|qtrs|qoq|q[1-4]\s*fy?\s*\d{0,4})\b", q_lower))
+    _QUARTERLY_REMAP = {
+        "revenue": "revenue_q",
+        "net_profit": "net_profit_q",
+        "eps": "eps_q",
+        "profit_loss": "quarterly",
+        "pnl": "quarterly",
+        "income_statement": "quarterly",
+        "operating_profit": "quarterly",
+        "pbt": "quarterly",
+    }
 
     seen:  set          = set()
     atoms: List[AtomicNeed] = []
@@ -587,7 +684,7 @@ def _rule_based_decompose(query: str, symbol: Optional[str] = None) -> List[Atom
         atom = AtomicNeed(
             need_type    = need_type,
             sub_type     = effective_sub_type,
-            metric       = metric,
+            metric       = "Quarterly Results" if effective_sub_type == "quarterly" else metric,
             symbol       = symbol,
             years        = years,
             time_horizon = effective_horizon,
@@ -597,6 +694,19 @@ def _rule_based_decompose(query: str, symbol: Optional[str] = None) -> List[Atom
         )
         atom.resolve_schema()
         atoms.append(atom)
+
+    # Deduplicate: if a full statement atom is present, drop redundant sub-metrics
+    statement_types = {"profit_loss", "balance_sheet", "cash_flow", "quarterly", "quarterly_results", "quarterly_statement"}
+    if any(a.sub_type in statement_types for a in atoms):
+        statement_atoms = [a for a in atoms if a.sub_type in statement_types]
+        sub_metric_noise = {
+            "net_profit", "net_profit_q", "revenue", "revenue_q", "operating_profit",
+            "eps", "eps_q", "pbt", "opm", "tax", "total_assets", "total_equity",
+            "borrowings", "cash", "cfo", "cfi", "cff", "capex", "fcf"
+        }
+        other_atoms = [a for a in atoms if a.sub_type not in statement_types and a.sub_type not in sub_metric_noise]
+        atoms = statement_atoms + other_atoms
+
 
     # [BUG-EBITDA-CAGR] If EBITDA is requested across multiple years,
     # also add an ebitda_proxy atom pointing to annual_results so the
