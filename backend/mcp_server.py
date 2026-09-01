@@ -11,17 +11,18 @@ Transport: stdio (default) – works with Cursor, Claude Desktop, etc.
 import json
 import logging
 import httpx
-from mcp.server.mcpserver import MCPServer
+from mcp.server.fastmcp import FastMCP
 
 # ── Configuration ────────────────────────────────────────────────────────────
 API_BASE = "http://localhost:8000"
 logger = logging.getLogger("mcp-financial-rag")
 
 # ── MCP App ──────────────────────────────────────────────────────────────────
-mcp = MCPServer(
+mcp = FastMCP(
     "Financial-RAG",
-    description="Indian equity research tools – financials, market data, ownership & stock listings",
+    instructions="Indian equity research tools – financials, market data, ownership & stock listings",
 )
+
 
 # ── Shared HTTP helper ───────────────────────────────────────────────────────
 
@@ -411,6 +412,183 @@ async def get_macro_indicators(indicator_name: str | None = None, limit: int = 2
     data = await _get("/api/v1/macro/indicators", {"indicator_name": indicator_name, "limit": limit})
     return json.dumps(data, indent=2)
 
+@mcp.tool()
+async def get_stock(symbol: str) -> str:
+    """
+    Get detailed information for a single stock.
+
+    Args:
+        symbol: Stock ticker symbol (e.g. TCS, RELIANCE, APOLLO)
+    """
+    data = await _get(f"/api/v1/stocks/{symbol}")
+    return json.dumps(data, indent=2)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LIVE MARKET DATA (yfinance)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@mcp.tool()
+async def get_live_market_data(
+    symbols: str,
+    include_indices: bool = False,
+) -> str:
+    """
+    Fetch live/current market data for stocks and indices using yfinance.
+    Returns current price, previous close, day change %, 52-week high/low,
+    market cap, and volume for each symbol.
+
+    Args:
+        symbols: Comma-separated stock symbols (e.g. 'HAL,RELIANCE,TCS').
+                 For Indian NSE stocks, '.NS' suffix is added automatically.
+                 For indices, use: NIFTY50, SENSEX, BANKNIFTY.
+        include_indices: If True, also fetch Nifty 50 and Sensex data alongside the stocks.
+    """
+    import yfinance as yf
+
+    INDEX_MAP = {
+        "NIFTY50": "^NSEI",
+        "NIFTY": "^NSEI",
+        "SENSEX": "^BSESN",
+        "BANKNIFTY": "^NSEBANK",
+    }
+
+    raw_symbols = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+
+    yf_tickers: list[str] = []
+    for s in raw_symbols:
+        if s in INDEX_MAP:
+            yf_tickers.append(INDEX_MAP[s])
+        elif s.startswith("^"):
+            yf_tickers.append(s)
+        elif ".NS" in s or ".BO" in s:
+            yf_tickers.append(s)
+        else:
+            yf_tickers.append(f"{s}.NS")
+
+    if include_indices:
+        for idx_ticker in ["^NSEI", "^BSESN"]:
+            if idx_ticker not in yf_tickers:
+                yf_tickers.append(idx_ticker)
+
+    results = []
+    for ticker_str in yf_tickers:
+        try:
+            ticker = yf.Ticker(ticker_str)
+            info = ticker.info
+            current = info.get("currentPrice") or info.get("regularMarketPrice")
+            prev_close = info.get("previousClose") or info.get("regularMarketPreviousClose")
+            day_change_pct = (
+                round((current - prev_close) / prev_close * 100, 2)
+                if current and prev_close
+                else None
+            )
+            results.append({
+                "symbol": ticker_str,
+                "name": info.get("shortName") or info.get("longName", ticker_str),
+                "current_price": current,
+                "previous_close": prev_close,
+                "day_change_pct": day_change_pct,
+                "day_high": info.get("dayHigh") or info.get("regularMarketDayHigh"),
+                "day_low": info.get("dayLow") or info.get("regularMarketDayLow"),
+                "52_week_high": info.get("fiftyTwoWeekHigh"),
+                "52_week_low": info.get("fiftyTwoWeekLow"),
+                "market_cap": info.get("marketCap"),
+                "volume": info.get("volume") or info.get("regularMarketVolume"),
+                "currency": info.get("currency", "INR"),
+            })
+        except Exception as e:
+            results.append({"symbol": ticker_str, "error": str(e)})
+
+    return json.dumps(
+        {"live_data": results, "timestamp": str(__import__("datetime").datetime.now())},
+        indent=2,
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DOCUMENTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@mcp.tool()
+async def get_documents(
+    symbol: str,
+    doc_type: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> str:
+    """
+    Annual reports & concall transcripts stored in MinIO.
+
+    Args:
+        symbol: Stock ticker symbol (e.g. TCS, RELIANCE, APOLLO)
+        doc_type: Filter by type: annual_report | concall
+        limit: Max rows (1-200, default 50)
+        offset: Pagination offset
+    """
+    data = await _get(
+        f"/api/v1/stocks/{symbol}/documents",
+        {"doc_type": doc_type, "limit": limit, "offset": offset},
+    )
+    return json.dumps(data, indent=2)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OPERATIONS & HEALTH
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@mcp.tool()
+async def get_health() -> str:
+    """Liveness probe / system health check."""
+    data = await _get("/api/v1/health")
+    return json.dumps(data, indent=2)
+
+
+@mcp.tool()
+async def get_etl_logs(
+    symbol: str | None = None,
+    status: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> str:
+    """
+    ETL run log — per-symbol pipeline execution history.
+
+    Args:
+        symbol: Filter by stock symbol
+        status: Filter by status (success | failed | running)
+        limit: Max rows (1-200, default 50)
+        offset: Pagination offset
+    """
+    data = await _get(
+        "/api/v1/ops/etl-logs",
+        {"symbol": symbol, "status": status, "limit": limit, "offset": offset},
+    )
+    return json.dumps(data, indent=2)
+
+
+@mcp.tool()
+async def get_quality_logs(
+    symbol: str | None = None,
+    table_name: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> str:
+    """
+    Data quality log — completeness & null-heavy rows per ETL run.
+
+    Args:
+        symbol: Filter by stock symbol
+        table_name: Filter by target table name
+        limit: Max rows (1-200, default 50)
+        offset: Pagination offset
+    """
+    data = await _get(
+        "/api/v1/ops/quality-logs",
+        {"symbol": symbol, "table_name": table_name, "limit": limit, "offset": offset},
+    )
+    return json.dumps(data, indent=2)
+
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────
@@ -422,8 +600,8 @@ if __name__ == "__main__":
     import sys
 
     if "--sse" in sys.argv:
-        # Run as SSE HTTP server on port 8100
-        mcp.run(transport="sse", host="0.0.0.0", port=MCP_PORT)
+        # Run as SSE HTTP server
+        mcp.run(transport="sse")
     else:
         # Default: stdio transport (no port needed)
         mcp.run(transport="stdio")
