@@ -22,8 +22,8 @@ from utils.logger import get_logger
 
 log = get_logger(__name__)
 
-# ─── MCP base URL (MCP server) ───────────────────────────────────────────────
-MCP_BASE = os.getenv("FINANCIAL_MCP_BASE", "http://localhost:8100")
+# ─── API base URL (FastAPI backend) ───────────────────────────────────────────
+API_BASE = os.getenv("FINANCIAL_API_BASE", "http://localhost:8000")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Table → API endpoint mapping
@@ -32,45 +32,44 @@ MCP_BASE = os.getenv("FINANCIAL_MCP_BASE", "http://localhost:8100")
 # endpoint that serves the same data. {symbol} is replaced at call time.
 # "date_key" is the field name in the JSON response used for year filtering.
 
-_TABLE_TO_TOOL: Dict[str, Dict[str, Any]] = {
+_TABLE_TO_ENDPOINT: Dict[str, Dict[str, Any]] = {
     # ── Financials ────────────────────────────────────────────────────────────
-    "profit_loss":          {"tool": "get_profit_loss",
+    "profit_loss":          {"path": "/api/v1/stocks/{symbol}/profit-loss",
                              "date_key": "period_end", "supports_period_type": True},
-    "quarterly_results":    {"tool": "get_quarterly_results",
+    "quarterly_results":    {"path": "/api/v1/stocks/{symbol}/quarterly",
                              "date_key": "period_end", "supports_period_type": False},
-    "balance_sheet":        {"tool": "get_balance_sheet",
+    "balance_sheet":        {"path": "/api/v1/stocks/{symbol}/balance-sheet",
                              "date_key": "period_end", "supports_period_type": True},
-    "cash_flow":            {"tool": "get_cash_flow",
+    "cash_flow":            {"path": "/api/v1/stocks/{symbol}/cash-flow",
                              "date_key": "period_end", "supports_period_type": True},
     # ── Market ────────────────────────────────────────────────────────────────
-    "price_daily":          {"tool": "get_price",
+    "price_daily":          {"path": "/api/v1/stocks/{symbol}/price",
                              "date_key": "date",       "supports_date_range": True},
-    "technical_indicators": {"tool": "get_technicals",
+    "technical_indicators": {"path": "/api/v1/stocks/{symbol}/technicals",
                              "date_key": "date",       "supports_date_range": True},
     # ── Ownership ─────────────────────────────────────────────────────────────
-    "shareholding":         {"tool": "get_shareholding",
+    "shareholding":         {"path": "/api/v1/stocks/{symbol}/shareholding",
                              "date_key": "period_end"},
-    "corporate_actions":    {"tool": "get_corporate_actions",
+    "corporate_actions":    {"path": "/api/v1/stocks/{symbol}/corporate-actions",
                              "date_key": "action_date"},
     # ── Stocks ────────────────────────────────────────────────────────────────
-    "stocks":               {"tool": "list_stocks",
+    "stocks":               {"path": "/api/v1/stocks",
                              "date_key": "updated_at", "no_symbol_in_path": True},
     # ── Growth / Estimates ────────────────────────────────────────────────────
-    "growth_metrics":       {"tool": "get_growth_metrics",
+    "growth_metrics":       {"path": "/api/v1/stocks/{symbol}/growth",
                              "date_key": "as_of_date"},
-    "eps_trend":            {"tool": "get_eps_trend",
+    "eps_trend":            {"path": "/api/v1/stocks/{symbol}/eps-trend",
                              "date_key": "snapshot_date"},
     # ── Macro ─────────────────────────────────────────────────────────────────
-    "rbi_rates":            {"tool": "get_rbi_rates",
+    "rbi_rates":            {"path": "/api/v1/macro/rbi-rates",
                              "date_key": "effective_date", "no_symbol_in_path": True},
-    "market_indices":       {"tool": "get_market_indices",
+    "market_indices":       {"path": "/api/v1/macro/indices",
                              "date_key": "snapshot_date",  "no_symbol_in_path": True},
-    "forex_commodities":    {"tool": "get_forex_commodities",
+    "forex_commodities":    {"path": "/api/v1/macro/forex",
                              "date_key": "snapshot_date",  "no_symbol_in_path": True},
-    "macro_indicators":     {"tool": "get_macro_indicators",
+    "macro_indicators":     {"path": "/api/v1/macro/indicators",
                              "date_key": "snapshot_date",  "no_symbol_in_path": True},
 }
-
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -93,7 +92,7 @@ def _fy_date_range(fy_year: int) -> Tuple[str, str]:
 class SqlAtomResult:
     atom:    AtomicNeed
     rows:    List[Dict[str, Any]] = field(default_factory=list)
-    sql:     str = ""           # the SQL that was executed (for debugging)
+    sql:     str = ""           # the SQL/HTTP request that was executed (for debugging)
     params:  tuple = ()
     error:   Optional[str] = None
 
@@ -159,16 +158,13 @@ def _filter_rows_by_fy(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MCP Tool executor (replaces HTTP/MySQL)
+# HTTP Financial API executor
 # ─────────────────────────────────────────────────────────────────────────────
 import json
-import asyncio
-from mcp.client.session import ClientSession
-from mcp.client.sse import sse_client
 
-async def _execute_mcp_atom(atom: AtomicNeed, session: ClientSession) -> SqlAtomResult:
+def _execute_http_atom(atom: AtomicNeed, api_base: str = API_BASE) -> SqlAtomResult:
     """
-    Fetch data for one atom via the MCP Server tools (never raises).
+    Fetch data for one atom via the FastAPI backend endpoints (never raises).
     Returns SqlAtomResult with rows from the JSON response.
     """
     table = atom.sql_table
@@ -187,98 +183,91 @@ async def _execute_mcp_atom(atom: AtomicNeed, session: ClientSession) -> SqlAtom
             ),
         )
 
-    tool_info = _TABLE_TO_TOOL.get(table)
-    if tool_info is None:
+    endpoint_info = _TABLE_TO_ENDPOINT.get(table)
+    if endpoint_info is None:
         return SqlAtomResult(
             atom=atom,
-            error=f"No MCP tool mapped for table {table!r}",
+            error=f"No endpoint mapped for table {table!r}",
         )
 
-    tool_name = tool_info["tool"]
-    
-    # ── Build arguments ───────────────────────────────────────────────────
-    args: Dict[str, Any] = {}
-
+    path_template = endpoint_info["path"]
     symbol = atom.symbol or (atom.symbols[0] if atom.symbols else None)
-    if not tool_info.get("no_symbol_in_path"):
+    if not endpoint_info.get("no_symbol_in_path"):
         if not symbol:
             return SqlAtomResult(
                 atom=atom,
                 error=f"Symbol required for {table} but none provided",
             )
-        args["symbol"] = symbol.upper()
+        url_path = path_template.format(symbol=symbol.upper())
+    else:
+        url_path = path_template
 
-    # Period type (profit_loss, balance_sheet, cash_flow)
-    if tool_info.get("supports_period_type") and atom.period_type:
-        args["period_type"] = atom.period_type
+    params: Dict[str, Any] = {}
 
-    # Date range (price, technicals)
-    # The tools might not actually accept from_date/to_date as arguments
-    # Let's check MCP tool definitions in mcp_server.py:
-    # get_price: takes from_date, to_date. Wait, I didn't verify if mcp_server get_price accepts them.
-    # Ah, let's just pass them if they are in the HTTP api... wait!
-    # I should check if the MCP tool accepts from_date/to_date.
-    # Let's pass them, if the tool doesn't take it, MCP server will ignore them or throw error.
-    if tool_info.get("supports_date_range") and atom.years:
+    if endpoint_info.get("supports_period_type") and atom.period_type:
+        params["period_type"] = atom.period_type
+
+    if endpoint_info.get("supports_date_range") and atom.years:
         min_fy, max_fy = min(atom.years), max(atom.years)
-        args["from_date"] = date(min_fy - 1, 4, 1).isoformat()
-        args["to_date"]   = date(max_fy, 3, 31).isoformat()
+        params["from_date"] = date(min_fy - 1, 4, 1).isoformat()
+        params["to_date"]   = date(max_fy, 3, 31).isoformat()
 
-    # Corporate actions: action_type filter
     if table == "corporate_actions" and atom.sub_type in (
         "dividend", "buyback", "bonus", "split"
     ):
-        args["action_type"] = atom.sub_type.capitalize()
+        params["action_type"] = atom.sub_type.capitalize()
 
-    # Macro: indicator/instrument filter from raw_text
     if table == "macro_indicators" and atom.raw_text and len(atom.raw_text) < 30:
-        args["indicator_name"] = atom.raw_text
+        params["indicator_name"] = atom.raw_text
     if table == "forex_commodities" and atom.raw_text and len(atom.raw_text) < 30:
-        args["instrument"] = atom.raw_text
+        params["instrument"] = atom.raw_text
     if table == "market_indices" and atom.raw_text and len(atom.raw_text) < 30:
-        args["index_name"] = atom.raw_text
+        params["index_name"] = atom.raw_text
 
-    # Limit: fetch enough data to cover requested years
     if atom.years and len(atom.years) > 1:
-        args["limit"] = max(20, len(atom.years) * 4)
+        params["limit"] = max(20, len(atom.years) * 4)
     elif atom.time_horizon == TimeHorizon.CURRENT and not atom.years:
-        args["limit"] = 5
+        params["limit"] = 5
     else:
-        args["limit"] = 20
+        params["limit"] = 20
 
-    # ── MCP Tool Call ─────────────────────────────────────────────────────
-    log.debug(f"  [bridge] MCP Tool {tool_name} args={args}")
+    url = f"{api_base.rstrip('/')}{url_path}"
+    log.debug(f"  [bridge] GET {url} params={params}")
 
     try:
-        result = await session.call_tool(tool_name, arguments=args)
-        body = json.loads(result.content[0].text)
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.get(url, params=params)
+            if resp.status_code != 200:
+                msg = f"HTTP {resp.status_code} calling {url_path}: {resp.text[:200]}"
+                log.error(f"  [bridge] {msg}")
+                return SqlAtomResult(atom=atom, sql=f"GET {url_path}", error=msg)
+            body = resp.json()
     except Exception as e:
-        msg = f"MCP error calling {tool_name} for {atom.sub_type}: {e}"
+        msg = f"HTTP error calling {url_path} for {atom.sub_type}: {e}"
         log.error(f"  [bridge] {msg}")
-        return SqlAtomResult(atom=atom, sql=f"TOOL {tool_name}", error=msg)
+        return SqlAtomResult(atom=atom, sql=f"GET {url_path}", error=msg)
 
-    # ── Extract rows ──────────────────────────────────────────────────────
     if isinstance(body, dict) and "error" in body:
         msg = f"API Error: {body['error']} - {body.get('detail', '')}"
         log.error(f"  [bridge] {msg}")
-        return SqlAtomResult(atom=atom, sql=f"TOOL {tool_name}", error=msg)
+        return SqlAtomResult(atom=atom, sql=f"GET {url_path}", error=msg)
 
     rows = body.get("data", body if isinstance(body, list) else [])
     if not isinstance(rows, list):
         rows = [rows]
 
-    # Client-side fiscal year filtering for endpoints that don't support it
-    date_key = tool_info.get("date_key", "period_end")
-    if atom.years and not tool_info.get("supports_date_range"):
+    date_key = endpoint_info.get("date_key", "period_end")
+    if atom.years and not endpoint_info.get("supports_date_range"):
         rows = _filter_rows_by_fy(rows, atom.years, date_key)
 
-    log.info(f"  [bridge] {atom.sub_type}: {len(rows)} row(s) from MCP {tool_name}")
+    log.info(f"  [bridge] {atom.sub_type}: {len(rows)} row(s) from {url_path}")
     return SqlAtomResult(
         atom=atom,
         rows=rows,
-        sql=f"TOOL {tool_name}",
-        params=tuple(args.items()),
+        sql=f"GET {url_path}",
+        params=tuple(params.items()),
     )
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -387,6 +376,10 @@ def _latest_resolved_fy_by_symbol(sql_results: List[SqlAtomResult]) -> Dict[str,
 # only for keywords with an unambiguous, already-whitelisted SQL mapping
 # (via SUBTYPE_TABLE_MAP) -- no free-form guessing, no new columns invented.
 _VECTOR_EMPTY_SQL_FALLBACK: List[Tuple[str, str]] = [
+    (r"\b(cash[\s\-]?flows?|cashflow)\b", "cash_flow"),
+    (r"\b(balance[\s\-]?sheets?)\b", "balance_sheet"),
+    (r"\b(profit\s*(?:and|&)\s*loss|p[&/]l|income\s+statement)\b", "profit_loss"),
+    (r"\b(quarterly\s+results?|quarterly\s+statements?)\b", "quarterly"),
     (r"\bnet\s+profit|\bpat\b|\bprofit\b", "net_profit"),
     (r"\brevenue|\bsales\b|\btop[\s\-]?line", "revenue"),
     (r"\bebitda\b", "ebitda"),
@@ -398,6 +391,7 @@ _VECTOR_EMPTY_SQL_FALLBACK: List[Tuple[str, str]] = [
     (r"\broe\b", "roe"),
     (r"\bcapex\b", "capex"),
 ]
+
 
 
 def _infer_fallback_sql_sub_type(atom: AtomicNeed) -> Optional[str]:
@@ -488,22 +482,14 @@ class SchemaBridge:
         # Vector chunks sorted by relevance
         for chunk in result.all_chunks():
             print(chunk.text[:120])
-
-    Thread safety: each call to fetch() opens its own DB connection(s).
-    The bridge object itself is stateless and safe to share.
     """
 
     def __init__(
         self,
-        mcp_base: Optional[str] = None,
+        api_base: Optional[str] = None,
         max_workers: int = 8,
     ):
-        """
-        :param mcp_base:     Base URL of the MCP server (e.g.
-                             http://localhost:8100). Defaults to MCP_BASE.
-        :param max_workers:  Maximum threads for parallel fetching.
-        """
-        self.mcp_base = mcp_base or MCP_BASE
+        self.api_base = api_base or API_BASE
         self.max_workers = max_workers
 
     # ── Main entry point ──────────────────────────────────────────────────────
@@ -560,19 +546,21 @@ class SchemaBridge:
                         log.error(f"  [bridge] {msg}")
                         errors.append(msg)
 
-        # Run SQL/MCP atoms via single asyncio SSE session
+        # Run SQL/HTTP atoms in parallel via thread pool
         if sql_atoms:
-            try:
-                mcp_url = f"{self.mcp_base}/sse"
-                results = asyncio.run(self._fetch_mcp_atoms(sql_atoms, mcp_url))
-                for res in results:
-                    sql_results.append(res)
-                    if res.error:
-                        errors.append(res.error)
-            except Exception as e:
-                msg = f"Unexpected failure in MCP bridge: {e}"
-                log.error(f"  [bridge] {msg}")
-                errors.append(msg)
+            with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
+                futures = {pool.submit(self._safe_sql, atom): atom for atom in sql_atoms}
+                for fut in as_completed(futures):
+                    atom = futures[fut]
+                    try:
+                        result = fut.result()
+                        sql_results.append(result)
+                        if result.error:
+                            errors.append(result.error)
+                    except Exception as e:
+                        msg = f"Unexpected failure in HTTP API bridge ({atom.sub_type}): {e}"
+                        log.error(f"  [bridge] {msg}")
+                        errors.append(msg)
 
         # [FIX-EMPTY-VECTOR-FALLBACK]
         # A qualitative/forward-looking ask that came back with literally
@@ -665,13 +653,9 @@ class SchemaBridge:
 
     # ── Internal helpers ──────────────────────────────────────────────────────
 
-    async def _fetch_mcp_atoms(self, atoms: List[AtomicNeed], mcp_url: str) -> List[SqlAtomResult]:
-        """Fetch multiple atoms over a single MCP SSE connection in parallel."""
-        async with sse_client(mcp_url) as streams:
-            async with ClientSession(*streams) as session:
-                await session.initialize()
-                tasks = [_execute_mcp_atom(atom, session) for atom in atoms]
-                return await asyncio.gather(*tasks)
+    def _safe_sql(self, atom: AtomicNeed) -> SqlAtomResult:
+        return _execute_http_atom(atom, api_base=self.api_base)
+
     def _safe_vector(self, atom: AtomicNeed) -> VectorAtomResult:
         return _execute_vector_atom(atom)
 
