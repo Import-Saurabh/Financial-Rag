@@ -601,6 +601,7 @@ if __name__ == "__main__":
 
     if "--sse" in sys.argv:
         # Run as SSE HTTP server
+        mcp.settings.port = MCP_PORT
         mcp.run(transport="sse")
     else:
         # Default: stdio transport (no port needed)

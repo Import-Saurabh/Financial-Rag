@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial RAG - Chat</title>
+    <title>Financial RAG - Chat & Visual Intelligence</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
     <style>
         .typing-indicator span {
             animation: blink 1.4s infinite both;
@@ -15,8 +16,16 @@
         .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
         @keyframes blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
         
-        pre { background: #f4f4f5; padding: 10px; border-radius: 5px; overflow-x: auto; margin-top: 5px; }
-        code { font-family: monospace; }
+        pre { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; overflow-x: auto; margin-top: 6px; }
+        code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.88rem; }
+        .chart-container {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 16px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        }
     </style>
 </head>
 <body class="bg-gray-50 flex h-screen text-gray-800 font-sans">
@@ -24,16 +33,31 @@
     <!-- Sidebar -->
     <div class="w-64 bg-gray-900 text-white flex flex-col">
         <div class="p-4 flex items-center justify-between border-b border-gray-800">
-            <h1 class="font-bold text-lg">FinRAG</h1>
+            <h1 class="font-bold text-lg flex items-center gap-2">
+                <i class="fas fa-chart-line text-blue-500"></i> FinRAG
+            </h1>
             <a href="login.html" class="text-xs bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded">Admin</a>
         </div>
         <div class="p-4 flex-1 overflow-y-auto">
-            <button class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-md py-2 px-4 flex items-center justify-center gap-2 mb-6" onclick="location.reload()">
+            <button class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-md py-2 px-4 flex items-center justify-center gap-2 mb-6 transition" onclick="location.reload()">
                 <i class="fas fa-plus"></i> New Chat
             </button>
-            <div class="text-xs text-gray-500 uppercase font-semibold mb-3">Today</div>
-            <div class="text-sm text-gray-300 truncate mb-2 hover:bg-gray-800 p-2 rounded cursor-pointer">Apollo MS Q1 FY26 Order Book</div>
-            <div class="text-sm text-gray-300 truncate mb-2 hover:bg-gray-800 p-2 rounded cursor-pointer">Financial Highlights FY25</div>
+            <div class="text-xs text-gray-400 uppercase font-semibold mb-3 tracking-wider">Example Prompts</div>
+            <div class="text-sm text-gray-300 mb-2 hover:bg-gray-800 p-2 rounded cursor-pointer transition" onclick="setPrompt('What is the profit CAGR and growth trend for APOLLO from FY23 to FY25?')">
+                📈 Apollo Profit CAGR & Trend
+            </div>
+            <div class="text-sm text-gray-300 mb-2 hover:bg-gray-800 p-2 rounded cursor-pointer transition" onclick="setPrompt('Show the revenue and EBITDA trend for HAL with YoY calculations.')">
+                📊 HAL Revenue & EBITDA
+            </div>
+            <div class="text-sm text-gray-300 mb-2 hover:bg-gray-800 p-2 rounded cursor-pointer transition" onclick="setPrompt('What is the shareholding pattern of BEL?')">
+                🥧 BEL Shareholding Pattern
+            </div>
+            <div class="text-sm text-gray-300 mb-2 hover:bg-gray-800 p-2 rounded cursor-pointer transition" onclick="setPrompt('Show P&L waterfall breakdown for RELIANCE.')">
+                💧 RELIANCE P&L Waterfall Bridge
+            </div>
+        </div>
+        <div class="p-3 text-xs text-gray-500 border-t border-gray-800 text-center">
+            Hybrid OpenKB + SQL Analytics Engine
         </div>
     </div>
 
@@ -43,25 +67,27 @@
         <div id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-6">
             <!-- Welcome Message -->
             <div class="flex gap-4 max-w-4xl mx-auto mt-8">
-                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
+                <div class="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white flex-shrink-0 shadow">
                     <i class="fas fa-robot text-sm"></i>
                 </div>
                 <div>
-                    <h3 class="font-bold mb-1">Financial RAG Assistant</h3>
-                    <p class="text-gray-700">Hello! I am connected to your OpenKB knowledge base. Ask me about the ingested financial documents, such as the Apollo Micro Systems concall.</p>
+                    <h3 class="font-bold text-gray-900 mb-1">Financial RAG Assistant</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        Hello! I am your financial research assistant powered by OpenKB and SQL quantitative extraction. Ask me about corporate earnings, growth metrics, profit CAGR, balance sheet health, or trend visuals for Indian listed equities.
+                    </p>
                 </div>
             </div>
         </div>
 
         <!-- Input Area -->
-        <div class="p-4 border-t border-gray-200">
+        <div class="p-4 border-t border-gray-200 bg-white">
             <div class="max-w-4xl mx-auto relative">
-                <textarea id="prompt-input" rows="1" class="w-full bg-gray-100 border border-gray-300 rounded-lg pl-4 pr-12 py-3 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none overflow-hidden" placeholder="Ask about order books, revenues, or programs..." onkeydown="handleEnter(event)"></textarea>
-                <button id="send-btn" class="absolute right-2 bottom-2 p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" onclick="sendMessage()">
+                <textarea id="prompt-input" rows="1" class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-4 pr-12 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white resize-none overflow-hidden text-sm" placeholder="Ask for profit CAGR, revenue trend, P&L breakdown, or order books..." onkeydown="handleEnter(event)"></textarea>
+                <button id="send-btn" class="absolute right-2.5 bottom-2.5 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50" onclick="sendMessage()">
                     <i class="fas fa-paper-plane"></i>
                 </button>
             </div>
-            <div class="text-center text-xs text-gray-400 mt-2">Financial RAG can make mistakes. Verify important financial figures.</div>
+            <div class="text-center text-xs text-gray-400 mt-2">Financial RAG automatically generates visual diagrams and computes CAGR/YoY growth from verified SQL data.</div>
         </div>
     </div>
 
@@ -71,11 +97,17 @@
         const sendBtn = document.getElementById('send-btn');
         let chatHistory = [];
 
-        // Auto-resize textarea
         inputField.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight < 200 ? this.scrollHeight : 200) + 'px';
         });
+
+        function setPrompt(text) {
+            inputField.value = text;
+            inputField.style.height = 'auto';
+            inputField.style.height = (inputField.scrollHeight < 200 ? inputField.scrollHeight : 200) + 'px';
+            inputField.focus();
+        }
 
         function handleEnter(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -88,19 +120,16 @@
             const text = inputField.value.trim();
             if (!text) return;
             
-            // Add user message
             appendMessage('user', text);
             inputField.value = '';
             inputField.style.height = 'auto';
             
-            // Add assistant loading
             const msgId = 'msg-' + Date.now();
             appendLoading(msgId);
             
             chatHistory.push({ role: 'user', content: text });
             
             try {
-                // We request streaming from our new FastAPI route
                 const response = await fetch('/v1/chat/completions', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -113,9 +142,8 @@
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder("utf-8");
-                let content = "";
+                let fullContent = "";
                 
-                // Remove loading indicator
                 const msgDiv = document.getElementById(msgId);
                 msgDiv.innerHTML = '';
                 
@@ -129,8 +157,8 @@
                             try {
                                 const data = JSON.parse(line.substring(6));
                                 if (data.choices && data.choices[0].delta && data.choices[0].delta.content) {
-                                    content += data.choices[0].delta.content;
-                                    msgDiv.innerHTML = formatMarkdown(content);
+                                    fullContent += data.choices[0].delta.content;
+                                    renderAssistantMessage(msgDiv, fullContent, msgId);
                                     chatBox.scrollTop = chatBox.scrollHeight;
                                 }
                             } catch (e) {}
@@ -138,10 +166,12 @@
                     }
                 }
                 
-                chatHistory.push({ role: 'assistant', content: content });
+                // Final render with full interactive chart rendering at the end of the text response
+                renderAssistantMessage(msgDiv, fullContent, msgId, true);
+                chatHistory.push({ role: 'assistant', content: fullContent });
                 
             } catch (error) {
-                document.getElementById(msgId).innerHTML = '<span class="text-red-500">Error connecting to server. Make sure the backend is running.</span>';
+                document.getElementById(msgId).innerHTML = '<span class="text-red-500 font-medium">Error connecting to server. Make sure the backend is running.</span>';
             }
         }
 
@@ -153,12 +183,12 @@
             
             const html = `
             <div class="flex gap-4 max-w-4xl mx-auto ${isUser ? 'flex-row-reverse' : ''}">
-                <div class="w-8 h-8 rounded-full ${bgClass} flex items-center justify-center flex-shrink-0">
+                <div class="w-9 h-9 rounded-full ${bgClass} flex items-center justify-center flex-shrink-0 shadow">
                     ${icon}
                 </div>
                 <div class="${isUser ? 'text-right' : ''} w-full">
-                    <h3 class="font-bold mb-1">${name}</h3>
-                    <div class="text-gray-800 ${isUser ? 'bg-gray-100 p-3 rounded-2xl inline-block' : 'prose max-w-none'}">${isUser ? content : formatMarkdown(content)}</div>
+                    <h3 class="font-bold mb-1 text-sm text-gray-900">${name}</h3>
+                    <div class="text-gray-800 ${isUser ? 'bg-blue-50 text-blue-950 px-4 py-3 rounded-2xl inline-block text-left text-sm font-medium border border-blue-100' : 'prose max-w-none text-sm'}">${isUser ? content : formatMarkdown(content)}</div>
                 </div>
             </div>`;
             chatBox.insertAdjacentHTML('beforeend', html);
@@ -168,12 +198,12 @@
         function appendLoading(id) {
             const html = `
             <div class="flex gap-4 max-w-4xl mx-auto">
-                <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
+                <div class="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white flex-shrink-0 shadow">
                     <i class="fas fa-robot text-sm"></i>
                 </div>
                 <div class="w-full">
-                    <h3 class="font-bold mb-1">Financial RAG Assistant</h3>
-                    <div id="${id}" class="text-gray-800 prose max-w-none">
+                    <h3 class="font-bold mb-1 text-sm text-gray-900">Financial RAG Assistant</h3>
+                    <div id="${id}" class="text-gray-800 prose max-w-none text-sm">
                         <div class="typing-indicator"><span></span><span></span><span></span></div>
                     </div>
                 </div>
@@ -181,13 +211,77 @@
             chatBox.insertAdjacentHTML('beforeend', html);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
+
+        function renderAssistantMessage(container, content, msgId, isFinal = false) {
+            // Check for embedded charts block
+            const chartMatch = content.match(/```json:financial-charts\n([\s\S]*?)\n```/);
+            let textOnly = content;
+            let chartData = null;
+
+            if (chartMatch) {
+                textOnly = content.replace(/```json:financial-charts\n[\s\S]*?\n```/, '');
+                try {
+                    chartData = JSON.parse(chartMatch[1]);
+                } catch (e) {}
+            }
+
+            let html = formatMarkdown(textOnly);
+
+            if (chartData && chartData.length > 0) {
+                html += '<div class="mt-4 pt-4 border-t border-gray-200"><h4 class="font-bold text-gray-800 text-sm flex items-center gap-2 mb-3"><i class="fas fa-chart-bar text-blue-600"></i> Financial Visual Insights</h4>';
+                
+                chartData.forEach((c, idx) => {
+                    const plotContainerId = `plot-${msgId}-${idx}`;
+                    
+                    // Render KPI Cards
+                    let kpisHtml = '';
+                    if (c.kpis && c.kpis.length > 0) {
+                        kpisHtml = '<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">';
+                        c.kpis.forEach(k => {
+                            const badgeColor = k.type === 'positive' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200';
+                            kpisHtml += `
+                            <div class="p-2.5 rounded-lg border ${badgeColor}">
+                                <div class="text-xs text-gray-500 font-medium">${k.label}</div>
+                                <div class="text-base font-bold">${k.value}</div>
+                            </div>`;
+                        });
+                        kpisHtml += '</div>';
+                    }
+
+                    html += `
+                    <div class="chart-container mb-4">
+                        <div class="font-semibold text-gray-900 text-sm mb-1">${c.title || 'Financial Trend'}</div>
+                        <div class="text-xs text-gray-500 mb-3">${c.subtitle || ''}</div>
+                        ${kpisHtml}
+                        <div id="${plotContainerId}" style="min-height: 320px;"></div>
+                    </div>`;
+                });
+                html += '</div>';
+            }
+
+            container.innerHTML = html;
+
+            // Render Plotly graphs once HTML is injected
+            if (chartData && isFinal && window.Plotly) {
+                chartData.forEach((c, idx) => {
+                    const plotContainerId = `plot-${msgId}-${idx}`;
+                    const targetEl = document.getElementById(plotContainerId);
+                    if (targetEl && c.plotly_fig) {
+                        Plotly.newPlot(targetEl, c.plotly_fig.data, c.plotly_fig.layout, { responsive: true, displayModeBar: false });
+                    }
+                });
+            }
+        }
         
-        // Very simple markdown parser for bold, lists, and code blocks
         function formatMarkdown(text) {
             let html = text
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/\[\[(.*?)\]\]/g, '<span class="text-blue-600 cursor-pointer hover:underline">[$1]</span>')
+                .replace(/^### (.*$)/gim, '<h3 class="font-bold text-base text-gray-900 mt-3 mb-1">$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2 class="font-bold text-lg text-gray-900 mt-4 mb-2">$1</h2>')
+                .replace(/^# (.*$)/gim, '<h1 class="font-bold text-xl text-gray-900 mt-4 mb-2">$1</h1>')
+                .replace(/^\- (.*$)/gim, '<li class="ml-4 list-disc">$1</li>')
+                .replace(/\[\[(.*?)\]\]/g, '<span class="text-blue-600 font-medium cursor-pointer hover:underline">[$1]</span>')
                 .replace(/\n/g, '<br/>');
             
             return html;

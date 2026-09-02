@@ -1,13 +1,13 @@
 # Financial RAG Platform ??
 
-An advanced, hybrid Retrieval-Augmented Generation (RAG) platform tailored for financial and equity research. This system fuses **qualitative semantic search** (reading earnings call transcripts) with **quantitative SQL data extraction** (fetching raw balance sheet and P&L data) to generate highly accurate, mathematically grounded financial analysis.
+An advanced, hybrid Retrieval-Augmented Generation (RAG) platform tailored for financial and equity research. This system fuses **qualitative keyword search (OpenKB)** (reading earnings call transcripts) with **quantitative SQL data extraction** (fetching raw balance sheet and P&L data) to generate highly accurate, mathematically grounded financial analysis.
 
 ![Demo](demo.png)
 
 ## Architecture Overview
 
 This platform dynamically routes user queries into two concurrent streams:
-1. **Vector Retrieval**: Searches local document chunks for qualitative context (management guidance, qualitative outlook).
+1. **OpenKB Keyword/PageIndex Retrieval**: Searches local document chunks for qualitative context (management guidance, qualitative outlook).
 2. **SQL MCP Bridge**: Decomposes queries into exact financial data requirements (e.g. ROCE, Revenue, EBITDA), extracting the exact rows from a MySQL database using a Model Context Protocol (MCP) server.
 
 The structured SQL data and the qualitative text chunks are fused together into a unified context prompt, which is then fed into an LLM for final generation.
@@ -20,7 +20,7 @@ flowchart TD
     subgraph Backend [Query Processing Pipeline]
         FastAPI --> Pipeline[RAG Pipeline]
         
-        Pipeline --> Vector[Keyword / Vector Retrieval]
+        Pipeline --> OpenKB[OpenKB PageIndex Tree Retrieval]
         Vector --> Chunks[Text Chunks]
         
         Pipeline --> Decomposer[Atomic Decomposer]

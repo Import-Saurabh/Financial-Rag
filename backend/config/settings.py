@@ -80,8 +80,9 @@ MINIO_BUCKET     = os.getenv("MINIO_BUCKET",     "quant-docs")
 GROQ_API_KEY        = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL          = "llama-3.3-70b-versatile"
 GROQ_FALLBACK_MODEL = "gemma2-9b-it"
-GROQ_MAX_TOKENS     = 1024
+GROQ_MAX_TOKENS     = 3000
 GROQ_TEMPERATURE    = 0.1
+
 
 
 # ─────────────────────────────────────────────

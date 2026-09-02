@@ -9,7 +9,19 @@ pdfplumber>=0.10.0
 # ── Knowledge Base (OpenKB + PageIndex) ────────
 openkb
 
+# ── Visualization & Web ─────────────────────────
+plotly>=5.0.0
+pandas>=1.5.0
+streamlit>=1.20.0
+
 # ── Utilities ──────────────────────────────────
 numpy>=1.24.0
 minio
 mysql-connector-python
+
+# ── LangGraph Agent ────────────────────────────
+langgraph>=0.2.0
+langchain-core>=0.3.0
+
+# ── Live Market Data ───────────────────────────
+yfinance>=0.2.40

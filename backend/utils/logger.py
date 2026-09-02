@@ -22,10 +22,16 @@ def get_logger(name: str, log_dir: Path = None) -> logging.Logger:
     )
 
     # Console handler
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     ch = logging.StreamHandler(sys.stdout)
     ch.setLevel(logging.INFO)
     ch.setFormatter(fmt)
     logger.addHandler(ch)
+
 
     # File handler
     if log_dir:
