@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 import traceback
 from dataclasses import dataclass, field
@@ -49,36 +50,45 @@ except ModuleNotFoundError:
     import logging
     log = logging.getLogger(__name__)
 
+try:
+    from visualization.chart_engine import generate_financial_charts
+    _HAS_CHARTS = True
+except ModuleNotFoundError:
+    _HAS_CHARTS = False
+    def generate_financial_charts(*args, **kwargs):
+        return []
+
 # ── API connectivity ────────────────────────────────────────────────────────
 import os
 import httpx
 
-MCP_BASE = os.getenv("FINANCIAL_MCP_BASE", "http://localhost:8100")
+API_BASE = os.getenv("FINANCIAL_API_BASE", os.getenv("FINANCIAL_MCP_BASE", "http://localhost:8000"))
 
-_MCP_REACHABLE_CACHE: Optional[bool] = None
-_MCP_REACHABLE_CHECKED_AT: float = 0.0
-_MCP_REACHABLE_TTL_SEC: float = 30.0
+_API_REACHABLE_CACHE: Optional[bool] = None
+_API_REACHABLE_CHECKED_AT: float = 0.0
+_API_REACHABLE_TTL_SEC: float = 30.0
 
 
 def _api_reachable() -> bool:
     """Cheap connectivity probe — used only for pipeline-mode gating."""
-    global _MCP_REACHABLE_CACHE, _MCP_REACHABLE_CHECKED_AT
+    global _API_REACHABLE_CACHE, _API_REACHABLE_CHECKED_AT
     now = time.time()
-    if _MCP_REACHABLE_CACHE is not None and (now - _MCP_REACHABLE_CHECKED_AT) < _MCP_REACHABLE_TTL_SEC:
-        return _MCP_REACHABLE_CACHE
+    if _API_REACHABLE_CACHE is not None and (now - _API_REACHABLE_CHECKED_AT) < _API_REACHABLE_TTL_SEC:
+        return _API_REACHABLE_CACHE
 
     try:
-        # Ping the root to check if the server is up (it will return 404, but instantly)
-        # Avoid GET /sse as it holds the stream open and times out
-        httpx.get(MCP_BASE, timeout=2.0)
-        _MCP_REACHABLE_CACHE = True
-    except httpx.HTTPStatusError:
-        _MCP_REACHABLE_CACHE = True  # 404 means it's up
+        r = httpx.get(f"{API_BASE.rstrip('/')}/api/v1/health", timeout=3.0)
+        _API_REACHABLE_CACHE = (r.status_code == 200)
     except Exception:
-        _MCP_REACHABLE_CACHE = False
+        try:
+            r = httpx.get(API_BASE, timeout=2.0)
+            _API_REACHABLE_CACHE = (r.status_code < 500)
+        except Exception:
+            _API_REACHABLE_CACHE = False
 
-    _MCP_REACHABLE_CHECKED_AT = now
-    return _MCP_REACHABLE_CACHE
+    _API_REACHABLE_CHECKED_AT = now
+    return _API_REACHABLE_CACHE
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -92,13 +102,14 @@ class SynthesisResult:
     built_prompt:    "BuiltPrompt"
 
     # Diagnostics (all optional — populated when pipeline ran fully)
-    atoms:           List[Any]  = field(default_factory=list)   # AtomicNeed list
-    fusion_result:   Any        = None                           # FusionResult | None
-    sql_rows:        int        = 0
-    insights:        int        = 0
-    chunks_used:     int        = 0
-    pipeline_mode:   str        = "vector_only"   # "full" | "no_sql" | "vector_only"
-    warnings:        List[str]  = field(default_factory=list)
+    atoms:           List[Any]             = field(default_factory=list)   # AtomicNeed list
+    fusion_result:   Any                   = None                           # FusionResult | None
+    sql_rows:        int                   = 0
+    insights:        int                   = 0
+    chunks_used:     int                   = 0
+    pipeline_mode:   str                   = "vector_only"   # "full" | "no_sql" | "vector_only"
+    warnings:        List[str]             = field(default_factory=list)
+    charts:          List[Dict[str, Any]]  = field(default_factory=list)
 
     # Convenience pass-throughs so callers don't need to unpack BuiltPrompt
     @property
@@ -198,9 +209,32 @@ class SynthesisPipeline:
     def _infer_symbol(
         chunks:  List["RetrievedChunk"],
         symbol:  Optional[str],
+        query:   Optional[str] = None,
     ) -> Optional[str]:
+        # 1. Query text takes top precedence
+        if query:
+            q_lower = query.lower()
+            known = {
+                "apollo": "APOLLO", "bel": "BEL", "hal": "HAL",
+                "reliance": "RELIANCE", "ril": "RELIANCE", "tcs": "TCS",
+                "infy": "INFY", "infosys": "INFY", "hdfc": "HDFCBANK",
+                "icici": "ICICIBANK", "sbi": "SBIN", "sbin": "SBIN",
+                "datapattns": "DATAPATTNS", "adani": "ADANIPORTS",
+            }
+            for k, sym in known.items():
+                if re.search(r'\b' + re.escape(k) + r'\b', q_lower):
+                    return sym
+            # Ticker matching in query
+            for m in re.finditer(r'\b([A-Z]{2,15})\b', query):
+                cand = m.group(1)
+                if cand not in {"CAGR", "EBITDA", "EBIT", "PAT", "PBT", "OPM", "ROE", "ROCE", "EPS", "FY", "AND", "THE", "FOR", "WHAT", "SHOW", "LIST"}:
+                    return cand
+
+        # 2. Passed symbol
         if symbol:
             return symbol.upper()
+
+        # 3. Chunks metadata
         for c in chunks:
             sym = c.metadata.get("symbol")
             if sym and str(sym).upper() != "UNKNOWN":
@@ -236,8 +270,8 @@ class SynthesisPipeline:
 
         builder = PromptBuilder().for_provider(model) if model else PromptBuilder()
 
-        # ── Infer symbol from chunks if not provided ───────────────────────────
-        eff_symbol = self._infer_symbol(chunks, symbol)
+        # ── Infer symbol from query, passed symbol, or chunks ──────────────────
+        eff_symbol = self._infer_symbol(chunks, symbol, query=query)
 
         # ── Decide which pipeline mode to run ─────────────────────────────────
         #
@@ -262,7 +296,7 @@ class SynthesisPipeline:
 
             elif not _api_reachable():
                 warnings.append(
-                    f"MCP Server unreachable at {MCP_BASE} — using vector-only path"
+                    f"MCP Server unreachable at {API_BASE} — using vector-only path"
                 )
             else:
                 warnings.append("fusion layer unavailable — using vector-only path")
@@ -379,6 +413,22 @@ class SynthesisPipeline:
             f"insights={built.insights_used} chars={built.total_chars:,}"
         )
 
+        # Generate financial visuals & trend charts
+        charts = []
+        try:
+            metric_rows = fusion_result.metric_rows if fusion_result else None
+            sql_res = bridge_result.sql_results if bridge_result else None
+            charts = generate_financial_charts(
+                query=query,
+                metric_rows=metric_rows,
+                sql_results=sql_res,
+                symbol=symbol,
+            )
+            if charts:
+                log.info(f"[synthesis] Generated {len(charts)} interactive financial chart(s)")
+        except Exception as ce:
+            log.warning(f"[synthesis] Chart generation warning: {ce}")
+
         return SynthesisResult(
             built_prompt  = built,
             atoms         = atoms,
@@ -388,6 +438,7 @@ class SynthesisPipeline:
             chunks_used   = built.chunks_used,
             pipeline_mode = mode,
             warnings      = warnings,
+            charts        = charts,
         )
 
     # ── Vector-only path ──────────────────────────────────────────────────────
