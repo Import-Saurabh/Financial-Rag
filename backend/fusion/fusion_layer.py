@@ -191,6 +191,16 @@ _METRIC_SIGNALS: Dict[str, Tuple[str, List[str], str]] = {
     "roce":             ("roce_pct",               ["roce", "return on capital"],                      "%"),
     "roa":              ("roa_pct",                ["roa", "return on assets"],                        "%"),
 
+    # ── Financial statements ──────────────────────────────────────────────────
+    "profit_loss":      ("net_profit",             ["sales", "revenue", "net profit", "operating profit"], "crore"),
+    "pnl":              ("net_profit",             ["sales", "revenue", "net profit", "operating profit"], "crore"),
+    "income_statement": ("net_profit",             ["sales", "revenue", "net profit", "operating profit"], "crore"),
+    "balance_sheet":    ("total_assets",           ["total assets", "assets", "equity", "liabilities", "borrowings"], "crore"),
+    "balancesheet":     ("total_assets",           ["total assets", "assets", "equity", "liabilities", "borrowings"], "crore"),
+    "quarterly":        ("net_profit",             ["sales", "revenue", "net profit", "operating profit"], "crore"),
+    "quarterly_results":("net_profit",             ["sales", "revenue", "net profit", "operating profit"], "crore"),
+    "quarterly_statement": ("net_profit",          ["sales", "revenue", "net profit", "operating profit"], "crore"),
+
     # ── Balance sheet ─────────────────────────────────────────────────────────
     "total_assets":     ("total_assets",           ["total assets", "asset base"],                    "crore"),
     "total_equity":     ("total_equity",           ["equity", "net worth", "shareholders equity"],    "crore"),
@@ -204,7 +214,10 @@ _METRIC_SIGNALS: Dict[str, Tuple[str, List[str], str]] = {
     "fixed_assets":     ("fixed_assets",           ["fixed assets", "net block", "property plant"],  "crore"),
     "investments":      ("investments",            ["investments"],                                   "crore"),
 
+
     # ── Cash flow ─────────────────────────────────────────────────────────────
+    "cash_flow":        ("net_cash_flow",          ["cash flow", "net cash flow", "operating cash flow", "free cash flow"], "crore"),
+    "cashflow":         ("net_cash_flow",          ["cash flow", "cashflow"],                         "crore"),
     "ocf":              ("cfo",                    ["operating cash flow", "cash from operations"],   "crore"),
     "cfi":              ("cfi",                    ["investing cash flow", "cash used in investing"], "crore"),
     "cff":              ("cff",                    ["financing cash flow", "cash from financing"],    "crore"),
@@ -755,24 +768,28 @@ class FusionLayer:
         so a weak-evidence answer can trigger a retry or an explicit
         uncertainty disclosure instead of a confident-sounding guess.
         """
-        if not result.metric_rows and not result.concall_claims:
+        if not result.metric_rows and not result.concall_claims and not result.annual_chunks and not result.concall_chunks:
             return 0.0
 
         total_insights = len(result.insights)
         if total_insights == 0:
-            # No SQL-vs-commentary cross-check was possible at all (e.g. a
-            # pure qualitative question). Base confidence on whether we have
-            # *any* evidence, not on cross-referencing.
-            has_any = bool(result.metric_rows or result.concall_chunks or result.annual_chunks)
-            return 0.55 if has_any else 0.0
+            has_sql = bool(result.metric_rows)
+            has_vec = bool(result.concall_chunks or result.annual_chunks)
+            if has_sql:
+                return 0.90
+            return 0.60 if has_vec else 0.0
 
         n_confirm    = sum(1 for i in result.insights if i.insight_type == InsightType.CONFIRM)
         n_contradict = sum(1 for i in result.insights if i.insight_type == InsightType.CONTRADICT)
         n_unmatched  = sum(1 for i in result.insights if i.insight_type == InsightType.UNMATCHED)
 
-        score = 0.5 + 0.4 * (n_confirm / total_insights)
-        score -= 0.35 * (n_contradict / total_insights)   # contradictions hurt a lot
-        score -= 0.05 * (n_unmatched / total_insights)    # unmatched hurts a little
+        if len(result.metric_rows) > 0:
+            score = 0.85 + 0.15 * (n_confirm / total_insights)
+            score -= 0.40 * (n_contradict / total_insights)
+        else:
+            score = 0.5 + 0.4 * (n_confirm / total_insights)
+            score -= 0.35 * (n_contradict / total_insights)
+            score -= 0.05 * (n_unmatched / total_insights)
         return round(max(0.0, min(1.0, score)), 3)
 
     # ── Step 1: MetricRow builder ─────────────────────────────────────────────
@@ -790,6 +807,156 @@ class FusionLayer:
             sig       = _METRIC_SIGNALS.get(sub_type)
             val_col   = sig[0] if sig else (atom.sql_columns[0] if atom.sql_columns else "")
             unit      = sig[2] if sig else ""
+
+            if sub_type in ("balance_sheet", "balancesheet"):
+                # Unpack complete balance sheet statement line items
+                bs_items = [
+                    ("equity_capital", "Equity Capital", "crore"),
+                    ("reserves", "Reserves", "crore"),
+                    ("total_equity", "Total Equity / Net Worth", "crore"),
+                    ("borrowings", "Borrowings", "crore"),
+                    ("other_liabilities", "Other Liabilities", "crore"),
+                    ("total_liabilities", "Total Liabilities", "crore"),
+                    ("fixed_assets", "Fixed Assets", "crore"),
+                    ("cwip", "CWIP", "crore"),
+                    ("investments", "Investments", "crore"),
+                    ("other_assets", "Other Assets", "crore"),
+                    ("inventories", "Inventories", "crore"),
+                    ("trade_receivables", "Trade Receivables", "crore"),
+                    ("cash_equivalents", "Cash & Equivalents", "crore"),
+                    ("total_assets", "Total Assets", "crore"),
+                    ("net_debt", "Net Debt", "crore"),
+                ]
+                for raw in sr.rows:
+                    period = _get_period_col(raw)
+                    year = _parse_year_from_period(period)
+                    sym = str(raw.get("symbol", atom.symbol or ""))
+                    for col_name, item_metric, item_unit in bs_items:
+                        val = raw.get(col_name)
+                        if val is not None:
+                            try:
+                                val_f = float(val)
+                            except (TypeError, ValueError):
+                                val_f = None
+                            rows.append(MetricRow(
+                                symbol=sym,
+                                sub_type=col_name,
+                                metric=item_metric,
+                                year=year,
+                                period=period,
+                                value=val_f,
+                                value_col=col_name,
+                                unit=item_unit,
+                                raw_row=raw,
+                            ))
+                continue
+
+            if sub_type in ("profit_loss", "pnl", "income_statement", "quarterly", "quarterly_results", "quarterly_statement"):
+                # Unpack complete profit & loss / quarterly statement line items
+                pl_items = [
+                    ("sales", "Sales / Revenue", "crore"),
+                    ("expenses", "Expenses", "crore"),
+                    ("operating_profit", "Operating Profit", "crore"),
+                    ("opm_pct", "OPM %", "%"),
+                    ("other_income", "Other Income", "crore"),
+                    ("interest", "Interest", "crore"),
+                    ("depreciation", "Depreciation", "crore"),
+                    ("profit_before_tax", "Profit Before Tax (PBT)", "crore"),
+                    ("tax_pct", "Tax %", "%"),
+                    ("net_profit", "Net Profit", "crore"),
+                    ("eps", "EPS", "₹"),
+                ]
+                for raw in sr.rows:
+                    period = _get_period_col(raw)
+                    year = _parse_year_from_period(period)
+                    sym = str(raw.get("symbol", atom.symbol or ""))
+                    for col_name, item_metric, item_unit in pl_items:
+                        val = raw.get(col_name)
+                        if val is not None:
+                            try:
+                                val_f = float(val)
+                            except (TypeError, ValueError):
+                                val_f = None
+                            rows.append(MetricRow(
+                                symbol=sym,
+                                sub_type=col_name,
+                                metric=item_metric,
+                                year=year,
+                                period=period,
+                                value=val_f,
+                                value_col=col_name,
+                                unit=item_unit,
+                                raw_row=raw,
+                            ))
+                continue
+
+            if sub_type in ("cash_flow", "cashflow"):
+                # Unpack complete cash flow statement line items
+                cf_items = [
+                    ("cfo", "Cash from Operations (CFO)", "crore"),
+                    ("cfi", "Cash from Investing (CFI)", "crore"),
+                    ("cff", "Cash from Financing (CFF)", "crore"),
+                    ("capex", "Capex", "crore"),
+                    ("free_cash_flow", "Free Cash Flow (FCF)", "crore"),
+                    ("net_cash_flow", "Net Cash Flow", "crore"),
+                ]
+                for raw in sr.rows:
+                    period = _get_period_col(raw)
+                    year = _parse_year_from_period(period)
+                    sym = str(raw.get("symbol", atom.symbol or ""))
+                    for col_name, item_metric, item_unit in cf_items:
+                        val = raw.get(col_name)
+                        if val is not None:
+                            try:
+                                val_f = float(val)
+                            except (TypeError, ValueError):
+                                val_f = None
+                            rows.append(MetricRow(
+                                symbol=sym,
+                                sub_type=col_name,
+                                metric=item_metric,
+                                year=year,
+                                period=period,
+                                value=val_f,
+                                value_col=col_name,
+                                unit=item_unit,
+                                raw_row=raw,
+                            ))
+                continue
+
+            if sub_type in ("shareholding", "shareholding_pattern", "ownership", "institutional_stake"):
+                # Unpack complete shareholding breakdown
+                sh_items = [
+                    ("promoter_pct", "Promoter Holding", "%"),
+                    ("fii_pct", "FII / FPI Holding", "%"),
+                    ("dii_pct", "DII Holding", "%"),
+                    ("public_pct", "Public / Retail Holding", "%"),
+                    ("total_institutional_pct", "Total Institutional Stake", "%"),
+                    ("num_shareholders", "Number of Shareholders", ""),
+                ]
+                for raw in sr.rows:
+                    period = _get_period_col(raw)
+                    year = _parse_year_from_period(period)
+                    sym = str(raw.get("symbol", atom.symbol or ""))
+                    for col_name, item_metric, item_unit in sh_items:
+                        val = raw.get(col_name)
+                        if val is not None:
+                            try:
+                                val_f = float(val)
+                            except (TypeError, ValueError):
+                                val_f = None
+                            rows.append(MetricRow(
+                                symbol=sym,
+                                sub_type=col_name,
+                                metric=item_metric,
+                                year=year,
+                                period=period,
+                                value=val_f,
+                                value_col=col_name,
+                                unit=item_unit,
+                                raw_row=raw,
+                            ))
+                continue
 
             for raw in sr.rows:
                 period  = _get_period_col(raw)
@@ -813,6 +980,7 @@ class FusionLayer:
                     raw_row  = raw,
                 ))
         return rows
+
 
     # ── Step 2: claim extractor ───────────────────────────────────────────────
 
