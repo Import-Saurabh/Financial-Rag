@@ -33,10 +33,8 @@ GEMINI_API_URL     = "https://generativelanguage.googleapis.com/v1beta/models/{m
 # ─────────────────────────────────────────────────────────────────────────────
 _MODEL_CTX: Dict[str, int] = {
     # ── Groq ─────────────────────────────────────────────────────────────────
-    "llama-3.3-70b-versatile":                    5_500,
-    "llama-3.1-8b-instant":                       6_000,
-    "llama3-8b-8192":                             6_000,
-    "gemma2-9b-it":                               3_200,   # kept for compat only
+    "openai/gpt-oss-120b":                        5_500,
+    "openai/gpt-oss-20b":                         6_000,
     # ── Gemini (direct) ───────────────────────────────────────────────────────
     "gemini-2.0-flash":                         200_000,
     "gemini-2.0-flash-lite":                    200_000,
@@ -126,8 +124,7 @@ def build_provider_catalogue() -> List[ProviderEntry]:
         when required by OR to avoid routing to paid variants.
       - Dead slugs removed:
           google/gemini-2.0-flash-exp:free  → google/gemini-2.0-flash-001
-          qwen/qwen2.5-72b-instruct:free   → qwen/qwen2.5-72b-instruct  (no :free)
-          gemma2-9b-it (Groq)              → replaced by llama-3.1-8b-instant
+          qwen/qwen2.5-72b-instruct:free   → qwen/qwen2.5-72b-instruct
     """
     cat: List[ProviderEntry] = []
 
@@ -143,18 +140,18 @@ def build_provider_catalogue() -> List[ProviderEntry]:
     if groq_key:
         cat.append(
             ProviderEntry(
-                id="groq-llama", label="Groq - Llama 3.3 70B Versatile",
-                provider="groq", model="llama-3.3-70b-versatile",
+                id="groq-llama", label="Groq - GPT OSS 120B",
+                provider="groq", model="openai/gpt-oss-120b",
                 api_key=groq_key, api_url=GROQ_API_URL,
                 context_note="128k ctx",
             )
         )
         cat.append(
             ProviderEntry(
-                id="groq-llama8b", label="Groq - Llama 3.1 8B Instant",
-                provider="groq", model="llama-3.1-8b-instant",
+                id="groq-llama8b", label="Groq - GPT OSS 20B",
+                provider="groq", model="openai/gpt-oss-20b",
                 api_key=groq_key, api_url=GROQ_API_URL,
-                context_note="128k ctx",
+                context_note="8k ctx",
             )
         )
 
