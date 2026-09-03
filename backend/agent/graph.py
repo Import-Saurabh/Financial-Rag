@@ -39,12 +39,12 @@ def get_agent_graph():
         if not GROQ_API_KEY:
             raise ValueError("GROQ_API_KEY is not set. Cannot initialize Tool-Calling Agent.")
             
-        # Initialize the ChatGroq model (requires tool-calling support, llama-3.3-70b-versatile or llama-3.1-8b-instant)
+        # Initialize the ChatGroq model (requires tool-calling support, openai/gpt-oss-120b or openai/gpt-oss-20b)
         # Using 8b-instant for speed or 70b if available.
         # Let's use 3.1-8b-instant since it was working in our previous test.
         llm = ChatGroq(
             api_key=GROQ_API_KEY,
-            model="llama3-70b-8192",
+            model="openai/gpt-oss-20b",
             temperature=0.0,
             max_retries=2
         )

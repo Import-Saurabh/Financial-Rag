@@ -665,12 +665,12 @@ class PromptBuilder:
         Return a new PromptBuilder sized for a specific model.
 
         Usage:
-            built = PromptBuilder().for_provider("llama-3.3-70b-versatile").build(...)
+            built = PromptBuilder().for_provider("openai/gpt-oss-20b").build(...)
         """
         _MODEL_CHARS = {
             # Groq free tier
-            "llama-3.3-70b-versatile":          _GROQ_MAX_CHARS,
-            "gemma2-9b-it":                     12_000,
+            "openai/gpt-oss-20b":          _GROQ_MAX_CHARS,
+            "openai/gpt-oss-120b":         _GROQ_MAX_CHARS,
             # OpenRouter Qwen free
             "qwen/qwen3-30b-a3b:free":          _DEFAULT_MAX_CHARS,
             "qwen/qwen3-8b:free":               _DEFAULT_MAX_CHARS,

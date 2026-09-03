@@ -353,7 +353,7 @@ def _run_query(req: QueryRequest) -> dict:
 
         return {
             "answer":        final_message,
-            "model_used":    "groq/llama-3.1-8b-instant (ReAct Agent)",
+            "model_used":    "groq/openai/gpt-oss-20b (ReAct Agent)",
             "chunks_used":   0,  # dynamic, omitted for simplicity
             "sql_rows":      0,  # dynamic, omitted for simplicity
             "insights":      0,  # dynamic, omitted for simplicity
