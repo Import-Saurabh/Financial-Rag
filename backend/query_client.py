@@ -73,14 +73,14 @@ REQUEST_TIMEOUT_SEC = 175
 # Provider menu (mirrors rag_engine.py build_provider_catalogue)
 # ─────────────────────────────────────────────────────────────────────────────
 FALLBACK_PROVIDERS = [
-    {"id": "groq-llama",              "label": "Groq — llama-3.3-70b-versatile ★ FASTEST",   "note": "~5.5k tok (free)"},
+    {"id": "groq-llama",              "label": "Groq — openai/gpt-oss-120b ★ FASTEST",   "note": "~6k tok (free)"},
     {"id": "or-llama70b",             "label": "OpenRouter — Llama 3.3 70B [FREE] ★ BEST",   "note": "131k ctx, FREE"},
     {"id": "or-gemini",               "label": "OpenRouter — Gemini 2.0 Flash [FREE]",       "note": "1M ctx, FREE"},
     {"id": "gemini",                  "label": "Google Gemini — gemini-2.0-flash (direct)",  "note": "1M ctx, 15 RPM"},
     {"id": "nvidia",                  "label": "NVIDIA NIM — llama-3.3-70b ⚠ SLOW (~90s)",  "note": "128k ctx, slow"},
     {"id": "ollama-llama3.1-latest",  "label": "Ollama local — llama3.1:latest",            "note": "4.9 GB, local"},
     {"id": "ollama-phi3-latest",      "label": "Ollama local — phi3:latest",                "note": "2.2 GB, local"},
-    {"id": "groq-llama-8b",           "label": "Groq — llama-3.1-8b-instant (fast fallback)", "note": "6k tok"},
+    {"id": "groq-llama-8b",           "label": "Groq — openai/gpt-oss-20b (fast fallback)", "note": "6k tok"},
     {"id": "deepseek",                "label": "DeepSeek — v4-flash",                        "note": "Concurrency Limit: 500"},
 ]
 
