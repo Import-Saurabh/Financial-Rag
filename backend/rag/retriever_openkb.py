@@ -142,42 +142,19 @@ class OpenKBRetriever:
                            falling back to unrelated documents.
         """
         evidence = []
-        try:
-            openkb_cmd = r"C:\Users\hp\AppData\Roaming\Python\Python310\Scripts\openkb.exe"
-            result = subprocess.run(
-                [openkb_cmd, "query", question, "--json", f"--top-k={top_k * 3}"],
-                cwd=self.wiki_dir,
-                capture_output=True,
-                text=True,
-                timeout=10,
-                shell=(os.name == "nt")
-            )
-            
-            if result.returncode == 0 and result.stdout.strip():
-                try:
-                    data = json.loads(result.stdout)
-                    for item in data.get("results", []):
-                        raw_text = item.get("summary", "") or item.get("text", "")
-                        sec_title = item.get("section_title", "Unknown Section")
-                        sym, yr, dt = _parse_chunk_metadata(raw_text, sec_title)
-                        evidence.append(RetrievedChunk(
-                            text=raw_text,
-                            section=sec_title,
-                            symbol=sym,
-                            year=yr,
-                            doc_type=dt,
-                            page_start=item.get("page_number", -1),
-                            importance_score=item.get("score", 0.0)
-                        ))
-                except json.JSONDecodeError:
-                    log.error(f"Failed to parse OpenKB JSON output: {result.stdout}")
-            else:
-                log.warning(f"OpenKB query returned non-zero or empty. Stderr: {result.stderr}")
-                
-        except subprocess.TimeoutExpired:
-            log.warning("OpenKB query timed out (>10s). Falling back to keyword search.")
-        except Exception as e:
-            log.error(f"Error calling OpenKB: {e}")
+        evidence = []
+        # openkb_cmd = r"C:\Users\hp\AppData\Roaming\Python\Python310\Scripts\openkb.exe"
+        # result = subprocess.run(
+        #     [openkb_cmd, "query", question, "--json", f"--top-k={top_k * 3}"],
+        #     cwd=self.wiki_dir,
+        #     capture_output=True,
+        #     text=True,
+        #     timeout=10,
+        #     shell=(os.name == "nt")
+        # )
+        # We know openkb currently doesn't support --json and always times out
+        pass
+
             
         # Fallback: if OpenKB returned nothing, try keyword search
         if not evidence:

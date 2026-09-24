@@ -62,7 +62,7 @@ except ModuleNotFoundError:
 import os
 import httpx
 
-API_BASE = os.getenv("FINANCIAL_API_BASE", os.getenv("FINANCIAL_MCP_BASE", "http://localhost:8000"))
+API_BASE = "https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws"
 
 _API_REACHABLE_CACHE: Optional[bool] = None
 _API_REACHABLE_CHECKED_AT: float = 0.0
@@ -77,13 +77,18 @@ def _api_reachable() -> bool:
         return _API_REACHABLE_CACHE
 
     try:
-        r = httpx.get(f"{API_BASE.rstrip('/')}/api/v1/health", timeout=3.0)
+        log.info(f"[pipeline] _api_reachable trying API_BASE: {API_BASE}")
+        r = httpx.get(f"{API_BASE.rstrip('/')}/api/v1/health", timeout=15.0)
         _API_REACHABLE_CACHE = (r.status_code == 200)
-    except Exception:
+        log.info(f"[pipeline] _api_reachable: {API_BASE}/api/v1/health returned {r.status_code}, cache={_API_REACHABLE_CACHE}")
+    except Exception as e:
+        log.error(f"[pipeline] _api_reachable: first try failed: {e}")
         try:
-            r = httpx.get(API_BASE, timeout=2.0)
+            r = httpx.get(API_BASE, timeout=15.0)
             _API_REACHABLE_CACHE = (r.status_code < 500)
-        except Exception:
+            log.info(f"[pipeline] _api_reachable: fallback {API_BASE} returned {r.status_code}, cache={_API_REACHABLE_CACHE}")
+        except Exception as e2:
+            log.error(f"[pipeline] _api_reachable: fallback failed: {e2}")
             _API_REACHABLE_CACHE = False
 
     _API_REACHABLE_CHECKED_AT = now
@@ -127,6 +132,7 @@ class SynthesisResult:
 
 def _pipeline_available() -> bool:
     """True only when every component is importable AND MySQL is reachable."""
+    log.info(f"[pipeline] _pipeline_available check: DECOMPOSER={_HAS_DECOMPOSER}, BRIDGE={_HAS_BRIDGE}, FUSION={_HAS_FUSION}, BUILDER={_HAS_BUILDER}")
     if not (_HAS_DECOMPOSER and _HAS_BRIDGE and _HAS_FUSION and _HAS_BUILDER):
         return False
     if not _api_reachable():

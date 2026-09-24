@@ -132,7 +132,7 @@ async def lifespan(app: FastAPI):
 
     # ── Validate all LLM providers and cache healthy list ─────────────────────
     log.info("[server] Validating LLM providers (non-blocking)...")
-    await _validate_all_providers_async()
+    asyncio.create_task(_validate_all_providers_async())
 
     # ── Start background revalidation every 5 minutes ────────────────────────
     _revalidation_task = asyncio.create_task(_revalidation_loop())
