@@ -14,7 +14,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 # ── Configuration ────────────────────────────────────────────────────────────
-API_BASE = "http://localhost:8000"
+API_BASE = "https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws"
 logger = logging.getLogger("mcp-financial-rag")
 
 # ── MCP App ──────────────────────────────────────────────────────────────────
