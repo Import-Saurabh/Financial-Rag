@@ -23,7 +23,7 @@ from utils.logger import get_logger
 log = get_logger(__name__)
 
 # ─── API base URL (FastAPI backend) ───────────────────────────────────────────
-API_BASE = os.getenv("FINANCIAL_API_BASE", "http://localhost:8000")
+API_BASE = "https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Table → API endpoint mapping
@@ -235,7 +235,7 @@ def _execute_http_atom(atom: AtomicNeed, api_base: str = API_BASE) -> SqlAtomRes
     log.debug(f"  [bridge] GET {url} params={params}")
 
     try:
-        with httpx.Client(timeout=10.0) as client:
+        with httpx.Client(timeout=25.0) as client:
             resp = client.get(url, params=params)
             if resp.status_code != 200:
                 msg = f"HTTP {resp.status_code} calling {url_path}: {resp.text[:200]}"
