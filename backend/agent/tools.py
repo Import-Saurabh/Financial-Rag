@@ -90,10 +90,12 @@ def get_financial_data(symbols: List[str], metric_query: str) -> str:
         )
         
         # We return the markdown representation of the SQL data fetched
-        if not result.markdown_context.strip():
+        markdown_context = result.user_prompt
+        
+        if not markdown_context.strip():
             return "No structured financial data was found for this query."
             
-        return result.markdown_context
+        return markdown_context
     except Exception as e:
         log.error(f"[tools] get_financial_data error: {e}")
         return f"Error retrieving financial data: {e}"
@@ -132,7 +134,7 @@ def search_company_documents(symbols: List[str], query: str) -> str:
             doc_type = getattr(chunk, 'doc_type', 'Unknown')
             year = getattr(chunk, 'year', 'Unknown')
             output += f"--- Source {i} ({doc_type} - {year}) ---\n"
-            output += f"{chunk.text}\n\n"
+            output += f"{chunk.text[:1500]}\n\n"
             
         return output
     except Exception as e:
