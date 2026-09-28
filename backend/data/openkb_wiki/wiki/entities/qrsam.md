@@ -1,5 +1,5 @@
 ---
-sources: ["summaries/2025_Aug_2025_Transcript.md"]
+sources: ["summaries/2026_Annual_Report_2026_part1.md", "summaries/2025_Aug_2025_Transcript.md"]
 type: "Product"
 description: "India's quick-reaction surface-to-air missile program; Apollo supplies four critical subsystems."
 ---
@@ -31,3 +31,5 @@ The QRSAM program forms part of India's broader [[concepts/defense_indigenizatio
 - [[concepts/defense-program-supply-chains]]
 - [[concepts/defense_indigenization]]
 - [[summaries/2025_Aug_2025_Transcript]]
+
+See also: [[summaries/2026_Annual_Report_2026_part1]]

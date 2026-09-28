@@ -12,3 +12,25 @@
 
 ## [2026-08-27 00:34:09] query | Financial RAG Assistant
 
+## [2026-09-27 16:48:11] ingest | 2026_Annual_Report_2026_part1.pdf
+
+## [2026-09-27 16:50:09] ingest | 2026_Annual_Report_2026_part2.pdf
+
+## [2026-09-27 16:52:03] ingest | 2026_Annual_Report_2026_part3.pdf
+
+## [2026-09-27 16:54:19] ingest | 2026_Annual_Report_2026_part4.pdf
+
+## [2026-09-27 16:56:17] ingest | 2026_Annual_Report_2026_part5.pdf
+
+## [2026-09-27 16:58:28] ingest | 2026_Annual_Report_2026_part6.pdf
+
+## [2026-09-27 17:00:24] ingest | 2026_Annual_Report_2026_part7.pdf
+
+## [2026-09-27 17:02:01] ingest | 2026_Annual_Report_2026_part8.pdf
+
+## [2026-09-27 17:03:12] ingest | 2026_Annual_Report_2026_part9.pdf
+
+## [2026-09-27 17:05:57] ingest | 2026_Annual_Report_2026_part10.pdf
+
+## [2026-09-27 17:07:59] ingest | 2026_Annual_Report_2026_part11.pdf
+

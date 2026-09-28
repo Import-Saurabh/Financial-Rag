@@ -1,23 +1,63 @@
 ---
-sources: ["summaries/2025_Aug_2025_Transcript.md", "summaries/2025_Financial_Year_2025_from_bse_part2.md"]
+sources: ["summaries/2026_Annual_Report_2026_part11.md", "summaries/2026_Annual_Report_2026_part10.md", "summaries/2026_Annual_Report_2026_part9.md", "summaries/2026_Annual_Report_2026_part8.md", "summaries/2026_Annual_Report_2026_part7.md", "summaries/2026_Annual_Report_2026_part5.md", "summaries/2026_Annual_Report_2026_part4.md", "summaries/2026_Annual_Report_2026_part3.md", "summaries/2026_Annual_Report_2026_part2.md", "summaries/2026_Annual_Report_2026_part1.md", "summaries/2025_Aug_2025_Transcript.md", "summaries/2025_Financial_Year_2025_from_bse_part2.md"]
 type: "Organization"
-description: "RF technology subsidiary of Apollo Micro Systems focused on defense electronics."
+description: "Indian RF-focused 51%-owned subsidiary of Apollo Micro Systems with negative net worth."
 ---
 
 # Ananya SIP RF Technologies Private Limited
 
-Ananya SIP RF Technologies Private Limited is a subsidiary company of [[entities/apollo_micro_systems_limited]], operating within the defense and electronic technology sectors with a focus on RF (radio frequency) technologies.
+Ananya SIP RF Technologies Private Limited (also referred to as "Ananya Sif Technologies Private Limited" in certain statutory schedules) is a subsidiary company of [[entities/apollo_micro_systems_limited]], operating within the defense and electronic technology sectors with a focus on RF (radio frequency) technologies. It is registered in India with CIN U74990TG2015PTC097610 and became a subsidiary on August 03, 2020.
 
 ## Key Facts
-- **Subsidiary Status:** Operates as a subsidiary of [[entities/apollo_micro_systems_limited]], with its financial features detailed in Form AOC-1 as outlined in [[summaries/2025_Financial_Year_2025_from_bse_part2]].
-- **Related Party Transactions:** Engages in arm's length transactions, including loans, advances, job work charges, and rent arrangements, as disclosed in statutory filings.
+- **Subsidiary Status:** Operates as a 51%-owned subsidiary of [[entities/apollo_micro_systems_limited]], with its financial details disclosed in Form AOC-1 as outlined in [[summaries/2025_Financial_Year_2025_from_bse_part2]] and [[summaries/2026_Annual_Report_2026_part4]]. Apollo Micro Systems holds 51% of its equity, as disclosed in related party transaction disclosures in [[summaries/2026_Annual_Report_2026_part2]]. The investment-in-subsidiaries table in [[summaries/2026_Annual_Report_2026_part8]] confirms a 51% shareholding as a subsidiary registered in India. The consolidated Group description in [[summaries/2026_Annual_Report_2026_part10]] likewise lists it as a subsidiary incorporated in India with 51% direct/indirect ownership interest, alongside [[entities/apollo_defence_industries_private_limited]], [[entities/apollo_strategic_technologies_private_limited]], and [[entities/idl_explosives]].
+- **Origin via Business Combination (FY 2020-21):** The holding company acquired 51% control through the purchase of equity shares of Ananya SIP RF Technologies Private Limited during FY 2020-21. Per the consolidated non-current assets note in [[summaries/2026_Annual_Report_2026_part10]], the Group accounted for the business combination based on the fair value of the identified assets, liabilities and contingent liabilities as on the date of acquisition and recognised **goodwill of ₹1.89 lakhs**. This is consistent with the treatment of business combinations under Ind AS 103 as reported across [[summaries/2026_Annual_Report_2026_part4]].
+- **BRSR Group Disclosure (FY 2025-26):** The Business Responsibility & Sustainability Report in [[summaries/2026_Annual_Report_2026_part5]] lists Ananya SIP RF Technologies Private Limited as a subsidiary of the listed entity with **51.01%** of shares held, and records that the entity does **not** participate in the Business Responsibility initiatives of [[entities/apollo_micro_systems_limited]].
+- **Nature of Business:** Classified in the Group's statutory disclosures as engaged in professional, scientific and technical activities, consistent with its RF and system-in-package technology focus.
+- **Investment Carrying Value:** The standalone financial statements in [[summaries/2026_Annual_Report_2026_part7]] record the parent's investment in equity instruments of the subsidiary at **₹132.89 lakhs** as at 31 March 2026 (unchanged from ₹132.89 lakhs as at 31 March 2025), represented by 2,10,940 fully paid-up equity shares of ₹10 each. The Section 186(4) particulars in [[summaries/2026_Annual_Report_2026_part8]] corroborate the same holding of 2,10,940 equity shares valued at ₹132.89 lakhs in both FY 2025-26 and FY 2024-25. Consistent with the Group's policy of carrying investments in subsidiaries and associates at cost less accumulated impairment, this investment forms part of the Group's total unquoted investment carrying value of ₹133.65 lakhs (down from ₹193.65 lakhs, following the extinguishment of a deemed investment in [[entities/apollo_defence_industries_private_limited]]). No impairment in the value of investments was recorded.
+- **Goodwill Carrying Amount:** In the consolidated statement of [[concepts/goodwill]] in [[summaries/2026_Annual_Report_2026_part10]], the ₹1.89 lakhs goodwill recognised on the Ananya acquisition remains part of the Group's gross goodwill of **₹14,519.55 lakhs** as at 31 March 2026 (the balance arising from fresh business combinations of ₹14,517.66 lakhs during the year). No impairment loss was recognised on goodwill, and the carrying value of goodwill was unchanged at ₹1.89 lakhs at the opening of FY 2025-26.
+- **Related Party Transactions:** Engages in arm's length transactions, including loans, advances, job work charges, rent arrangements, and a land transfer, as disclosed in statutory filings. In FY 2025-26, disclosures include an outstanding loan at 9.90% p.a., rent received of ₹2.40 lakhs, and a one-time transfer of land valued at ₹1,604.76 lakhs, per [[summaries/2026_Annual_Report_2026_part4]]. Statutory filings previously reported total transactions with the Group during FY 2025-26 of ₹1,662.71 lakhs (gross), with ₹61.47 lakhs transacted in the current financial year up to the quarter immediately preceding the approval-seeking quarter. The related party listing in [[summaries/2026_Annual_Report_2026_part10]] identifies the entity as a subsidiary company with which the Group transacts.
+- **Financial Position (FY 2025-26):** Reported a loss and negative net worth, with profit after tax of ₹(250.46) lakhs and net worth of ₹(55.45) lakhs, indicating an early-stage or investment-phase entity within the Group. Form AOC-1 in [[summaries/2026_Annual_Report_2026_part4]] reports share capital of ₹41.36 lakhs, negative reserves and surplus of ₹(96.81) lakhs, total assets of ₹1,083.65 lakhs, total liabilities of ₹1,139.10 lakhs, nil investments, nil turnover, profit before tax of ₹(236.03) lakhs, provision for tax of ₹3.65 lakhs, and no proposed dividend.
+- **Consolidation Disclosure (Note 51, FY 2025-26):** The additional information required under Schedule III in the consolidated financial statements, set out in [[summaries/2026_Annual_Report_2026_part11]], identifies the entity (as "Ananya Sif Technologies Private Limited") as an Indian subsidiary contributing **net assets (total assets minus total liabilities) of ₹(55.45) lakhs, being -0.04% of consolidated net assets**, and a **share in the Group's loss of ₹(250.46) lakhs (-2.33% of consolidated profit/loss)** for FY 2025-26, with a **nil** share in other comprehensive income. For the comparative year ended 31 March 2025, it contributed net assets of ₹195.01 lakhs (0.32% of consolidated net assets) and a share in loss of ₹(2.80) lakhs (-0.05%), with nil other comprehensive income. The same note records that the Group has no joint ventures or associates as of 31 March 2026, and reflects the entity within the Group's consolidation adjustments alongside the other Indian subsidiaries.
 - **RF Focus:** The entity name indicates a specialization in SIP (System-in-Package) RF technologies, supporting Apollo's defense electronics portfolio.
+
+## Related Party Transactions and Governance
+At the 29th Annual General Meeting, approval was sought for material related party transactions covering intercorporate loans to be advanced to Ananya SIP RF Technologies Private Limited as and when required during FY 2027, up to a proposed value of ₹1 crore, sourced from internal accruals. The loans are unsecured, carry a proposed interest rate of 9.90%, and are intended for day-to-day working capital requirements and capital expenditure. Mr. Addepalli Krishna Sai Kumar, a Director/KMP of the listed entity with a 1% shareholding in the related party, was noted as interested in these transactions.
+
+The FY 2025-26 Form AOC-2 disclosure in [[summaries/2026_Annual_Report_2026_part4]] records a long-term loan/advance to the subsidiary, repayable on demand with interest at 9.90% p.a., with an outstanding balance of ₹353.08 lakhs as on the balance sheet date. It also records rent received of ₹2.40 lakhs for 12 months, approved by the Board on 23rd July, 2025, and a one-time transfer of land valued at ₹1,604.76 lakhs. The loan transaction received shareholders' approval on 16th August, 2024, and Board approval on 23rd July, 2025.
+
+The related party note in [[summaries/2026_Annual_Report_2026_part8]] quantifies the FY 2025-26 flows with the subsidiary: a **net repayment** of loans and advances of **₹(1,340.96) lakhs** (versus a net advance of ₹709.35 lakhs in FY 2024-25), **interest received of ₹55.55 lakhs** (versus ₹115.51 lakhs), **rent received of ₹2.40 lakhs**, and the one-time **purchase of land and building of ₹1,604.76 lakhs**; job work charges of ₹26.01 lakhs in the prior year fell to nil. Outstanding balances as at 31 March 2026 comprise a loan of **₹344.65 lakhs**, interest receivable of **₹8.43 lakhs**, and rent receivable of **₹2.40 lakhs**. The Section 186(4) schedule in the same note records the loan without a specified repayment period at **₹353.08 lakhs** (down from ₹1,685.61 lakhs at 31 March 2025), reflecting the substantial year-on-year reduction in exposure to the subsidiary.
+
+The loans and advances schedule in the standalone financial statements in [[summaries/2026_Annual_Report_2026_part7]] corroborates the outstanding balance: an unsecured loan to the subsidiary of **₹353.08 lakhs**, carrying interest at **9.90% per annum**, payable quarterly, with **no stipulated repayment period**. This amount sits within the parent's total loans to subsidiaries and step-down subsidiaries of ₹31,555.75 lakhs (up from ₹1,786.61 lakhs at 31 March 2025), alongside loans to [[entities/apollo_defence_industries_private_limited]], [[entities/idl_explosives]], and [[entities/apollo_strategic_technologies_private_limited]].
+
+Group-level RPT and subsidiary oversight disclosures in [[summaries/2026_Annual_Report_2026_part5]] confirm that the Audit Committee of [[entities/apollo_micro_systems_limited]] reviews the consolidated financial statements and the investments made by its unlisted subsidiaries, and that no material subsidiary exists within the Group. The related party transaction ratios reported under NGRBC Principle 1 show related-party investments at 100% of total investments and related-party loans & advances at 97.83% of total loans & advances in FY 2025-26, consistent with the Group's funding pattern towards its subsidiaries.
 
 ## Strategic Context from Q1 FY26 Earnings Call
 During the Q1 FY26 earnings call covered in [[summaries/2025_Aug_2025_Transcript]], Apollo Micro Systems disclosed that it is building in-house RF capabilities and is considering an acquisition in the RF space after consolidating the [[entities/idl_explosives]] acquisition. While the call did not explicitly name Ananya SIP RF Technologies, its role as Apollo's RF-focused subsidiary aligns with this stated strategic direction. Management declined to divulge specifics on sensitive RF technology development, citing regulatory and national security considerations.
 
 ## Related Entities and Summaries
 - Parent Company: [[entities/apollo_micro_systems_limited]]
-- Other Subsidiary: [[entities/apollo_defence_industries_private_limited]]
-- Document References: [[summaries/2025_Financial_Year_2025_from_bse_part2]], [[summaries/2025_Aug_2025_Transcript]]
-- Related Concepts: [[concepts/corporate-governance-and-compliance]], [[concepts/defense_indigenization]]
+- Other Subsidiaries: [[entities/apollo_defence_industries_private_limited]], [[entities/apollo_strategic_technologies_private_limited]], [[entities/idl_explosives]]
+- Related Persons: [[entities/krishna_sai_kumar_addepalli]], [[entities/karunakar_reddy_baddam]]
+- Document References: [[summaries/2025_Financial_Year_2025_from_bse_part2]], [[summaries/2025_Aug_2025_Transcript]], [[summaries/2026_Annual_Report_2026_part2]], [[summaries/2026_Annual_Report_2026_part4]], [[summaries/2026_Annual_Report_2026_part5]], [[summaries/2026_Annual_Report_2026_part7]], [[summaries/2026_Annual_Report_2026_part8]], [[summaries/2026_Annual_Report_2026_part10]], [[summaries/2026_Annual_Report_2026_part11]]
+- Related Concepts: [[concepts/goodwill]], [[concepts/consolidated-financial-statements]], [[concepts/corporate-governance-and-compliance]], [[concepts/defense_indigenization]], [[concepts/related-party-transactions]], [[concepts/business-responsibility-and-sustainability-reporting]], [[concepts/financial-instruments]], [[concepts/segment-reporting]]
+
+
+See also: [[summaries/2026_Annual_Report_2026_part1]]
+
+
+See also: [[summaries/2026_Annual_Report_2026_part3]]
+
+
+See also: [[summaries/2026_Annual_Report_2026_part4]]
+
+
+See also: [[summaries/2026_Annual_Report_2026_part5]]
+
+
+See also: [[summaries/2026_Annual_Report_2026_part7]]
+
+See also: [[summaries/2026_Annual_Report_2026_part9]]
+
+See also: [[summaries/2026_Annual_Report_2026_part10]]
+
+See also: [[summaries/2026_Annual_Report_2026_part11]]

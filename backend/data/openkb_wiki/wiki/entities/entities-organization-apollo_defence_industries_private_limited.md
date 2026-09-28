@@ -1,5 +1,5 @@
 ---
-sources: ["summaries/2025_Financial_Year_2025_from_bse_part1.md"]
+sources: ["summaries/2026_Annual_Report_2026_part2.md", "summaries/2026_Annual_Report_2026_part1.md", "summaries/2025_Financial_Year_2025_from_bse_part1.md"]
 type: "Organization"
 description: "A subsidiary of Apollo Micro Systems used for strategic acquisitions and vertical integration."
 ---
@@ -18,3 +18,7 @@ Apollo Defence Industries Private Limited is a corporate entity and subsidiary u
 - [[entities/entities-organization-idl_explosives_limited]]
 - [[concepts/concepts-tier_1_defense_oem_integration]]
 - [[summaries/2025_Financial_Year_2025_from_bse_part1]]
+
+See also: [[summaries/2026_Annual_Report_2026_part1]]
+
+See also: [[summaries/2026_Annual_Report_2026_part2]]

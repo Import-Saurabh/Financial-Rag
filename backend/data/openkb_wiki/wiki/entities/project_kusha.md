@@ -1,5 +1,5 @@
 ---
-sources: ["summaries/2025_Aug_2025_Transcript.md"]
+sources: ["summaries/2026_Annual_Report_2026_part1.md", "summaries/2025_Aug_2025_Transcript.md"]
 type: "Work"
 description: "Indian air-defense program where Apollo Micro Systems is the only industry supplier of onboard systems."
 ---
@@ -9,3 +9,5 @@ description: "Indian air-defense program where Apollo Micro Systems is the only 
 Project Kusha is an Indian air-defense program in which [[entities/apollo_micro_systems_limited]] is involved in onboard systems. According to the Q1 FY26 earnings call, Apollo Micro Systems is the only industry supplier to have delivered systems for this program, and trials are planned within a few months.
 
 The program reflects broader [[concepts/defense_indigenization]] efforts and forms part of India's [[concepts/defense-program-supply-chains]], with Apollo contributing critical onboard electronics developed in collaboration with agencies such as [[entities/drdo]]. Further details are covered in [[summaries/2025_Aug_2025_Transcript]].
+
+See also: [[summaries/2026_Annual_Report_2026_part1]]

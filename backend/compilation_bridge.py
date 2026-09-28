@@ -35,8 +35,13 @@ import json
 import os
 import re
 import sys
+import os
+os.environ['LITELLM_REQUEST_TIMEOUT'] = '60'
 import time
 import traceback
+import tqdm
+
+GLOBAL_PBAR = None
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
@@ -78,9 +83,11 @@ except ImportError:
 # ─────────────────────────────────────────────
 # Doc-type -> bucket mapping
 # ─────────────────────────────────────────────
-DOC_TYPE_BUCKETS = {
-    "annual_report": "annual-reports",
-    "concall":       "concall-transcripts",
+import os
+MINIO_BUCKET = os.getenv("MINIO_BUCKET", "quantbucket-saurabhh")
+DOC_TYPE_PREFIXES = {
+    "annual_report": "annual_report",
+    "concall":       "concall",
 }
 
 _YEAR_RE = re.compile(r"^(\d{4})")
@@ -164,15 +171,11 @@ def _minio_client() -> Minio:
 # ─────────────────────────────────────────────
 # Key parsing + validation helpers
 # ─────────────────────────────────────────────
-def _parse_minio_key(key: str, doc_type: str, bucket: str) -> Optional[dict]:
-    if not key.lower().endswith(".pdf"):
-        return None
-
+def _parse_minio_key(key: str, doc_type: str, bucket: str):
+    if not key.lower().endswith(".pdf"): return None
     parts = key.split("/")
-    if len(parts) < 2:
-        return None
-
-    symbol   = parts[0].upper()
+    if len(parts) < 3: return None
+    symbol   = parts[1].upper()
     filename = parts[-1]
 
     m = _YEAR_RE.match(filename)
@@ -205,7 +208,7 @@ def _validate_pdf_metadata(pdf_info: dict) -> List[ValidationIssue]:
         issues.append(ValidationIssue(key, "symbol",
                       f"Could not resolve a valid company symbol from key "
                       f"(got {pdf_info.get('symbol')!r})"))
-    if pdf_info.get("doc_type") not in DOC_TYPE_BUCKETS:
+    if pdf_info.get("doc_type") not in DOC_TYPE_PREFIXES:
         issues.append(ValidationIssue(key, "doc_type",
                       f"Unrecognised doc_type {pdf_info.get('doc_type')!r}"))
     if not pdf_info.get("year"):
@@ -231,42 +234,22 @@ def _quick_pdf_sanity_check(local_path: Path) -> Optional[str]:
     return None
 
 
-def _resolve_single_object(path: str, client: Optional[Minio] = None) -> dict:
-    if client is None:
-        client = _minio_client()
-
+def _resolve_single_object(path: str, client=None) -> dict:
+    if client is None: client = _minio_client()
     path = path.strip().lstrip("/")
     parts = path.split("/", 1)
-    if len(parts) < 2:
-        raise ValueError(
-            f"'{path}' is not a valid object path — expected "
-            f"'{{bucket}}/{{symbol}}/{{filename}}.pdf', e.g. "
-            f"'annual-reports/bel/2025_Financial_Year_2025_from_bse.pdf'"
-        )
-
+    if len(parts) < 2: raise ValueError("Invalid path")
     bucket, key = parts
-    reverse_bucket_map = {v: k for k, v in DOC_TYPE_BUCKETS.items()}
-    if bucket not in reverse_bucket_map:
-        raise ValueError(
-            f"Unknown bucket '{bucket}' in '{path}'. "
-            f"Known buckets: {list(DOC_TYPE_BUCKETS.values())}"
-        )
-    doc_type = reverse_bucket_map[bucket]
-
+    key_parts = key.split("/")
+    if len(key_parts) < 2: raise ValueError("Invalid key")
+    doc_type_prefix = key_parts[0]
+    reverse_bucket_map = {v: k for k, v in DOC_TYPE_PREFIXES.items()}
+    if doc_type_prefix not in reverse_bucket_map: raise ValueError("Unknown prefix")
+    doc_type = reverse_bucket_map[doc_type_prefix]
     parsed = _parse_minio_key(key, doc_type, bucket)
-    if parsed is None:
-        raise ValueError(
-            f"Could not parse '{key}' as a valid PDF key under bucket '{bucket}' "
-            f"(expected '{{symbol}}/{{filename}}.pdf')"
-        )
-
-    try:
-        stat = client.stat_object(bucket, key)
-    except S3Error as e:
-        raise ValueError(f"Object not found in MinIO: '{path}' ({e})")
-
-    parsed["size_bytes"] = stat.size or 0
-    parsed["etag"] = (stat.etag or "").strip('"')
+    if parsed is None: raise ValueError("Could not parse key")
+    try: client.stat_object(bucket, key)
+    except Exception as e: raise ValueError(str(e))
     return parsed
 
 
@@ -282,14 +265,15 @@ def list_minio_pdfs(
     if client is None:
         client = _minio_client()
 
-    doc_types = [doc_type_filter] if doc_type_filter else list(DOC_TYPE_BUCKETS.keys())
+    doc_types = [doc_type_filter] if doc_type_filter else list(DOC_TYPE_PREFIXES.keys())
     prefix = f"{symbol.lower()}/" if symbol else ""
 
     pdfs = []
     for doc_type in doc_types:
-        bucket = DOC_TYPE_BUCKETS[doc_type]
+        bucket = MINIO_BUCKET
+        actual_prefix = f"{DOC_TYPE_PREFIXES[doc_type]}/{prefix}"
         try:
-            objects = client.list_objects(bucket, prefix=prefix, recursive=True)
+            objects = client.list_objects(bucket, prefix=actual_prefix, recursive=True)
         except S3Error as e:
             log.error(f"MinIO list failed for bucket '{bucket}': {e}")
             continue
@@ -691,18 +675,13 @@ def ingest_pdf(
                     def _render(spin_idx: int = 0) -> None:
                         with render_lock:
                             elapsed = int(time.time() - t_start)
-                            frame = _SPINNER_FRAMES[spin_idx % len(_SPINNER_FRAMES)]
-                            err_part = (
-                                f" | [!] {state['llm_errors']} issue(s)"
-                                if state["llm_errors"] else ""
-                            )
-                            line = (
-                                f"\r  {frame} [{label}] {state['stage'][:40]:<40} "
-                                f"| {state['llm_calls']:>3} LLM call(s){err_part} "
-                                f"| {elapsed:>4}s elapsed  "
-                            )
-                            sys.stdout.write(line)
-                            sys.stdout.flush()
+                            err_part = f" | [!] {state['llm_errors']} err" if state["llm_errors"] else ""
+                            
+                            global GLOBAL_PBAR
+                            if GLOBAL_PBAR:
+                                GLOBAL_PBAR.set_postfix_str(
+                                    f"[{label}] {state['stage'][:30]:<30} | {state['llm_calls']} LLM calls{err_part} | {elapsed}s"
+                                )
 
                     def _reader(proc: "subprocess.Popen") -> None:
                         for raw_line in proc.stdout:
@@ -714,7 +693,6 @@ def ingest_pdf(
                             if oversized and state["fatal_oversized"] is None:
                                 limit_tok, requested_tok = int(oversized.group(1)), int(oversized.group(2))
                                 state["fatal_oversized"] = {"limit": limit_tok, "requested": requested_tok}
-                                sys.stdout.write("\r" + " " * 100 + "\r")
                                 log.error(
                                     f"  [!] [{label}] Provider rejected a single call as "
                                     f"structurally too large (requested {requested_tok} tok, "
@@ -786,7 +764,7 @@ def ingest_pdf(
                             returncode = proc.wait(timeout=hang_timeout_sec)
                         except subprocess.TimeoutExpired:
                             state["done"] = True
-                            print()  # move off the status line
+
                             log.error(
                                 f"  X {label} exceeded hang timeout of {hang_timeout_sec}s "
                                 f"— force-killing process {proc.pid} (this usually means a "
@@ -800,7 +778,7 @@ def ingest_pdf(
 
                         state["done"] = True
                         reader_thread.join(timeout=2)
-                        print()  # move off the status line, one final time
+
 
                         if returncode != 0:
                             raise subprocess.CalledProcessError(returncode, cmd)
@@ -881,12 +859,66 @@ def ingest_pdf(
                     f"a bug in the retry logic itself."
                 )
                             
-            log.info(f"  -> Sending {local_path.name} directly to OpenKB...")
-            result = run_openkb_with_retry(
-                [r"C:\Users\hp\AppData\Roaming\Python\Python310\Scripts\openkb.exe", "add", str(local_path)],
-                cwd=wiki_dir,
-                label="openkb add [full]"
-            )
+            # ── PDF Splitting Strategy ────────────────────────────────
+            # OpenKB's PageIndex mode kicks in for docs with 30+ pages,
+            # sending the entire document text to the LLM for TOC parsing.
+            # On DeepSeek this causes multi-minute hangs per LLM call.
+            # Instead, split large PDFs into <=30-page chunks so each one
+            # goes through the fast short-doc pipeline (~3 LLM calls each).
+            CHUNK_PAGE_LIMIT = 30
+
+            if total_pages <= CHUNK_PAGE_LIMIT:
+                # Small doc — process directly (fast short-doc pipeline)
+                log.info(f"  -> Sending {local_path.name} ({total_pages} pages) directly to OpenKB...")
+                result = run_openkb_with_retry(
+                    [r"C:\Users\hp\AppData\Roaming\Python\Python310\Scripts\openkb.exe", "add", str(local_path)],
+                    cwd=wiki_dir,
+                    label="openkb add [full]"
+                )
+            else:
+                # Large doc — split into chunks to avoid PageIndex hang
+                import math
+                num_chunks = math.ceil(total_pages / CHUNK_PAGE_LIMIT)
+                log.info(
+                    f"  -> Splitting {local_path.name} ({total_pages} pages) into "
+                    f"{num_chunks} chunks of ~{CHUNK_PAGE_LIMIT} pages to avoid PageIndex slowdown..."
+                )
+
+                chunk_dir = INGEST_TMP_DIR / f"{local_path.stem}_chunks"
+                chunk_dir.mkdir(parents=True, exist_ok=True)
+
+                chunk_results = []
+                for chunk_idx in range(num_chunks):
+                    start_page = chunk_idx * CHUNK_PAGE_LIMIT
+                    end_page = min((chunk_idx + 1) * CHUNK_PAGE_LIMIT, total_pages)
+                    chunk_label = f"chunk {chunk_idx+1}/{num_chunks} (pp.{start_page+1}-{end_page})"
+
+                    writer = PdfWriter()
+                    for pg in range(start_page, end_page):
+                        writer.add_page(reader.pages[pg])
+
+                    chunk_path = chunk_dir / f"{local_path.stem}_part{chunk_idx+1}.pdf"
+                    with open(chunk_path, "wb") as cf:
+                        writer.write(cf)
+
+                    log.info(f"  -> [{chunk_label}] Processing {end_page - start_page} pages...")
+                    chunk_result = run_openkb_with_retry(
+                        [r"C:\Users\hp\AppData\Roaming\Python\Python310\Scripts\openkb.exe", "add", str(chunk_path)],
+                        cwd=wiki_dir,
+                        label=f"openkb add [{chunk_label}]"
+                    )
+                    chunk_results.append(chunk_result)
+
+                # Clean up chunk files
+                import shutil
+                shutil.rmtree(chunk_dir, ignore_errors=True)
+
+                # Aggregate results from all chunks
+                result = {
+                    "proc": chunk_results[-1]["proc"],
+                    "llm_calls": sum(r["llm_calls"] for r in chunk_results),
+                    "llm_errors": sum(r["llm_errors"] for r in chunk_results),
+                }
             total_llm_calls = result["llm_calls"]
             total_llm_errors = result["llm_errors"]
             
@@ -1112,7 +1144,7 @@ def main() -> None:
     if args.list:
         doc_type_filter = "annual_report" if args.type == "annual" else args.type
         pdfs = list_minio_pdfs(symbol=args.symbol, doc_type_filter=doc_type_filter, year=args.year, client=client)
-        print(f"\n-- MinIO objects - buckets {list(DOC_TYPE_BUCKETS.values())} - {len(pdfs)} PDF(s) --")
+        print(f"\n-- MinIO objects - buckets {list(DOC_TYPE_PREFIXES.values())} - {len(pdfs)} PDF(s) --")
         for p in pdfs:
             ingested = "OK" if is_already_ingested(p["minio_key"]) else "·"
             print(f"  [{ingested}] {p['minio_key']}")
@@ -1148,8 +1180,8 @@ def main() -> None:
             year=args.year, client=client,
         )
         if not pdfs:
-            buckets = ([DOC_TYPE_BUCKETS[doc_type_filter]] if doc_type_filter
-                       else list(DOC_TYPE_BUCKETS.values()))
+            buckets = ([DOC_TYPE_PREFIXES[doc_type_filter]] if doc_type_filter
+                       else list(DOC_TYPE_PREFIXES.values()))
             year_msg = f" with year {args.year}" if args.year else ""
             log.error(f"No PDFs found for {args.symbol.upper()} in bucket(s) {buckets} "
                       f"(prefix: {args.symbol.lower()}/){year_msg}")
@@ -1170,6 +1202,8 @@ def main() -> None:
           f"{f' with {workers} parallel workers' if use_parallel else ''}"
           f"{' [DRY RUN]' if args.dry_run else ''}\n")
 
+    global GLOBAL_PBAR
+    GLOBAL_PBAR = tqdm.tqdm(total=total, desc="Ingesting", unit="doc", dynamic_ncols=True)
     if use_parallel:
         _run_batch_parallel(pdfs, args.force, args.dry_run, workers, report, total, llm_model=args.llm_model)
     else:
@@ -1184,13 +1218,14 @@ def main() -> None:
                     retry_buffer_sec=args.retry_buffer_sec, chunk_cooldown_sec=args.chunk_cooldown_sec,
                 )
                 doc_elapsed = time.time() - doc_t0
-                bar = _progress_bar(global_idx, total)
-                print(f"  {bar}  {status:<26} {pdf_info['minio_key']}  ({doc_elapsed:.1f}s)")
+                GLOBAL_PBAR.update(1)
+                tqdm.tqdm.write(f"  [DONE] {status:<26} {pdf_info['minio_key']}  ({doc_elapsed:.1f}s)")
 
             _save_state(state)
             log.info(f"Batch {batch_start // batch_size + 1} complete "
                      f"({min(batch_start + batch_size, total)}/{total} documents)")
 
+    if GLOBAL_PBAR: GLOBAL_PBAR.close()
     report.finish(time.time() - run_t0)
     report.print_summary()
     saved_path = report.save()

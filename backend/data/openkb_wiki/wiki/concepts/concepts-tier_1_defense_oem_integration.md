@@ -1,6 +1,6 @@
 ---
 type: "Concept"
-sources: ["summaries/2025_Financial_Year_2025_from_bse_part2.md", "summaries/2025_Financial_Year_2025_from_bse_part1.md"]
+sources: ["summaries/2026_Annual_Report_2026_part2.md", "summaries/2026_Annual_Report_2026_part1.md", "summaries/2025_Financial_Year_2025_from_bse_part2.md", "summaries/2025_Financial_Year_2025_from_bse_part1.md"]
 description: "The strategic transition of defense manufacturers into fully integrated Tier-1 OEMs."
 ---
 
@@ -25,3 +25,7 @@ A prime example of executing this strategy is the acquisition of [[entities/enti
 * [[concepts/concepts-defense_indigenization]]
 
 See also: [[summaries/2025_Financial_Year_2025_from_bse_part2]]
+
+See also: [[summaries/2026_Annual_Report_2026_part1]]
+
+See also: [[summaries/2026_Annual_Report_2026_part2]]

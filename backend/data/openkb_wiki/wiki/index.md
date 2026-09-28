@@ -1,34 +1,132 @@
 # Knowledge Base Index
 
 ## Documents
+- [[summaries/2026_Annual_Report_2026_part11]] (short) — Consolidated financial statement notes: employee benefits, leases, EPS, risk, and IDL acquisition.
+- [[summaries/2026_Annual_Report_2026_part10]] (short) — Consolidated financial statement notes of Apollo Micro Systems Limited for FY 2025-26.
+- [[summaries/2026_Annual_Report_2026_part9]] (short) — Auditor's report and consolidated financial statements of Apollo Micro Systems for FY2025-26, including key audit matters and accounting policies.
+- [[summaries/2026_Annual_Report_2026_part8]] (short) — Notes to Apollo Micro Systems FY2025-26 standalone financial statements.
+- [[summaries/2026_Annual_Report_2026_part7]] (short) — Apollo Micro Systems' FY 2025-26 accounting policies and financial statement notes.
+- [[summaries/2026_Annual_Report_2026_part6]] (short) — AMS FY2025-26 BRSR Principles 6-9, auditor's report, and standalone financial statements.
+- [[summaries/2026_Annual_Report_2026_part5]] (short) — Corporate governance disclosures, certificates and the BRSR for Apollo Micro Systems FY 2025-26.
+- [[summaries/2026_Annual_Report_2026_part4]] (short) — Apollo Micro Systems 2025-26 annexures: subsidiaries, related parties, dividends, ESOS, governance.
+- [[summaries/2026_Annual_Report_2026_part3]] (short) — AMS 2026 Annual Report part 3: RPT disclosures, Directors' Report, CSR, audit.
+- [[summaries/2026_Annual_Report_2026_part2]] (short) — AMS annual report part 2: space/defence initiatives, FY26 results, risks, and AGM resolutions.
+- [[summaries/2026_Annual_Report_2026_part1]] (short) — Apollo Micro Systems FY26 annual report: 61% revenue growth, IDL acquisition and global OEM ambition.
 - [[summaries/2025_Aug_2025_Transcript]] (pageindex) — This document is the regulatory filing of the transcript of Apollo Micro Systems Limited's Q1 FY26 earnings conference call held on August 4, 2025, addressed to BSE and NSE, covering management's opening remarks, financial highlights, and a detailed Q&A session on orders, exports, and defense programs.
 - [[summaries/2025_Financial_Year_2025_from_bse_part2]] (pageindex) — This document is the comprehensive annual report of Apollo Micro Systems Limited for the financial year 2024-25, detailing its statutory disclosures, corporate governance practices, CSR activities, subsidiary financial statements, management reports, and standalone financial results.
 - [[summaries/2025_Financial_Year_2025_from_bse_part1]] (pageindex) — This document is the 2024-25 Annual Report and Notice of the 28th Annual General Meeting for Apollo Micro Systems Limited, detailing the company's financial performance, strategic expansion in the defence and aerospace sectors, corporate governance, and statutory reports.
 
 ## Concepts
-- [[concepts/tier_1_defense_oem_integration]] — Supplying complete critical subsystems directly to defense OEMs for integration into larger weapon platforms.
-- [[concepts/defense_indigenization]] — Policy drive for domestic defense manufacturing, reducing import dependence and boosting self-reliance.
-- [[concepts/defense-program-supply-chains]] — The network of contractors, subsystems, and partnerships behind India's defense weapon programs.
-- [[concepts/defense-exports-and-global-market-entry]] — Exporting indigenous defense products to global markets, exemplified by Apollo's maiden export order.
-- [[concepts/corporate-social-responsibility]] — Overview of CSR policies, expenditures, and community projects for FY 2024-25.
-- [[concepts/corporate-governance-and-compliance]] — Overview of corporate governance standards and compliance frameworks at Apollo Micro Systems.
+- [[concepts/capital-management]] — How a company manages its capital structure, debt-equity mix, and shareholder value objectives.
+- [[concepts/msmed-supplier-disclosures]] — Disclosures under the MSMED Act, 2006 on amounts due to registered micro and small suppliers.
+- [[concepts/financial-risk-management]] — How the Apollo Micro Systems group identifies, measures and manages market, credit and liquidity risks.
+- [[concepts/government-grants]] — Accounting treatment for government grants, subsidies and concessional loans under Ind AS 20.
+- [[concepts/segment-reporting]] — How an entity discloses operating segments under Ind AS 108, including single-segment determination and revenue disaggregation.
+- [[concepts/provisions-and-contingent-liabilities]] — Accounting for provisions, contingent liabilities and contingent assets, and related disclosures under Ind AS 37.
+- [[concepts/goodwill]] — Accounting for goodwill in business combinations, including provisional IDL Explosives goodwill.
+- [[concepts/capital-work-in-progress]] — Capital expenditure on assets under construction, not yet ready for use, transferred to PPE once capitalised.
+- [[concepts/consolidated-financial-statements]] — Financial statements of a parent and its subsidiaries presented as a single economic entity under Ind AS.
+- [[concepts/financial-ratios]] — Liquidity, solvency, profitability and efficiency ratios computed from financial statements.
+- [[concepts/earnings-per-share]] — Earnings per share — basic and diluted EPS computation, disclosure, and interpretation for Apollo Micro Systems.
+- [[concepts/employee-benefits]] — Employee benefits at Apollo Micro Systems: expense, provisions, gratuity plan and compensated absences.
+- [[concepts/leases]] — Accounting for leases under Ind AS 116, with Apollo Micro Systems' ROU assets and lease liabilities disclosures.
+- [[concepts/deferred-tax]] — Accounting for deferred tax assets and liabilities from temporary differences under Ind AS 12.
+- [[concepts/property-plant-and-equipment]] — Tangible assets held for use, measured at cost less depreciation and impairment under Ind AS 16.
+- [[concepts/financial-instruments]] — Recognition, classification, measurement, impairment, and risk disclosure of financial instruments, with FY26 standalone and consolidated data.
+- [[concepts/revenue-recognition]] — How Ind AS 115 governs when and how much revenue is recognised by Apollo Micro Systems Limited and its Group.
+- [[concepts/audit-trail-rule-11g]] — Rule 11(g) audit-trail reporting, its requirements and Apollo Micro Systems' FY 2025-26 compliance.
+- [[concepts/inventory-obsolescence]] — The risk that inventory is overstated because goods are obsolete, slow-moving, or worth less than recorded cost.
+- [[concepts/internal-financial-controls]] — Policies and procedures ensuring reliability of financial reporting, audited under Section 143(3)(i) of the Companies Act, 2013.
+- [[concepts/ind-as-103-business-combinations]] — Indian standard for business combinations, applied to Apollo's IDL Explosives acquisition.
+- [[concepts/key-audit-matters]] — Judgemental matters of most significance in an audit, disclosed with the auditor's responses.
+- [[concepts/credit-rating]] — Assessment of a company's creditworthiness by a rating agency, expressed as long- and short-term ratings and an outlook.
+- [[concepts/related-party-transactions]] — Definition, governance and disclosures of related party transactions at Apollo Micro Systems.
+- [[concepts/insider-trading]] — Rules and practices preventing misuse of unpublished price-sensitive information by company insiders.
+- [[concepts/business-responsibility-and-sustainability-reporting]] — SEBI-mandated ESG disclosure framework requiring listed Indian companies to report on nine NGRBC principles.
+- [[concepts/defence-acquisitions-and-integration]] — How defence firms acquire and integrate complementary capabilities to become prime contractors.
+- [[concepts/government-defence-funding-schemes]] — Indian government schemes funding defence and space technology development by private firms, startups, and MSMEs.
+- [[concepts/indian-space-programme]] — India's space programme spanning lunar, navigation, and human spaceflight missions plus private sector participation.
+- [[concepts/global-military-spending]] — Global defence expenditure trends, drivers and their implications for defence firms such as Apollo Micro Systems.
+- [[concepts/transfer-of-technology]] — How defence technology transfer becomes production through industrialisation capability.
+- [[concepts/defence-manufacturing-licensing]] — The statutory approval system—arms and industrial licences—that authorises firms to manufacture defence weapons, platforms, and energetics in India.
+- [[concepts/directed-energy-weapons]] — Directed Energy Weapons (DEWs): laser-based systems Apollo is industrialising via ToT for counter-drone hard-kill.
+- [[concepts/inertial-navigation-systems]] — Self-contained navigation technology using gyroscopes and accelerometers, central to Apollo Micro Systems' guidance portfolio.
+- [[concepts/underwater-warfare]] — Underwater warfare — naval mines, torpedoes, ASW weapons and subsea electronics developed for the Indian Navy.
+- [[concepts/counter-drone-systems]] — Layered detect-to-defeat defence against hostile drones and unmanned aerial threats.
+- [[concepts/defence-energetics]] — High explosives, propellants, warheads and fuzes that give weapon platforms their lethal effect.
+- [[concepts/tier_1_defense_oem_integration]] — How tier-1 subsystem and electronics suppliers graduate into prime defense OEMs and platform integrators.
+- [[concepts/defense_indigenization]] — India's strategic push to design, develop and manufacture defense systems domestically.
+- [[concepts/defense-program-supply-chains]] — The network of primes, development partners, and subsystem suppliers delivering India's defense programs
+- [[concepts/defense-exports-and-global-market-entry]] — How India's defense suppliers turn indigenous capability into global export revenue.
+- [[concepts/corporate-social-responsibility]] — Apollo Micro Systems' Section 135 CSR obligations, governance, spending and set-off disclosures
+- [[concepts/corporate-governance-and-compliance]] — Governance framework, statutory compliance, audit oversight and reporting of Apollo Micro Systems Limited
 - [[concepts/concepts-tier_1_defense_oem_integration]] — The strategic transition of defense manufacturers into fully integrated Tier-1 OEMs.
 - [[concepts/concepts-defense_indigenization]] — Analysis of India's defence indigenization and self-reliance initiatives in FY 2024-25.
 
 ## Entities
-- [[entities/pinaka]] (product) — Indigenous multi-barrel rocket system for which Apollo supplies guidance electronics.
+- [[entities/venkata_subbarao_gupta_batchu]] (person) — Director and key management personnel of Apollo Micro Systems Limited, a related party with loan balances disclosed.
+- [[entities/satyanarayana_batchu]] (person) — Director and Key Management Personnel of Apollo Micro Systems Limited per FY 2025-26 related party disclosures.
+- [[entities/revx_capital_fund_ii]] (organization) — Debenture holder that subscribed to Apollo Micro Systems' 15% non-convertible debentures, fully redeemed by March 2026.
+- [[entities/life_insurance_corporation_of_india]] (organization) — State-owned Indian insurer that manages Apollo Micro Systems' funded gratuity plan.
+- [[entities/bajaj_finance_limited]] (organization) — Non-banking financial company providing term loans and working capital overdraft facilities to Apollo Micro Systems Limited.
+- [[entities/indian_overseas_bank]] (organization) — Indian public sector bank and a lender providing term loans to Apollo Micro Systems Limited.
+- [[entities/apollo_food_and_beverages_private_limited]] (organization) — Related party of Apollo Micro Systems, classified as an enterprise in which a director has significant influence.
+- [[entities/origa_markets_private_limited]] (organization) — Lessor of assets to Apollo Micro Systems under Ind AS 116 lease arrangements
+- [[entities/bandhan_bank]] (organization) — Indian private-sector bank providing term loans and working capital facilities to Apollo Micro Systems Limited.
+- [[entities/hdfc_bank]] (organization) — Indian private-sector bank providing vehicle loans and working capital overdraft facilities to Apollo Micro Systems Limited.
+- [[entities/state_bank_of_india]] (organization) — Indian public sector bank and a secured lender to Apollo Micro Systems Limited.
+- [[entities/baddam_kanishka_reddy]] (person) — Promoter shareholder of Apollo Micro Systems Limited holding 2.35% equity as at 31 March 2026.
+- [[entities/baddam_chanakya_reddy]] (person) — Baddam Chanakya Reddy is a promoter-group shareholder of Apollo Micro Systems Limited, holding 2.35%.
+- [[entities/srilakshmi_reddy_vangeti]] (person) — Promoter shareholder of Apollo Micro Systems Limited holding a nominal 100 equity shares (0.00%).
+- [[entities/society_of_indian_defence_manufacturers]] (organization) — ...
+- [[entities/hima_bindu_sagala]] (person) — Partner at S.T. Mohite & Co who signs Apollo Micro Systems' FY26 audit reports and notes
+- [[entities/s_t_mohite_and_co]] (organization) — Chartered accountant firm serving as statutory auditor of Apollo Micro Systems Limited
+- [[entities/securities_and_exchange_board_of_india]] (organization) — India's securities market regulator, referenced throughout Apollo Micro Systems' compliance disclosures.
+- [[entities/bse_limited]] (organization) — Indian stock exchange where Apollo Micro Systems Limited's equity shares are listed.
+- [[entities/national_stock_exchange_of_india]] (organization) — Indian stock exchange where Apollo Micro Systems is listed; fined the company ₹88,500.
+- [[entities/acuite_rating_and_research_limited]] (organization) — Indian credit rating agency that assigned Apollo Micro Systems its domestic ACUITE A- / A2+ ratings.
+- [[entities/bigshare_services_private_limited]] (organization) — Registrar and Transfer Agent (RTA) for Apollo Micro Systems Limited, based in Hyderabad.
+- [[entities/mnm_and_associates]] (organization) — Practising Company Secretaries firm that certified Apollo Micro Systems' corporate governance compliance for FY 2025-26.
+- [[entities/sridevi_madati]] (person) — Practising Company Secretary and Partner at MNM & Associates who certified Apollo Micro Systems' corporate governance compliance.
+- [[entities/apollo_employees_foundation]] (organization) — Trust administering Apollo Micro Systems' ESOS-2018 employee stock option scheme; no shares held.
+- [[entities/sudarshan_chiluveru]] (person) — Chief Financial Officer and KMP of Apollo Micro Systems Limited
+- [[entities/rukhya_parveen]] (person) — Rukhya Parveen is Company Secretary & Compliance Officer and KMP of Apollo Micro Systems Limited.
+- [[entities/vehicle_mounted_counter_drone_system]] (product) — Apollo Micro Systems' mobile counter-drone product for detecting and neutralising hostile UAVs.
+- [[entities/asw_weapon_platform]] (product) — Apollo Micro Systems' first fully in-house anti-submarine warfare weapon platform for the Indian Navy.
+- [[entities/limpet_mines]] (product) — Indigenous underwater limpet mine by Apollo Micro Systems for naval special operations.
+- [[entities/moored_mine]] (product) — Indigenously developed sea mine by Apollo Micro Systems for area denial in naval warfare.
+- [[entities/mini_torpedo]] (product) — Compact indigenous lightweight underwater weapon developed by Apollo Micro Systems for anti-submarine engagement.
+- [[entities/premier_explosives_limited]] (organization) — Indian explosives and energetic materials maker that Apollo Micro Systems agreed to acquire a 41.33% stake in.
+- [[entities/isro]] (organization) — India's national space agency, developer of the Chandrayaan, GAGAN and PSLV programmes.
+- [[entities/apollo_strategic_technologies_private_limited]] (organization) — Step-down subsidiary of Apollo Micro Systems via Apollo Defence Industries (51% held).
+- [[entities/shauryastra_defence_systems_private_limited]] (organization) — Associate company of Apollo Micro Systems (34% stake) developing complete weapon systems for India's Armed Forces.
+- [[entities/tsiic]] (organization) — Telangana State Industrial Infrastructure Corporation, the state agency allotting industrial land to Apollo Micro Systems.
+- [[entities/iit_madras]] (organization) — Premier Indian technical institute in Chennai, academic partner in Apollo's tripartite defence alliance with the Indian Navy.
+- [[entities/grse]] (organization) — Indian defence shipyard and DPSU in Kolkata; MoU partner to Apollo Micro Systems.
+- [[entities/munitions_india_limited]] (organization) — India's state-owned ammunition manufacturer and MoU partner of Apollo Micro Systems.
+- [[entities/bharat_electronics_limited]] (organization) — Indian defence electronics PSU that recognised Apollo Micro Systems as an approved collaborative R&D partner.
+- [[entities/indian_navy]] (organization) — India's naval branch of the Armed Forces; a key customer and partner of Apollo Micro Systems.
+- [[entities/aditya_kumar_halwasiya]] (person) — Non-Executive Non-Independent Director of Apollo Micro Systems and Universal-Halwasiya Group scion.
+- [[entities/kavya_gorla]] (person) — Non-Executive Non-Independent Director of Apollo Micro Systems and licensed commercial pilot
+- [[entities/chandrashekar_matham]] (person) — Non-Executive Director of Apollo Micro Systems; defence R&D and embedded-systems professional
+- [[entities/karunasree_samudrala]] (person) — Independent Director of Apollo Micro Systems Limited, a chartered accountant and audit committee chair.
+- [[entities/krishna_sai_kumar_addepalli]] (person) — Whole-Time Director (Operations) at Apollo Micro Systems Limited and director of IDL Explosives Limited.
+- [[entities/venkata_siva_prasad_chandrapati]] (person) — Whole-Time Director (Technical) of Apollo Micro Systems, leading its R&D and weapon system electronics.
+- [[entities/raghupathy_goud_theegala]] (person) — Chairman and Non-Executive Independent Director of Apollo Micro Systems Limited.
+- [[entities/karunakar_reddy_baddam]] (person) — Founder and Managing Director of Apollo Micro Systems Limited, an Indian defence technology company.
+- [[entities/pinaka]] (product) — Indigenous multi-barrel rocket system for which Apollo supplies guidance and navigation electronics.
 - [[entities/brahmos]] (product) — Supersonic cruise missile system; Apollo Micro Systems supplies subsystems and expects further orders.
-- [[entities/migm]] (product) — Man-Portable Anti-Tank Guided Missile developed with BDL; Apollo is a development-cum-production partner.
+- [[entities/migm]] (product) — India's indigenous Multi-Influence Ground Mine (Vighna), produced by Apollo for the Indian Navy.
 - [[entities/qrsam]] (product) — India's quick-reaction surface-to-air missile program; Apollo supplies four critical subsystems.
 - [[entities/project_kusha]] (work) — Indian air-defense program where Apollo Micro Systems is the only industry supplier of onboard systems.
-- [[entities/idl_explosives]] (organization) — Explosives manufacturer acquired by Apollo Micro Systems for defense ordnance and missile warhead production.
-- [[entities/drdo]] (organization) — Indian government agency driving defense R&D and indigenization, with whom Apollo collaborates on missile programs.
-- [[entities/bharat_dynamics_limited]] (organization) — Indian defense PSU and missile manufacturer, key development and production partner to Apollo Micro Systems.
-- [[entities/apollo_defence_industries_private_limited]] (organization) — A subsidiary of Apollo Micro Systems specializing in defense industries.
-- [[entities/apollo_micro_systems_limited]] (organization) — Defense electronics company driving indigenization, exports, and growth across Indian defense programs.
+- [[entities/idl_explosives]] (organization) — Indian industrial explosives maker and step-down subsidiary of Apollo Micro Systems, acquired in 2025.
+- [[entities/drdo]] (organization) — India's premier defence R&D agency under the Ministry of Defence and a core Apollo programme partner.
+- [[entities/bharat_dynamics_limited]] (organization) — Indian defense PSU and missile manufacturer; a key prime integrator partner and customer for Apollo Micro Systems.
+- [[entities/apollo_defence_industries_private_limited]] (organization) — Apollo Micro Systems defence subsidiary that acquired IDL Explosives, expanding into energetics
+- [[entities/apollo_micro_systems_limited]] (organization) — Hyderabad-based defence electronics maker and Tier-I OEM; parent of the Apollo defence group.
 - [[entities/sarada_educational_society]] (organization) — An educational society partnering with Apollo Micro Systems for CSR initiatives.
 - [[entities/arunodaya_trust]] (organization) — A trust receiving CSR funds from Apollo Micro Systems for environmental sustainability.
-- [[entities/ananya_sip_rf_technologies_private_limited]] (organization) — RF technology subsidiary of Apollo Micro Systems focused on defense electronics.
+- [[entities/ananya_sip_rf_technologies_private_limited]] (organization) — Indian RF-focused 51%-owned subsidiary of Apollo Micro Systems with negative net worth.
 - [[entities/entities-organization-apollo_defence_industries_private_limited]] (organization) — A subsidiary of Apollo Micro Systems used for strategic acquisitions and vertical integration.
 - [[entities/entities-organization-apollo_micro_systems_limited]] (organization) — Indian defence and aerospace technology company specializing in mission-critical electronics for defence.
 

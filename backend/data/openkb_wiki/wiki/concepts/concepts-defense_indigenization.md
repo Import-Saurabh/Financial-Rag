@@ -1,6 +1,6 @@
 ---
 type: "Concept"
-sources: ["summaries/2025_Financial_Year_2025_from_bse_part2.md", "summaries/2025_Financial_Year_2025_from_bse_part1.md"]
+sources: ["summaries/2026_Annual_Report_2026_part2.md", "summaries/2026_Annual_Report_2026_part1.md", "summaries/2025_Financial_Year_2025_from_bse_part2.md", "summaries/2025_Financial_Year_2025_from_bse_part1.md"]
 description: "Analysis of India's defence indigenization and self-reliance initiatives in FY 2024-25."
 ---
 
@@ -19,3 +19,7 @@ Companies such as [[entities/entities-organization-apollo_micro_systems_limited]
 See also: [[concepts/concepts-defense_indigenization]], [[concepts/concepts-tier_1_defense_oem_integration]]
 
 See also: [[summaries/2025_Financial_Year_2025_from_bse_part2]]
+
+See also: [[summaries/2026_Annual_Report_2026_part1]]
+
+See also: [[summaries/2026_Annual_Report_2026_part2]]

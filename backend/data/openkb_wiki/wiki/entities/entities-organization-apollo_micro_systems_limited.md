@@ -1,5 +1,5 @@
 ---
-sources: ["summaries/2025_Aug_2025_Transcript.md", "summaries/2025_Financial_Year_2025_from_bse_part1.md"]
+sources: ["summaries/2026_Annual_Report_2026_part2.md", "summaries/2026_Annual_Report_2026_part1.md", "summaries/2025_Aug_2025_Transcript.md", "summaries/2025_Financial_Year_2025_from_bse_part1.md"]
 type: "Organization"
 description: "Indian defence and aerospace technology company specializing in mission-critical electronics for defence."
 ---
@@ -35,3 +35,8 @@ description: "Indian defence and aerospace technology company specializing in mi
 - [[entities/project_kusha]]
 - [[entities/brahmos]]
 - [[entities/pinaka]]
+
+
+See also: [[summaries/2026_Annual_Report_2026_part1]]
+
+See also: [[summaries/2026_Annual_Report_2026_part2]]

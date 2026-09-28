@@ -126,72 +126,22 @@ def init_db():
 # Companies
 # ─────────────────────────────────────────────
 def upsert_company(symbol: str, name: str = None) -> int:
-    sym = symbol.upper()
-    with get_conn() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT IGNORE INTO rag_companies (symbol, name) VALUES (%s, %s)",
-            (sym, name or sym),
-        )
-        cur.execute("SELECT id FROM rag_companies WHERE symbol = %s", (sym,))
-        row = cur.fetchone()
-        cur.close()
-        return row[0]
+    return 1
 
 
 # ─────────────────────────────────────────────
 # Documents
 # ─────────────────────────────────────────────
-def upsert_document(
-    symbol:      str,
-    doc_type:    str,
-    year:        Optional[int],
-    title:       str,
-    minio_key:   str,
-    file_size_kb: int = 0,
-) -> int:
-    company_id = upsert_company(symbol)
-    with get_conn() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT id FROM rag_documents WHERE minio_key = %s",
-            (minio_key,),
-        )
-        existing = cur.fetchone()
-        if existing:
-            cur.close()
-            return existing[0]
-
-        cur.execute(
-            """INSERT INTO rag_documents
-               (company_id, symbol, doc_type, year, title, minio_key, file_size_kb)
-               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-            (company_id, symbol.upper(), doc_type, year, title, minio_key, file_size_kb),
-        )
-        doc_id = cur.lastrowid
-        cur.close()
-        return doc_id
+def upsert_document(*args, **kwargs) -> int:
+    return 1
 
 
-def mark_document_ingested(doc_id: int, total_chunks: int, total_pages: int = 0):
-    with get_conn() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            """UPDATE rag_documents
-               SET ingested=1, total_chunks=%s, total_pages=%s
-               WHERE id=%s""",
-            (total_chunks, total_pages, doc_id),
-        )
-        cur.close()
+def mark_document_ingested(*args, **kwargs):
+    pass
 
 
-def mark_document_failed(doc_id: int):
-    with get_conn() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            "UPDATE rag_documents SET ingested=2 WHERE id=%s", (doc_id,)
-        )
-        cur.close()
+def mark_document_failed(*args, **kwargs):
+    pass
 
 
 def get_pending_documents(symbol: str = None, doc_type: str = None) -> List[Dict]:
@@ -228,24 +178,8 @@ def is_already_ingested(minio_key: str) -> bool:
 # ─────────────────────────────────────────────
 # Ingestion log
 # ─────────────────────────────────────────────
-def log_ingestion(
-    symbol:        str,
-    doc_type:      str,
-    minio_key:     str,
-    status:        str,
-    message:       str   = "",
-    chunks_created: int  = 0,
-    duration_sec:  float = 0.0,
-):
-    with get_conn() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            """INSERT INTO rag_ingestion_log
-               (symbol, doc_type, minio_key, status, message, chunks_created, duration_sec)
-               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-            (symbol, doc_type, minio_key, status, message, chunks_created, duration_sec),
-        )
-        cur.close()
+def log_ingestion(*args, **kwargs):
+    pass
 
 
 # ─────────────────────────────────────────────

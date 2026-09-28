@@ -22,5 +22,93 @@
     "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2025_Aug_2025_Transcript.pdf",
     "raw_path": "raw/2025_Aug_2025_Transcript.pdf",
     "doc_id": "93eb1ea0-9d75-4eb6-be0f-4663ebb0c730"
+  },
+  "f1c6fa3c07b02311d5ec2f20c655a2d9088326d3d64efb772412207b30fb90f6": {
+    "name": "2026_Annual_Report_2026_part1.pdf",
+    "doc_name": "2026_Annual_Report_2026_part1",
+    "type": "pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2026_Annual_Report_2026_chunks/2026_Annual_Report_2026_part1.pdf",
+    "raw_path": "raw/2026_Annual_Report_2026_part1.pdf",
+    "source_path": "wiki/sources/2026_Annual_Report_2026_part1.md"
+  },
+  "6e0206e8215fe7aacb8345f2f04ea03e29fb5c821e9a120f834e7af42738fc5a": {
+    "name": "2026_Annual_Report_2026_part2.pdf",
+    "doc_name": "2026_Annual_Report_2026_part2",
+    "type": "pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2026_Annual_Report_2026_chunks/2026_Annual_Report_2026_part2.pdf",
+    "raw_path": "raw/2026_Annual_Report_2026_part2.pdf",
+    "source_path": "wiki/sources/2026_Annual_Report_2026_part2.md"
+  },
+  "b49832543ace494d30a139835f457d143b74a3b882c3d4168b0792fd7a43acef": {
+    "name": "2026_Annual_Report_2026_part3.pdf",
+    "doc_name": "2026_Annual_Report_2026_part3",
+    "type": "pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2026_Annual_Report_2026_chunks/2026_Annual_Report_2026_part3.pdf",
+    "raw_path": "raw/2026_Annual_Report_2026_part3.pdf",
+    "source_path": "wiki/sources/2026_Annual_Report_2026_part3.md"
+  },
+  "23606e4d83a6a87e4b0cdb2a2b84c1fd4431e830b4c5bb8c7f3ba1eb6488ecb7": {
+    "name": "2026_Annual_Report_2026_part4.pdf",
+    "doc_name": "2026_Annual_Report_2026_part4",
+    "type": "pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2026_Annual_Report_2026_chunks/2026_Annual_Report_2026_part4.pdf",
+    "raw_path": "raw/2026_Annual_Report_2026_part4.pdf",
+    "source_path": "wiki/sources/2026_Annual_Report_2026_part4.md"
+  },
+  "b3bef7dd15bb8e9fdc591df6281b2b1ee9b5f8db4bf3b5895675c5f9acfb3209": {
+    "name": "2026_Annual_Report_2026_part5.pdf",
+    "doc_name": "2026_Annual_Report_2026_part5",
+    "type": "pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2026_Annual_Report_2026_chunks/2026_Annual_Report_2026_part5.pdf",
+    "raw_path": "raw/2026_Annual_Report_2026_part5.pdf",
+    "source_path": "wiki/sources/2026_Annual_Report_2026_part5.md"
+  },
+  "0ca26ad55f3a94af74e7924b544813bdc290c677a55b1ad7aba017bf953aaeab": {
+    "name": "2026_Annual_Report_2026_part6.pdf",
+    "doc_name": "2026_Annual_Report_2026_part6",
+    "type": "pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2026_Annual_Report_2026_chunks/2026_Annual_Report_2026_part6.pdf",
+    "raw_path": "raw/2026_Annual_Report_2026_part6.pdf",
+    "source_path": "wiki/sources/2026_Annual_Report_2026_part6.md"
+  },
+  "ca8c036a06c27ef84f23e78e2145a4febaaac8240cdae54c4047744531767356": {
+    "name": "2026_Annual_Report_2026_part7.pdf",
+    "doc_name": "2026_Annual_Report_2026_part7",
+    "type": "pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2026_Annual_Report_2026_chunks/2026_Annual_Report_2026_part7.pdf",
+    "raw_path": "raw/2026_Annual_Report_2026_part7.pdf",
+    "source_path": "wiki/sources/2026_Annual_Report_2026_part7.md"
+  },
+  "736f5b4102fcde06bd13d740d445ada529ca024fdf8f919a7ca8baec683cecb3": {
+    "name": "2026_Annual_Report_2026_part8.pdf",
+    "doc_name": "2026_Annual_Report_2026_part8",
+    "type": "pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2026_Annual_Report_2026_chunks/2026_Annual_Report_2026_part8.pdf",
+    "raw_path": "raw/2026_Annual_Report_2026_part8.pdf",
+    "source_path": "wiki/sources/2026_Annual_Report_2026_part8.md"
+  },
+  "69386e06c7d9c516e3ead5ae3fe8a474162d43e5305d26d2e78311ced4853abf": {
+    "name": "2026_Annual_Report_2026_part9.pdf",
+    "doc_name": "2026_Annual_Report_2026_part9",
+    "type": "pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2026_Annual_Report_2026_chunks/2026_Annual_Report_2026_part9.pdf",
+    "raw_path": "raw/2026_Annual_Report_2026_part9.pdf",
+    "source_path": "wiki/sources/2026_Annual_Report_2026_part9.md"
+  },
+  "387537749f9bb57151762fb227c8685cb5300ead69ed750ad5a215194e20ba4d": {
+    "name": "2026_Annual_Report_2026_part10.pdf",
+    "doc_name": "2026_Annual_Report_2026_part10",
+    "type": "pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2026_Annual_Report_2026_chunks/2026_Annual_Report_2026_part10.pdf",
+    "raw_path": "raw/2026_Annual_Report_2026_part10.pdf",
+    "source_path": "wiki/sources/2026_Annual_Report_2026_part10.md"
+  },
+  "269fd3b6c19618309dbebbd17ff9f5f19217619e945a2e5ed62155c37358aa1b": {
+    "name": "2026_Annual_Report_2026_part11.pdf",
+    "doc_name": "2026_Annual_Report_2026_part11",
+    "type": "pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2026_Annual_Report_2026_chunks/2026_Annual_Report_2026_part11.pdf",
+    "raw_path": "raw/2026_Annual_Report_2026_part11.pdf",
+    "source_path": "wiki/sources/2026_Annual_Report_2026_part11.md"
   }
 }
