@@ -729,6 +729,7 @@ class RAGResponse:
     insights:      int  = 0
     pipeline_mode: str  = "vector_only"
     charts:        List[dict] = field(default_factory=list)
+    citations:     int  = 0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -949,6 +950,15 @@ def _build_sources_list(
 
     return sources
 
+import re as _re_module
+
+def _count_citations(answer_text: str, sources: list) -> int:
+    """Count unique citations from sources list and inline tags."""
+    sql_tags = set(_re_module.findall(r'\[SQL-\d+\]', answer_text))
+    src_tags = set(_re_module.findall(r'\[SRC-\d+\]', answer_text))
+    inline_count = len(sql_tags) + len(src_tags)
+    return max(len(sources), inline_count)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Main entry point  [SYNTHESIS-PATCHED]
@@ -1084,17 +1094,19 @@ def generate_answer(
                 f"{latency:.1f}s | {len(safe_chunks)}/{len(chunks)} chunks"
             )
 
+            sources_list = _build_sources_list(safe_chunks, sr, symbol)
             resp_obj = RAGResponse(
                 answer        = answer,
                 model_used    = entry.label,
                 chunks_used   = len(safe_chunks),
-                sources       = _build_sources_list(safe_chunks, sr, symbol),
+                sources       = sources_list,
                 tokens_used   = usage.get("total_tokens", 0),
                 latency_sec   = round(latency, 2),
                 sql_rows      = sql_rows,
                 insights      = n_insights,
                 pipeline_mode = pipeline_mode,
                 charts        = charts,
+                citations     = _count_citations(answer, sources_list),
             )
 
 
