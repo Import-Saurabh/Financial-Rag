@@ -178,3 +178,55 @@ INGEST_TMP_DIR = Path(tempfile.gettempdir()) / "finrag_ingest"
 # ─────────────────────────────────────────────
 # No separate path needed — it's the same MySQL instance.
 # FINANCE_DB_PATH (old SQLite ref) is removed.
+
+
+# ─────────────────────────────────────────────
+# Model Routing (Phase 4.2 fix)
+# Classify query complexity → select model config
+# ─────────────────────────────────────────────
+MODEL_ROUTING = {
+    "simple": {
+        # Single metric lookups, basic factual questions
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "max_tokens": 800,
+        "temperature": 0.0,
+        "timeout": 20,
+    },
+    "moderate": {
+        # YoY comparisons, multi-metric queries
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "max_tokens": 1500,
+        "temperature": 0.1,
+        "timeout": 40,
+    },
+    "complex": {
+        # Multi-hop analysis, cross-section synthesis
+        "provider": "deepseek",
+        "model": "deepseek-chat",
+        "max_tokens": 3000,
+        "temperature": 0.2,
+        "timeout": 75,
+    },
+}
+
+
+def classify_query_complexity(query: str) -> str:
+    """Classify query into simple/moderate/complex for model routing."""
+    query_lower = query.lower()
+    complex_signals = [
+        "analyze", "synthesize", "comprehensive", "connect",
+        "cross-section", "compare multiple", "all of the following",
+        "multi-hop", "relationship between",
+    ]
+    moderate_signals = [
+        "year over year", "yoy", "y-o-y", "compare", "growth",
+        "change", "difference", "trend", "versus", "vs",
+    ]
+
+    if any(s in query_lower for s in complex_signals) or len(query) > 300:
+        return "complex"
+    if any(s in query_lower for s in moderate_signals):
+        return "moderate"
+    return "simple"
