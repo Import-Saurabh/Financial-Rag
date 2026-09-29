@@ -17,6 +17,7 @@ except ModuleNotFoundError:
 
 try:
     from schema_bridge.schema_bridge import SchemaBridge, BridgeResult
+    from schema_bridge.metric_computer import compute_metrics
     _HAS_BRIDGE = True
 except ModuleNotFoundError:
     _HAS_BRIDGE = False
@@ -357,6 +358,22 @@ class SynthesisPipeline:
             bridge = self._get_bridge()
             if bridge and atoms:
                 bridge_result = bridge.fetch(atoms)
+                
+                # Compute derived ratios and margins
+                pl_rows = [row for r in bridge_result.sql_results if r.atom.sub_type in ('profit_loss', 'revenue', 'net_profit', 'ebitda', 'operating_profit', 'quarterly_results', 'quarterly') for row in r.rows]
+                bs_rows = [row for r in bridge_result.sql_results if r.atom.sub_type in ('balance_sheet', 'total_assets', 'total_equity', 'net_debt') for row in r.rows]
+                cf_rows = [row for r in bridge_result.sql_results if r.atom.sub_type in ('cash_flow', 'ocf', 'capex', 'fcf') for row in r.rows]
+                computed = compute_metrics(pl_rows, bs_rows, cf_rows)
+                
+                # Inject back into sql_results
+                for r in bridge_result.sql_results:
+                    for row in r.rows:
+                        period = row.get("period_end")
+                        if period and period in computed:
+                            for k, v in computed[period].items():
+                                if k not in row or row[k] is None:
+                                    row[k] = v
+
                 log.info(
                     f"[synthesis] bridge → "
                     f"{sum(len(r.rows) for r in bridge_result.sql_results)} SQL rows | "
