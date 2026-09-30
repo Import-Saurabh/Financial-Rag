@@ -115,14 +115,18 @@ def search_company_documents(symbols: List[str], query: str) -> str:
     log.info(f"[tools] search_company_documents invoked for {symbols} with query: {query}")
     
     try:
-        from rag.retriever_openkb import OpenKBRetriever
-        retriever = OpenKBRetriever()
+        from rag.retriever_openkb import FinancialRetriever
+        from rag.section_router import get_target_sections
+        
+        retriever = FinancialRetriever()
+        target_sections = get_target_sections(query)
         
         # Retrieve chunks, explicitly passing the symbols to prevent cross-pollination
         chunks = retriever.retrieve(
             question=query, 
-            top_k=5, 
-            symbol_filter=symbols if symbols else None
+            top_k=20, 
+            symbol_filter=symbols if symbols else None,
+            section_filter=target_sections
         )
         
         if not chunks:
@@ -133,8 +137,9 @@ def search_company_documents(symbols: List[str], query: str) -> str:
         for i, chunk in enumerate(chunks, 1):
             doc_type = getattr(chunk, 'doc_type', 'Unknown')
             year = getattr(chunk, 'year', 'Unknown')
-            output += f"--- Source {i} ({doc_type} - {year}) ---\n"
-            output += f"{chunk.text[:1500]}\n\n"
+            sec_type = getattr(chunk, 'section_type', 'Unknown')
+            output += f"[SRC-{i}] ({doc_type} - {year} - Section: {sec_type}) ---\n"
+            output += f"{chunk.text[:2500]}\n\n"
             
         return output
     except Exception as e:

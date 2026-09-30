@@ -8,6 +8,7 @@ from enum import Enum
 from typing import List, Optional, Dict, Any
 
 import requests
+from decomposer.temporal_resolver import resolve_year_range
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Enumerations
@@ -407,25 +408,35 @@ _RULES: List[tuple] = [
     (r"\b(fcf\s+margin)\b",
      NeedType.QUANTITATIVE, "fcf_margin", "FCF Margin %", None),
 
-    # Growth / CAGR
-    (r"\b(revenue\s+cagr|sales\s+cagr|revenue\s+growth)\b",
-     NeedType.QUANTITATIVE, "revenue_cagr", "Revenue CAGR", None),
-    (r"\b(profit\s+cagr|earnings\s+cagr|pat\s+cagr)\b",
-     NeedType.QUANTITATIVE, "profit_cagr", "Profit CAGR", None),
+    # Growth / CAGR - mapped to base metrics so LLM can compute YoY differences
+    (r"\b(revenue\s+cagr|sales\s+cagr|revenue\s+growth|revenue\s+change|sales\s+growth)\b",
+     NeedType.QUANTITATIVE, "revenue", "Revenue", None),
+    (r"\b(profit\s+cagr|earnings\s+cagr|pat\s+cagr|profit\s+growth|net\s+profit\s+change)\b",
+     NeedType.QUANTITATIVE, "net_profit", "Net Profit", None),
     (r"\b(eps\s+cagr|eps\s+growth)\b",
-     NeedType.QUANTITATIVE, "eps_cagr", "EPS CAGR", None),
+     NeedType.QUANTITATIVE, "eps", "EPS", None),
     (r"\b(ebitda\s+cagr|ebitda\s+growth)\b",
-     NeedType.QUANTITATIVE, "ebitda_cagr", "EBITDA CAGR", None),
+     NeedType.QUANTITATIVE, "ebitda_proxy", "EBITDA", None),
     (r"\b(stock\s+(?:price\s+)?cagr|price\s+cagr|stock\s+return)\b",
      NeedType.QUANTITATIVE, "stock_cagr", "Stock Price CAGR", None),
 
-    # Return ratios
+    # Return ratios - mapped to base metrics for calculation
     (r"\b(roe|return\s+on\s+equity|return\s+on\s+net\s+worth|ronw)\b",
-     NeedType.QUANTITATIVE, "roe", "ROE", None),
+     NeedType.QUANTITATIVE, "net_profit", "Net Profit (for ROE)", None),
+    (r"\b(roe|return\s+on\s+equity|return\s+on\s+net\s+worth|ronw)\b",
+     NeedType.QUANTITATIVE, "total_equity", "Total Equity (for ROE)", None),
     (r"\b(roce|return\s+on\s+capital\s+employed)\b",
-     NeedType.QUANTITATIVE, "roce", "ROCE", None),
+     NeedType.QUANTITATIVE, "operating_profit", "Operating Profit (for ROCE)", None),
+    (r"\b(roce|return\s+on\s+capital\s+employed)\b",
+     NeedType.QUANTITATIVE, "total_equity", "Capital (for ROCE)", None),
+    (r"\b(roce|return\s+on\s+capital\s+employed)\b",
+     NeedType.QUANTITATIVE, "borrowings", "Borrowings (for ROCE)", None),
     (r"\b(roa|return\s+on\s+assets?)\b",
-     NeedType.QUANTITATIVE, "roa", "ROA", None),
+     NeedType.QUANTITATIVE, "net_profit", "Net Profit (for ROA)", None),
+    (r"\b(roa|return\s+on\s+assets?)\b",
+     NeedType.QUANTITATIVE, "total_assets", "Total Assets (for ROA)", None),
+    (r"\b(gross\s+margin|operating\s+margin|profit\s+margin|margins?)\b",
+     NeedType.QUANTITATIVE, "profit_loss", "P&L for Margins", None),
 
     # Valuation
     (r"\b(p/?e\s+ratio|price\s+to\s+earnings|pe\s+multiple|ttm\s+pe|forward\s+pe)\b",
@@ -617,27 +628,25 @@ def _rule_based_decompose(query: str, symbol: Optional[str] = None) -> List[Atom
     q_lower  = query.lower()
     years    = _extract_years(query)
 
-    # 1. Query text takes precedence for symbol extraction
-    query_sym = None
-    for alias, sym in _KNOWN_COMPANY_SYMBOLS.items():
-        if re.search(r'\b' + re.escape(alias) + r'\b', q_lower):
-            query_sym = sym
-            break
-
-    if not query_sym:
-        for m in re.finditer(r'\b([A-Z]{2,15})\b', query):
-            cand = m.group(1)
-            if cand not in _EXCLUDED_TICKER_WORDS:
-                query_sym = cand
+    # 1. Explicit symbol takes precedence. Otherwise try to extract from query text.
+    if symbol is not None:
+        symbol = symbol.upper()
+    else:
+        query_sym = None
+        for alias, sym in _KNOWN_COMPANY_SYMBOLS.items():
+            if re.search(r'\b' + re.escape(alias) + r'\b', q_lower):
+                query_sym = sym
                 break
-
-    if query_sym:
-        symbol = query_sym
-    elif symbol is not None:
-        if symbol.lower() in _KNOWN_COMPANY_SYMBOLS:
-            symbol = _KNOWN_COMPANY_SYMBOLS[symbol.lower()]
-        else:
-            symbol = symbol.upper()
+    
+        if not query_sym:
+            for m in re.finditer(r'\b([A-Z]{2,15})\b', query):
+                cand = m.group(1)
+                if cand not in _EXCLUDED_TICKER_WORDS:
+                    query_sym = cand
+                    break
+        
+        if query_sym:
+            symbol = query_sym
             
     horizon  = (
         TimeHorizon.FORWARD_LOOKING
@@ -870,6 +879,12 @@ class AtomicDecomposer:
             for atom in atoms:
                 if not atom.symbol:
                     atom.symbol = symbol
+
+        # Backfill empty years using temporal resolver:
+        fy_start, fy_end = resolve_year_range(query)
+        for atom in atoms:
+            if not atom.years:
+                atom.years = list(range(fy_start, fy_end + 1))
 
         return atoms
 

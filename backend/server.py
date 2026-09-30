@@ -379,10 +379,10 @@ def _run_query(req: QueryRequest) -> dict:
         log.warning("[server] Falling back to legacy pipeline")
 
     # ── Legacy fallback (original linear pipeline) ────────────────────────────
-    from rag.retriever_openkb import OpenKBRetriever
+    from rag.retriever_openkb import FinancialRetriever
     from rag.rag_engine import generate_answer
 
-    retriever = OpenKBRetriever()
+    retriever = FinancialRetriever()
     # Pass symbol as filter so the old path also benefits from the fix
     symbol_list = [req.symbol] if req.symbol else None
     chunks = retriever.retrieve(req.query, top_k=15, symbol_filter=symbol_list)

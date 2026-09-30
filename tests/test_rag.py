@@ -1,6 +1,7 @@
 import requests
 import json
 import time
+import sys
 
 API_URL = "http://localhost:5000/query"
 SYMBOL = "APOLLO"
@@ -69,7 +70,7 @@ def run_tests():
     print("🚀 STARTING RAG EVALUATION BENCHMARK")
     print(f"Target: {SYMBOL} (FY{YEAR})")
     print(f"Endpoint: {API_URL}")
-    print("Provider: Groq (via backend config)")
+    print("Provider: DeepSeek (deepseek)")
     print("==================================================\n")
 
     results_md = "# RAG Evaluation Results\n\n"
@@ -89,7 +90,7 @@ def run_tests():
                 "symbol": SYMBOL,
                 "year": YEAR,
                 "doc_type": "both",
-                "provider": "groq-llama"
+                "provider": "deepseek"
             }
             
             t0 = time.time()
@@ -123,4 +124,5 @@ def run_tests():
     print("\n✅ Benchmark complete! Results saved to rag_test_results.md")
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding='utf-8')
     run_tests()

@@ -275,7 +275,7 @@ def _execute_http_atom(atom: AtomicNeed, api_base: str = API_BASE) -> SqlAtomRes
 # ─────────────────────────────────────────────────────────────────────────────
 def _execute_vector_atom(atom: AtomicNeed) -> VectorAtomResult:
     """Run an OpenKB vector query for one atom, return VectorAtomResult."""
-    from rag.retriever_openkb import OpenKBRetriever
+    from rag.retriever_openkb import FinancialRetriever
     
     query  = atom.metric        # human-readable label is a good base query
     raw    = atom.raw_text or ""
@@ -291,7 +291,7 @@ def _execute_vector_atom(atom: AtomicNeed) -> VectorAtomResult:
         query = f"{query} {' '.join(str(y) for y in years)}"
 
     try:
-        retriever = OpenKBRetriever(wiki_dir="backend/data/openkb_wiki")
+        retriever = FinancialRetriever(wiki_dir="backend/data/openkb_wiki")
         raw_results = retriever.retrieve(query)
         
         # Wrap the dicts into RetrievedChunk so downstream code doesn't break
