@@ -46,6 +46,13 @@ flowchart TD
     LLM --> Streamlit
 ```
 
+### ⚡ Performance & Latency
+
+By utilizing structurally selective chunking (capping Cross-Encoder candidates to 15, and dynamically limiting the chunk density per section to 2), this architecture avoids the bloat of traditional vector RAGs and minimizes LLM Time-To-First-Token (TTFT). 
+
+**Average Query Latency (After Cold Start):** **~6.5 seconds**
+*(Faster than PageIndex Chat AI!)*
+
 ### 🏆 API Acknowledgment
 The core APIs powering the structured financial extraction are adapted from the [Quant_CoPilot-Equity-Research-Agent-ETL](https://github.com/Import-Saurabh/Quant_CoPilot-Equity-Research-Agent-ETL) repository.
 
