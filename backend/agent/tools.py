@@ -121,7 +121,7 @@ def search_company_documents(symbols: List[str], query: str) -> str:
         retriever = FinancialRetriever()
         target_sections = get_target_sections(query)
         
-        # Retrieve chunks, explicitly passing the symbols to prevent cross-pollination
+        # Retrieve chunks (request up to 20 to have candidates)
         chunks = retriever.retrieve(
             question=query, 
             top_k=20, 
@@ -132,14 +132,24 @@ def search_company_documents(symbols: List[str], query: str) -> str:
         if not chunks:
             return f"No relevant documents found for {symbols} matching your query."
             
-        # Format the retrieved chunks for the LLM
+        # Format the retrieved chunks for the LLM dynamically to fit token limits
+        # Groq's 8k TPM limit allows ~6000 tokens per prompt (approx 24,000 characters).
+        MAX_CHARS = 24000
         output = f"Document Search Results for {symbols}:\n\n"
+        
         for i, chunk in enumerate(chunks, 1):
             doc_type = getattr(chunk, 'doc_type', 'Unknown')
             year = getattr(chunk, 'year', 'Unknown')
             sec_type = getattr(chunk, 'section_type', 'Unknown')
-            output += f"[SRC-{i}] ({doc_type} - {year} - Section: {sec_type}) ---\n"
-            output += f"{chunk.text[:2500]}\n\n"
+            
+            chunk_text = f"[SRC-{i}] ({doc_type} - {year} - Section: {sec_type}) ---\n{chunk.text[:2500]}\n\n"
+            
+            # Stop if adding this chunk exceeds our character budget
+            if len(output) + len(chunk_text) > MAX_CHARS:
+                output += f"\n... [Truncated {len(chunks) - i + 1} remaining chunks to fit token limits]\n"
+                break
+                
+            output += chunk_text
             
         return output
     except Exception as e:

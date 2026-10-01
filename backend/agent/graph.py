@@ -40,14 +40,13 @@ def get_agent_graph(user_query: str = ""):
         if not GROQ_API_KEY:
             raise ValueError("GROQ_API_KEY is not set. Cannot initialize Tool-Calling Agent.")
             
-        # Initialize the ChatGroq model (requires tool-calling support, openai/gpt-oss-120b or openai/gpt-oss-20b)
-        # Using 8b-instant for speed or 70b if available.
-        # Let's use 3.1-8b-instant since it was working in our previous test.
+        # Initialize the ChatGroq model (requires tool-calling support)
+        # Using openai/gpt-oss-120b (larger TPM limit to avoid 413 errors)
         _cached_llm = ChatGroq(
             api_key=GROQ_API_KEY,
             model="openai/gpt-oss-120b",
             temperature=0.0,
-            max_retries=2
+            max_retries=0
         )
         
     tools = [get_live_price, get_financial_data, search_company_documents]
