@@ -376,9 +376,9 @@ class FinancialRetriever:
                 importance_score=float(final_score)
             ))
                 
-        # Stage 1: Sort by Hybrid Score and take top 40 candidates for re-ranking
+        # Stage 1: Sort by Hybrid Score and take top 15 candidates for re-ranking
         results.sort(key=lambda x: x.importance_score, reverse=True)
-        candidates = results[:40]
+        candidates = results[:15]
         
         # Stage 2: Cross-Encoder Re-ranking (High Precision)
         if candidates and hasattr(self, 'reranker') and self.reranker is not None:
