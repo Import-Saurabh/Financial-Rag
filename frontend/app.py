@@ -135,6 +135,27 @@ def render_financial_visuals(charts, msg_idx: int = 0):
                     st.plotly_chart(fig, use_container_width=True, key=chart_key)
 
 
+def render_sources(sources):
+    if not sources:
+        return
+    with st.expander("📚 Sources & Evidence (Transparent Read)"):
+        for i, src in enumerate(sources, 1):
+            dt = src.get("doc_type", "")
+            sym = src.get("symbol", "Unknown")
+            yr = src.get("year", "")
+            yr_str = f" FY{yr}" if yr else ""
+            if dt in ("sql_data", "shareholding"):
+                doc_label = "Structured Database" if dt == "sql_data" else "Shareholding Data"
+                section = src.get("section", "")
+                st.markdown(f"**[SRC-{i}] {sym}{yr_str} — {doc_label}**\n* **Query:** {section}")
+            else:
+                doc = "Annual Report" if dt == "annual_report" else "Concall"
+                page = src.get("page", "")
+                page_str = f" (Page {page})" if page not in ("", -1, "-1", None) else ""
+                section = src.get("section", "")
+                st.markdown(f"**[SRC-{i}] {sym} {doc}{yr_str}{page_str}**\n* **Section:** {section}")
+
+
 tab1, tab2 = st.tabs(["💬 Query Interface", "⚙️ Admin Dashboard"])
 
 with tab1:
@@ -148,6 +169,8 @@ with tab1:
             st.markdown(msg["content"])
             if msg.get("charts"):
                 render_financial_visuals(msg["charts"], msg_idx=msg_idx)
+            if msg.get("sources"):
+                render_sources(msg["sources"])
             
     if prompt := st.chat_input("E.g., What is the profit CAGR and trend for APOLLO from FY23 to FY25?"):
         st.session_state.messages.append({"role": "user", "content": prompt, "charts": []})
@@ -174,25 +197,12 @@ with tab1:
                         sources = data.get("sources", [])
                         charts = data.get("charts", [])
                         
-                        if sources:
-                            ans += "\n\n### Sources\n"
-                            for i, src in enumerate(sources, 1):
-                                dt = src.get("doc_type", "")
-                                sym = src.get("symbol", "Unknown")
-                                yr = src.get("year", "")
-                                yr_str = f" FY{yr}" if yr else ""
-                                if dt in ("sql_data", "shareholding"):
-                                    doc_label = "Structured Database" if dt == "sql_data" else "Shareholding Data"
-                                    section = src.get("section", "")
-                                    ans += f"- **[SRC-{i}]** {sym}{yr_str} — {doc_label} ({section})\n"
-                                else:
-                                    doc = "Annual Report" if dt == "annual_report" else "Concall"
-                                    page = src.get("page", "")
-                                    page_str = f" (Page {page})" if page not in ("", -1, "-1") else ""
-                                    ans += f"- **[SRC-{i}]** {sym} {doc}{yr_str}{page_str}\n"
-                        
                         # Display Text Response FIRST
                         st.markdown(ans)
+                        
+                        # Display transparent sources UI
+                        if sources:
+                            render_sources(sources)
 
                         # Display Visual Charts AT THE END OF TEXTUAL RESPONSE
                         if charts:
@@ -201,7 +211,8 @@ with tab1:
                         st.session_state.messages.append({
                             "role": "assistant",
                             "content": ans,
-                            "charts": charts
+                            "charts": charts,
+                            "sources": sources
                         })
                     else:
                         st.error(f"Error {res.status_code}: {res.text}")

@@ -920,15 +920,20 @@ def _build_sources_list(
 
     # Add matching symbol chunks first
     for c in matching_chunks:
-        key = (getattr(c, "symbol", "").upper(), getattr(c, "year", 0), getattr(c, "doc_type", ""))
+        sym = getattr(c, "symbol", "").upper()
+        yr = getattr(c, "year", 0)
+        dt = getattr(c, "doc_type", "")
+        sec = getattr(c, "section", "")[:50]
+        pg = getattr(c, "page_start", "")
+        key = (sym, yr, dt, sec, pg)
         if key not in seen:
             seen.add(key)
             sources.append({
                 "symbol":   getattr(c, "symbol", ""),
                 "year":     getattr(c, "year", ""),
                 "doc_type": getattr(c, "doc_type", ""),
-                "section":  (getattr(c, "section", "") or getattr(c, "speaker", ""))[:50],
-                "page":     getattr(c, "page_start", ""),
+                "section":  sec,
+                "page":     pg,
                 "score":    round(getattr(c, "importance_score", 0.0), 4),
             })
 
@@ -936,15 +941,20 @@ def _build_sources_list(
     # This prevents showing "APOLLO Concall FY2026" when the user asked about HAL
     if not sources:
         for c in other_chunks:
-            key = (getattr(c, "symbol", "").upper(), getattr(c, "year", 0), getattr(c, "doc_type", ""))
+            sym = getattr(c, "symbol", "").upper()
+            yr = getattr(c, "year", 0)
+            dt = getattr(c, "doc_type", "")
+            sec = getattr(c, "section", "")[:50]
+            pg = getattr(c, "page_start", "")
+            key = (sym, yr, dt, sec, pg)
             if key not in seen:
                 seen.add(key)
                 sources.append({
                     "symbol":   getattr(c, "symbol", ""),
                     "year":     getattr(c, "year", ""),
                     "doc_type": getattr(c, "doc_type", ""),
-                    "section":  (getattr(c, "section", "") or getattr(c, "speaker", ""))[:50],
-                    "page":     getattr(c, "page_start", ""),
+                    "section":  sec,
+                    "page":     pg,
                     "score":    round(getattr(c, "importance_score", 0.0), 4),
                 })
 
