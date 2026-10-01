@@ -603,7 +603,7 @@ def _dedup_chunks(chunks: List["RetrievedChunk"]) -> List["RetrievedChunk"]:
 # the highest-scoring N per section — so both standalone and consolidated
 # are still available, just not at the expense of every other topic.
 # ─────────────────────────────────────────────────────────────────────────────
-_MAX_CHUNKS_PER_SECTION = 3
+_MAX_CHUNKS_PER_SECTION = 2
 
 
 def _section_key(chunk: "RetrievedChunk") -> str:
