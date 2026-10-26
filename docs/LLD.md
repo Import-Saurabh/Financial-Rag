@@ -6,41 +6,41 @@ Based on the static code analysis and AST extraction from `graphify-out` (1,836 
 
 ```mermaid
 flowchart TD
-    subgraph Ingestion_API [Interface Layer]
-        Server[backend/server.py\nFastAPI Application]
-        MCPServer[backend/mcp_server.py\nFastMCP Server :8100]
-        Client[backend/query_client.py\nCLI Tool]
+    subgraph Ingestion_API ["Interface Layer"]
+        Server["backend/server.py (FastAPI Application)"]
+        MCPServer["backend/mcp_server.py (FastMCP Server :8100)"]
+        Client["backend/query_client.py (CLI Tool)"]
     end
 
-    subgraph Agent_Core [Agent & Orchestration Layer]
-        Graph[backend/agent/graph.py\nLangGraph ReAct Agent]
-        Tools[backend/agent/tools.py\nAgent Toolbox]
-        Registry[backend/agent/entity_registry.py\nEntity Disambiguation]
+    subgraph Agent_Core ["Agent & Orchestration Layer"]
+        Graph["backend/agent/graph.py (LangGraph ReAct Agent)"]
+        Tools["backend/agent/tools.py (Agent Toolbox)"]
+        Registry["backend/agent/entity_registry.py (Entity Disambiguation)"]
     end
 
-    subgraph Decomposition [Query Analysis Layer]
-        Decomp[backend/decomposer/atomic_decomposer.py\nAtomicDecomposer]
-        Temporal[backend/decomposer/temporal_resolver.py\nTemporalResolver]
+    subgraph Decomposition ["Query Analysis Layer"]
+        Decomp["backend/decomposer/atomic_decomposer.py (AtomicDecomposer)"]
+        Temporal["backend/decomposer/temporal_resolver.py (TemporalResolver)"]
     end
 
-    subgraph Retrieval_Plane [Retrieval & Routing Layer]
-        SecRouter[backend/rag/section_router.py\nSectionRouter]
-        OpenKB[backend/rag/retriever_openkb.py\nFinancialRetriever]
-        AgenticRet[backend/rag/agentic_retriever.py\nPageIndexHybridRetriever]
+    subgraph Retrieval_Plane ["Retrieval & Routing Layer"]
+        SecRouter["backend/rag/section_router.py (SectionRouter)"]
+        OpenKB["backend/rag/retriever_openkb.py (FinancialRetriever)"]
+        AgenticRet["backend/rag/agentic_retriever.py (PageIndexHybridRetriever)"]
     end
 
-    subgraph Quantitative_Plane [Quantitative Bridge Layer]
-        Bridge[backend/schema_bridge/schema_bridge.py\nSchemaBridge]
-        Metrics[backend/schema_bridge/metric_computer.py\nMetricComputer]
+    subgraph Quantitative_Plane ["Quantitative Bridge Layer"]
+        Bridge["backend/schema_bridge/schema_bridge.py (SchemaBridge)"]
+        Metrics["backend/schema_bridge/metric_computer.py (MetricComputer)"]
     end
 
-    subgraph Fusion_Synthesis [Fusion & Synthesis Layer]
-        Fusion[backend/fusion/fusion_layer.py\nFusionLayer]
-        Norm[backend/fusion/unit_normalizer.py\nUnitNormalizer]
-        PBuilder[backend/synthesis/prompt_builder.py\nPromptBuilder]
-        Pipeline[backend/synthesis/pipeline.py\nSynthesisPipeline]
-        Charts[backend/visualization/chart_engine.py\nFinancialChartEngine]
-        RAGEngine[backend/rag/rag_engine.py\nLLM Generation & Model Fallbacks]
+    subgraph Fusion_Synthesis ["Fusion & Synthesis Layer"]
+        Fusion["backend/fusion/fusion_layer.py (FusionLayer)"]
+        Norm["backend/fusion/unit_normalizer.py (UnitNormalizer)"]
+        PBuilder["backend/synthesis/prompt_builder.py (PromptBuilder)"]
+        Pipeline["backend/synthesis/pipeline.py (SynthesisPipeline)"]
+        Charts["backend/visualization/chart_engine.py (FinancialChartEngine)"]
+        RAGEngine["backend/rag/rag_engine.py (LLM Generation & Fallbacks)"]
     end
 
     Server --> Graph

@@ -60,44 +60,44 @@ Codebase Knowledge Graph:   Graphifyy AST Analysis (1,836 nodes, 2,497 edges, 16
 
 ```mermaid
 flowchart TD
-    User([User Query]) --> UI[Streamlit UI / CLI Client]
-    UI --> API[FastAPI Server :8000]
+    User([User Query]) --> UI["Streamlit UI / CLI Client"]
+    UI --> API["FastAPI Server :8000"]
 
-    subgraph Agentic_Tier [Agentic Orchestrator]
-        API --> Agent{Execution Mode}
-        Agent -->|Primary| ReAct[LangGraph ReAct Agent\nChatGroq openai/gpt-oss-120b]
-        Agent -->|Fallback on Rate Limit| Linear[Deterministic Synthesis Pipeline]
-        ReAct -.->|Tool Calls| Tools[Toolbox: get_financial_data, search_company_docs, get_live_price]
+    subgraph Agentic_Tier ["Agentic Orchestrator"]
+        API --> Agent{"Execution Mode"}
+        Agent -->|Primary| ReAct["LangGraph ReAct Agent (ChatGroq openai/gpt-oss-120b)"]
+        Agent -->|Fallback on Rate Limit| Linear["Deterministic Synthesis Pipeline"]
+        ReAct -.->|Tool Calls| Tools["Toolbox: get_financial_data, search_company_docs, get_live_price"]
     end
 
-    subgraph Quantitative_Stream [Quantitative Stream - Deterministic SQL]
-        Tools & Linear --> Decomp[Atomic Decomposer & Temporal Resolver]
-        Decomp --> Bridge[Schema Bridge HTTP Client]
-        Bridge --> Lambda[AWS Lambda Serverless REST API]
-        Lambda --> MySQL[(Cloud MySQL DB)]
+    subgraph Quantitative_Stream ["Quantitative Stream - Deterministic SQL"]
+        Tools & Linear --> Decomp["Atomic Decomposer & Temporal Resolver"]
+        Decomp --> Bridge["Schema Bridge HTTP Client"]
+        Bridge --> Lambda["AWS Lambda Serverless REST API"]
+        Lambda --> MySQL[("Cloud MySQL DB")]
         MySQL -. Rows .-> Lambda
         Lambda -. JSON .-> Bridge
-        Bridge --> MetricComp[Derived Metric Computer\nCAGR, YoY, Margins]
+        Bridge --> MetricComp["Derived Metric Computer (CAGR, YoY, Margins)"]
     end
 
-    subgraph Qualitative_Stream [Qualitative Stream - OpenKB Tree Search]
-        Tools & Linear --> SecRouter[Section & Intent Router]
-        SecRouter --> OpenKB[OpenKB Knowledge Base\nBSE Filings, Transcripts, Entities]
-        OpenKB --> Hybrid[Stage 1: BM25 + all-MiniLM-L6-v2\nTop 15 Candidate Pruning]
-        Hybrid --> CrossEnc[Stage 2: Cross-Encoder Reranker\nms-marco-MiniLM-L-6-v2]
-        CrossEnc --> Expansion[Stage 3: Adjacent Chunk Evidence Expansion]
+    subgraph Qualitative_Stream ["Qualitative Stream - OpenKB Tree Search"]
+        Tools & Linear --> SecRouter["Section & Intent Router"]
+        SecRouter --> OpenKB["OpenKB Knowledge Base (BSE Filings, Transcripts, Entities)"]
+        OpenKB --> Hybrid["Stage 1: BM25 + all-MiniLM-L6-v2 (Top 15 Candidate Pruning)"]
+        Hybrid --> CrossEnc["Stage 2: Cross-Encoder Reranker (ms-marco-MiniLM-L-6-v2)"]
+        CrossEnc --> Expansion["Stage 3: Adjacent Chunk Evidence Expansion"]
     end
 
-    subgraph Fusion_Synthesis [Fusion & Synthesis Tier]
-        MetricComp --> Fusion[Fusion Layer\nClaim Extractor + Contradiction Engine]
+    subgraph Fusion_Synthesis ["Fusion & Synthesis Tier"]
+        MetricComp --> Fusion["Fusion Layer (Claim Extractor + Contradiction Engine)"]
         Expansion --> Fusion
-        Fusion --> Diversity[Section Diversity Cap\nmax 2 chunks / section]
-        Diversity --> Prompt[Dynamic Prompt Builder\nToken Budget <= 80k chars]
-        Prompt --> LLM[LLM Synthesis\nGroq Llama 3.1 / DeepSeek V3]
-        MetricComp -.-> Charts[Financial Chart Engine\nPlotly Visuals]
+        Fusion --> Diversity["Section Diversity Cap (max 2 chunks / section)"]
+        Diversity --> Prompt["Dynamic Prompt Builder (Token Budget <= 80k chars)"]
+        Prompt --> LLM["LLM Synthesis (Groq Llama 3.1 / DeepSeek V3)"]
+        MetricComp -.-> Charts["Financial Chart Engine (Plotly Visuals)"]
     end
 
-    LLM --> Result[Synthesized Report with [SRC-n] Citations & Verified Tables]
+    LLM --> Result["Synthesized Report with Source Citations & Verified Tables"]
     Charts --> Result
     Result --> UI
 ```

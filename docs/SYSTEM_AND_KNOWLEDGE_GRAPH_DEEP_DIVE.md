@@ -26,20 +26,23 @@ pie title Graph Node Composition (1,836 Total Nodes)
 The graph establishes explicit semantic and programmatic connections across the codebase and knowledge repository:
 
 ```mermaid
-bar-chart
-    title Top Edge Relationship Frequencies
+xychart-beta
+    title "Top Edge Relationship Frequencies"
     x-axis ["contains", "references", "calls", "rationale_for", "uses", "imports", "method", "imports_from", "inherits"]
     y-axis "Edge Count" 0 --> 1500
-    "contains" : 1389
-    "references" : 318
-    "calls" : 286
-    "rationale_for" : 148
-    "uses" : 113
-    "imports" : 95
-    "method" : 81
-    "imports_from" : 39
-    "inherits" : 11
+    bar [1389, 318, 286, 148, 113, 95, 81, 39, 11]
 ```
+
+| Relationship Type | Frequency | Semantics in System |
+| :--- | :--- | :--- |
+| `contains` | 1,389 | Directory, class, document section, and footnote containment |
+| `references` | 318 | Cross-document and conceptual citations (e.g. Ind AS 103, DRDO) |
+| `calls` | 286 | Function and tool invocation paths |
+| `rationale_for` | 148 | Architectural rationale and docstrings linked to symbols |
+| `uses` | 113 | Data contract and type dependency mappings |
+| `imports` / `imports_from` | 134 | Inter-module Python dependency structure |
+| `method` | 81 | Member methods belonging to classes |
+| `inherits` | 11 | Object-oriented polymorphism |
 
 ### 1.3 Architectural "God Nodes" (Core Abstractions)
 

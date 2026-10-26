@@ -38,44 +38,44 @@ The architecture consists of four primary tiers:
 
 ```mermaid
 flowchart TD
-    User([Institutional Researcher / Analyst]) --> UI[Streamlit UI / Query Client / IDE]
-    UI --> API[FastAPI Server :8000 / FastMCP Server :8100]
+    User([Institutional Researcher / Analyst]) --> UI["Streamlit UI / Query Client / IDE"]
+    UI --> API["FastAPI Server :8000 / FastMCP Server :8100"]
 
-    subgraph Orchestrator [Agentic Orchestration Tier]
-        API --> Router{Execution Router}
-        Router -->|Primary Mode| Agent[LangGraph ReAct Agent\nChatGroq openai/gpt-oss-120b]
-        Router -->|Fallback / Headless| Linear[Deterministic Synthesis Pipeline]
-        Agent -.->|Tool Calls| Tools[Toolbox: get_financial_data, search_company_docs, get_live_price]
+    subgraph Orchestrator ["Agentic Orchestration Tier"]
+        API --> Router{"Execution Router"}
+        Router -->|Primary Mode| Agent["LangGraph ReAct Agent (ChatGroq openai/gpt-oss-120b)"]
+        Router -->|Fallback / Headless| Linear["Deterministic Synthesis Pipeline"]
+        Agent -.->|Tool Calls| Tools["Toolbox: get_financial_data, search_company_docs, get_live_price"]
     end
 
-    subgraph QuantPath [Quantitative Data Plane]
-        Tools & Linear --> Decomp[Atomic Decomposer & Temporal Resolver]
-        Decomp --> Bridge[Schema Bridge HTTP Client]
-        Bridge --> Lambda[AWS Lambda Serverless REST API]
-        Lambda --> MySQL[(Cloud MySQL Database)]
+    subgraph QuantPath ["Quantitative Data Plane"]
+        Tools & Linear --> Decomp["Atomic Decomposer & Temporal Resolver"]
+        Decomp --> Bridge["Schema Bridge HTTP Client"]
+        Bridge --> Lambda["AWS Lambda Serverless REST API"]
+        Lambda --> MySQL[("Cloud MySQL Database")]
         MySQL -. Rows .-> Lambda
         Lambda -. JSON .-> Bridge
-        Bridge --> MetricComp[Derived Metric Computer\nCAGR, YoY, Margins]
+        Bridge --> MetricComp["Derived Metric Computer (CAGR, YoY, Margins)"]
     end
 
-    subgraph QualPath [Qualitative Knowledge Plane]
-        Tools & Linear --> SecRouter[Section & Intent Router]
-        SecRouter --> OpenKB[OpenKB Hierarchical Knowledge Store\nBSE Filings, AR Parts 1-11, Concalls]
-        OpenKB --> HybridSearch[Stage 1: BM25 + all-MiniLM-L6-v2\nTop 15 Candidate Pruning]
-        HybridSearch --> CrossEncoder[Stage 2: Cross-Encoder ms-marco Reranker]
-        CrossEncoder --> Expansion[Stage 3: Adjacent Chunk Evidence Expansion]
+    subgraph QualPath ["Qualitative Knowledge Plane"]
+        Tools & Linear --> SecRouter["Section & Intent Router"]
+        SecRouter --> OpenKB["OpenKB Hierarchical Knowledge Store (BSE Filings, AR Parts 1-11, Concalls)"]
+        OpenKB --> HybridSearch["Stage 1: BM25 + all-MiniLM-L6-v2 (Top 15 Candidate Pruning)"]
+        HybridSearch --> CrossEncoder["Stage 2: Cross-Encoder ms-marco Reranker"]
+        CrossEncoder --> Expansion["Stage 3: Adjacent Chunk Evidence Expansion"]
     end
 
-    subgraph FusionTier [Fusion & Synthesis Tier]
-        MetricComp --> Fusion[Fusion Layer\nClaim Extractor + Contradiction Engine]
+    subgraph FusionTier ["Fusion & Synthesis Tier"]
+        MetricComp --> Fusion["Fusion Layer (Claim Extractor + Contradiction Engine)"]
         Expansion --> Fusion
-        Fusion --> Diversity[Section Diversity Cap\nmax 2 chunks / section]
-        Diversity --> PromptBuild[Dynamic Prompt Builder\nToken Budget <= 80k chars]
-        PromptBuild --> LLM[LLM Synthesis Engine\nGroq Llama 3.1 / DeepSeek V3]
-        MetricComp -.-> Charts[Financial Chart Engine\nPlotly Interactive Visuals]
+        Fusion --> Diversity["Section Diversity Cap (max 2 chunks / section)"]
+        Diversity --> PromptBuild["Dynamic Prompt Builder (Token Budget <= 80k chars)"]
+        PromptBuild --> LLM["LLM Synthesis Engine (Groq Llama 3.1 / DeepSeek V3)"]
+        MetricComp -.-> Charts["Financial Chart Engine (Plotly Interactive Visuals)"]
     end
 
-    LLM --> Response[Verified Research Report with Sources & Citations]
+    LLM --> Response["Verified Research Report with Sources & Citations"]
     Charts --> Response
     Response --> UI
 ```
@@ -130,24 +130,24 @@ The platform provides a first-class **Model Context Protocol (FastMCP)** server 
 
 ```mermaid
 flowchart LR
-    Client[AI Assistant / Cursor / Claude Desktop / Antigravity] -- stdio or SSE :8100 --> MCP[FastMCP Financial-RAG Server]
+    Client["AI Assistant / Cursor / Claude Desktop / Antigravity"] -- stdio or SSE :8100 --> MCP["FastMCP Financial-RAG Server"]
     
-    subgraph Tools [Exposed MCP Tool Suite]
-        MCP --> T1[get_profit_loss & items]
-        MCP --> T2[get_balance_sheet & items]
-        MCP --> T3[get_cash_flow & items]
-        MCP --> T4[get_quarterly_results]
-        MCP --> T5[get_price & get_technicals]
-        MCP --> T6[get_shareholding & corporate_actions]
-        MCP --> T7[get_growth_metrics & eps_trend]
-        MCP --> T8[get_rbi_rates & macro_indicators]
-        MCP --> T9[get_live_market_data yfinance]
-        MCP --> T10[get_documents MinIO]
+    subgraph Tools ["Exposed MCP Tool Suite"]
+        MCP --> T1["get_profit_loss & items"]
+        MCP --> T2["get_balance_sheet & items"]
+        MCP --> T3["get_cash_flow & items"]
+        MCP --> T4["get_quarterly_results"]
+        MCP --> T5["get_price & get_technicals"]
+        MCP --> T6["get_shareholding & corporate_actions"]
+        MCP --> T7["get_growth_metrics & eps_trend"]
+        MCP --> T8["get_rbi_rates & macro_indicators"]
+        MCP --> T9["get_live_market_data (yfinance)"]
+        MCP --> T10["get_documents (MinIO)"]
     end
 
-    Tools --> Lambda[AWS Lambda REST API]
-    Tools --> YF[Yahoo Finance API]
-    Tools --> MinIO[MinIO Storage Bucket]
+    Tools --> Lambda["AWS Lambda REST API"]
+    Tools --> YF["Yahoo Finance API"]
+    Tools --> MinIO["MinIO Storage Bucket"]
 ```
 
 ### Transport Options:
