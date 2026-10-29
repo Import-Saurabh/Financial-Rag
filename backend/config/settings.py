@@ -1,17 +1,3 @@
-"""
-config/settings.py
-Central configuration for the Financial RAG system.
-
-Migration notes (v2):
-  - SQLite  → MySQL 8.0   (metadata store)
-  - MinIO               (PDF source — replaces screener_docs/ local dir)
-  - ChromaDB → Qdrant   (vector store)
-  - pdfplumber → Docling (PDF extraction)
-
-EMBEDDING_MODEL is still FinLang/finance-embeddings-investopedia (768-dim).
-If you change it, drop + recreate both Qdrant collections and re-ingest.
-"""
-
 import os
 from pathlib import Path
 
@@ -72,6 +58,15 @@ MINIO_SECURE     = os.getenv("MINIO_SECURE",     "false").lower() == "true"
 MINIO_BUCKET     = os.getenv("MINIO_BUCKET",     "quant-docs")
 
 
+# ─────────────────────────────────────────────
+# Quant / Financials Lambda API Base URL
+# ─────────────────────────────────────────────
+FINRAG_API_BASE = os.getenv(
+    "FINRAG_API_BASE",
+    "https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws"
+)
+
+
 
 
 # ─────────────────────────────────────────────
@@ -83,23 +78,6 @@ GROQ_FALLBACK_MODEL = "openai/gpt-oss-20b"
 GROQ_MAX_TOKENS     = 3000
 GROQ_TEMPERATURE    = 0.1
 
-
-
-# ─────────────────────────────────────────────
-# Embeddings
-# ─────────────────────────────────────────────
-# FinLang/finance-embeddings-investopedia → 768-dim vectors.
-EMBEDDING_MODEL      = "FinLang/finance-embeddings-investopedia"
-EMBEDDING_DIM        = 768
-EMBEDDING_BATCH_SIZE = 64
-
-
-# ─────────────────────────────────────────────
-# Re-ranker
-# ─────────────────────────────────────────────
-RERANKER_MODEL    = "rerank-2"                    # Voyage Rerank-2.5
-RERANKER_FALLBACK = "BAAI/bge-reranker-v2-m3"
-VOYAGE_API_KEY    = os.getenv("VOYAGE_API_KEY", "")
 
 
 # ─────────────────────────────────────────────
@@ -230,3 +208,12 @@ def classify_query_complexity(query: str) -> str:
     if any(s in query_lower for s in moderate_signals):
         return "moderate"
     return "simple"
+
+
+# ─────────────────────────────────────────────
+# WhatsApp Cloud API & Security Guardrails
+# ─────────────────────────────────────────────
+WHATSAPP_VERIFY_TOKEN      = os.getenv("WHATSAPP_VERIFY_TOKEN", "finrag_verify_token_2026")
+WHATSAPP_ACCESS_TOKEN      = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
+WHATSAPP_PHONE_NUMBER_ID   = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
+AUTHORIZED_WHATSAPP_NUMBER = os.getenv("AUTHORIZED_WHATSAPP_NUMBER", "")
