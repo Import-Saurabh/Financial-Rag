@@ -1,27 +1,37 @@
-# ── Scraper (already in repo) ──────────────────
-requests>=2.31.0
-beautifulsoup4>=4.12.0
-lxml>=5.0.0
-diskcache
-# ── PDF extraction ──────────────────────────────
-pdfplumber>=0.10.0
+# ── Web Framework & API Server ────────────────
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.0.0
+httpx>=0.25.0
+python-dotenv>=1.0.0
+
+# ── LLM & Agent Framework ─────────────────────
+groq>=0.9.0
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-groq>=0.1.0
+
+# ── Embeddings & ML Reranking ──────────────────
+sentence-transformers>=2.2.0
+scikit-learn>=1.2.0
+numpy>=1.24.0
 
 # ── Knowledge Base (OpenKB + PageIndex) ────────
 openkb
 
-# ── Visualization & Web ─────────────────────────
+# ── Scraper & Document Extraction ─────────────
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+diskcache
+pdfplumber>=0.10.0
+
+# ── Live Market Data & Visualization ──────────
+yfinance>=0.2.40
 plotly>=5.0.0
 pandas>=1.5.0
 streamlit>=1.20.0
 
-# ── Utilities ──────────────────────────────────
-numpy>=1.24.0
+# ── Storage & Database Utilities ──────────────
 minio
 mysql-connector-python
-
-# ── LangGraph Agent ────────────────────────────
-langgraph>=0.2.0
-langchain-core>=0.3.0
-
-# ── Live Market Data ───────────────────────────
-yfinance>=0.2.40
