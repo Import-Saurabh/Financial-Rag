@@ -5,17 +5,20 @@ import sys
 import asyncio
 import time
 from contextlib import asynccontextmanager
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Union
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-
+from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import json
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+
+
+
+
+
 
 class ChatMessage(BaseModel):
     role: str
@@ -30,11 +33,11 @@ class ChatCompletionRequest(BaseModel):
     year: Optional[int] = None
 
 
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import StreamingResponse
-from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict, Any, Union
-import json
+
+
+
+
+
 
 try:
     import httpx as _httpx  # optional, used only by /providers/validate
@@ -106,6 +109,24 @@ async def lifespan(app: FastAPI):
 
     # Reranker removed (relies on OpenKB)
 
+    # ── Pre-warm OpenKB FinancialRetriever (embeddings & index) ─────────────────
+    try:
+        from rag.retriever_openkb import FinancialRetriever
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, FinancialRetriever)
+        log.info("[server] FinancialRetriever (OpenKB embeddings & index) pre-warmed OK")
+    except Exception as e:
+        log.warning(f"[server] FinancialRetriever pre-warm failed: {e}")
+
+    # ── Pre-warm LangGraph ReAct agent ──────────────────────────────────────────
+    try:
+        from agent.graph import get_agent_graph
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, get_agent_graph)
+        log.info("[server] LangGraph ReAct agent pre-warmed OK")
+    except Exception as e:
+        log.warning(f"[server] ReAct agent pre-warm skipped/failed: {e}")
+
     # Warm the synthesis pipeline (decomposer + MySQL SchemaBridge + fusion).
     # This is the atomic/SQL pipeline. It's optional at runtime (rag_engine.py
     # degrades to vector-only if it's unavailable), but we still probe it here
@@ -157,6 +178,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="FinRAG Server", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_credentials=True, allow_methods=['*'], allow_headers=['*'])
+
+# ── WhatsApp Cloud API Webhook Integration ──────────────────────────────────
+try:
+    from whatsapp.webhook import router as whatsapp_router
+    app.include_router(whatsapp_router)
+    log.info("[server] WhatsApp webhook router mounted at /webhook/whatsapp")
+except Exception as _wa_err:
+    log.warning(f"[server] WhatsApp router could not be mounted: {_wa_err}")
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
