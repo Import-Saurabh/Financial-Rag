@@ -23,7 +23,11 @@ from utils.logger import get_logger
 log = get_logger(__name__)
 
 # ─── API base URL (FastAPI backend) ───────────────────────────────────────────
-API_BASE = "https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws"
+try:
+    from config.settings import FINRAG_API_BASE
+    API_BASE = FINRAG_API_BASE
+except ImportError:
+    API_BASE = "https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Table → API endpoint mapping

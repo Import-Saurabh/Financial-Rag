@@ -63,7 +63,11 @@ except ModuleNotFoundError:
 import os
 import httpx
 
-API_BASE = "https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws"
+try:
+    from config.settings import FINRAG_API_BASE
+    API_BASE = FINRAG_API_BASE
+except ImportError:
+    API_BASE = "https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws"
 
 _API_REACHABLE_CACHE: Optional[bool] = None
 _API_REACHABLE_CHECKED_AT: float = 0.0
