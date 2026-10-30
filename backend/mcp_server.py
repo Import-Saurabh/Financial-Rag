@@ -14,7 +14,11 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 # ── Configuration ────────────────────────────────────────────────────────────
-API_BASE = "https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws"
+try:
+    from config.settings import FINRAG_API_BASE
+    API_BASE = FINRAG_API_BASE
+except ImportError:
+    API_BASE = "https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws"
 logger = logging.getLogger("mcp-financial-rag")
 
 # ── MCP App ──────────────────────────────────────────────────────────────────
