@@ -30,7 +30,12 @@ class EntityRegistry:
             os.path.dirname(os.path.dirname(__file__)),
             "data", "openkb_wiki", "wiki"
         )
-        self.api_url = "https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws/api/v1/stocks"
+        try:
+            from config.settings import FINRAG_API_BASE
+        except ImportError:
+            FINRAG_API_BASE = "https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws"
+
+        self.api_url = f"{FINRAG_API_BASE.rstrip('/')}/api/v1/stocks"
         self._update_lock = threading.Lock()
 
     def _clean_name(self, name: str) -> str:
