@@ -32,6 +32,11 @@ async def verify_webhook(
     Verification challenge endpoint for Meta WhatsApp Cloud API.
     Configured in the Meta App Dashboard under WhatsApp > Configuration > Callback URL.
     """
+    if not WHATSAPP_VERIFY_TOKEN:
+        log.warning(
+            "[whatsapp-webhook] WHATSAPP_VERIFY_TOKEN is not configured in .env; "
+            "falling back to default 'finrag_verify_token_2026'."
+        )
     token = WHATSAPP_VERIFY_TOKEN or "finrag_verify_token_2026"
 
     if hub_mode == "subscribe" and hub_verify_token == token:
