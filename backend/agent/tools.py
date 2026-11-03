@@ -121,10 +121,10 @@ def search_company_documents(symbols: List[str], query: str) -> str:
         retriever = FinancialRetriever()
         target_sections = get_target_sections(query)
         
-        # Retrieve chunks (request up to 20 to have candidates)
+        # Retrieve top 5 high-precision chunks (evidence expansion returns up to 10 context-rich excerpts)
         chunks = retriever.retrieve(
             question=query, 
-            top_k=20, 
+            top_k=5, 
             symbol_filter=symbols if symbols else None,
             section_filter=target_sections
         )

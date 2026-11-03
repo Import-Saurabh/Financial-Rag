@@ -127,6 +127,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.warning(f"[server] ReAct agent pre-warm skipped/failed: {e}")
 
+    # ── Pre-warm Fast Parallel RAG Pipeline ─────────────────────────────────────
+    try:
+        from rag.fast_pipeline import get_fast_rag_pipeline
+        get_fast_rag_pipeline()
+        log.info("[server] FastRAGPipeline (Parallel Scatter-Gather) pre-warmed OK")
+    except Exception as e:
+        log.warning(f"[server] FastRAGPipeline pre-warm failed: {e}")
+
     # Warm the synthesis pipeline (decomposer + MySQL SchemaBridge + fusion).
     # This is the atomic/SQL pipeline. It's optional at runtime (rag_engine.py
     # degrades to vector-only if it's unavailable), but we still probe it here
@@ -353,7 +361,20 @@ async def _run_query(req: QueryRequest) -> dict:
     FastAPI worker threads during long LLM generations.
     """
 
-    # ── Try Tool-Calling ReAct Agent first ────────────────────────────────────
+    # ── 1. Fast Parallel RAG (Sub-3s Latency) ─────────────────────────────────
+    try:
+        from rag.fast_pipeline import get_fast_rag_pipeline
+        fast_rag = get_fast_rag_pipeline()
+        return await fast_rag.execute_query(
+            query=req.query,
+            symbol=req.symbol,
+            doc_type=req.doc_type,
+            year=req.year,
+        )
+    except Exception as e:
+        log.warning(f"[server] Fast parallel pipeline error: {e}; falling back to ReAct agent", exc_info=True)
+
+    # ── 2. Fallback to Tool-Calling ReAct Agent ──────────────────────────────
     try:
         from agent.graph import get_agent_graph
 
