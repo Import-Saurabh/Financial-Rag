@@ -152,10 +152,46 @@ class FinancialRetriever:
             self.embeddings = _GLOBAL_EMBEDDINGS_CACHE.get(cache_key)
             self._idf_table = _GLOBAL_INDEX_CACHE.get(cache_key + "_idf", {})
         else:
-            self.index = []
-            self.embeddings = None
-            self._idf_table = {}
-            self._build_index()
+            # Check disk cache first to avoid 30s re-encoding on startup
+            import pickle
+            disk_cache_dir = self.wiki_dir / ".cache"
+            emb_file = disk_cache_dir / "embeddings.npy"
+            idx_file = disk_cache_dir / "index.pkl"
+            idf_file = disk_cache_dir / "idf.pkl"
+
+            if emb_file.exists() and idx_file.exists():
+                try:
+                    with open(idx_file, "rb") as f:
+                        self.index = pickle.load(f)
+                    self.embeddings = np.load(emb_file)
+                    self._idf_table = {}
+                    if idf_file.exists():
+                        with open(idf_file, "rb") as f:
+                            self._idf_table = pickle.load(f)
+                    log.info(f"[OpenKB] Loaded {len(self.index)} chunks from disk cache in <10ms")
+                except Exception as e:
+                    log.warning(f"[OpenKB] Failed to load disk cache ({e}), rebuilding index...")
+                    self.index = []
+                    self.embeddings = None
+                    self._idf_table = {}
+                    self._build_index()
+            else:
+                self.index = []
+                self.embeddings = None
+                self._idf_table = {}
+                self._build_index()
+                try:
+                    disk_cache_dir.mkdir(parents=True, exist_ok=True)
+                    with open(idx_file, "wb") as f:
+                        pickle.dump(self.index, f)
+                    if self.embeddings is not None:
+                        np.save(emb_file, self.embeddings)
+                    with open(idf_file, "wb") as f:
+                        pickle.dump(self._idf_table, f)
+                    log.info(f"[OpenKB] Saved {len(self.index)} chunks & embeddings to disk cache ({disk_cache_dir})")
+                except Exception as e:
+                    log.warning(f"[OpenKB] Failed to save disk cache: {e}")
+
             _GLOBAL_INDEX_CACHE[cache_key] = self.index
             _GLOBAL_EMBEDDINGS_CACHE[cache_key] = self.embeddings
             _GLOBAL_INDEX_CACHE[cache_key + "_idf"] = getattr(self, '_idf_table', {})
@@ -376,13 +412,15 @@ class FinancialRetriever:
                 importance_score=float(final_score)
             ))
                 
-        # Stage 1: Sort by Hybrid Score and take top 15 candidates for re-ranking
+        # Stage 1: Sort by Hybrid Score and select top candidates for fast re-ranking
         results.sort(key=lambda x: x.importance_score, reverse=True)
-        candidates = results[:15]
+        rerank_k = min(len(results), max(top_k + 2, 7))
+        candidates = results[:rerank_k]
         
         # Stage 2: Cross-Encoder Re-ranking (High Precision)
         if candidates and hasattr(self, 'reranker') and self.reranker is not None:
-            pairs = [[question, chunk.text] for chunk in candidates]
+            # Truncate candidate text to first 512 characters to minimize CrossEncoder forward-pass latency
+            pairs = [[question, chunk.text[:512]] for chunk in candidates]
             try:
                 rerank_scores = self.reranker.predict(pairs)
                 for chunk, r_score in zip(candidates, rerank_scores):
