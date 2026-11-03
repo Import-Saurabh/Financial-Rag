@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional, List
 from groq import AsyncGroq
 from config.settings import GROQ_API_KEY
 from agent.tools import get_financial_data, search_company_documents, get_live_price
-from agent.entity_registry import resolve_entity
+from agent.entity_registry import resolve_entity, aresolve_entity
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class FastRAGPipeline:
         company_name = ticker or "the company"
         if not ticker:
             try:
-                resolved = resolve_entity(query)
+                resolved = await aresolve_entity(query)
                 if resolved:
                     ticker, company_name = resolved
             except Exception as e:

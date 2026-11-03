@@ -8,11 +8,11 @@ from typing import List, Dict, Optional, Set, Any
 import numpy as np
 
 try:
-    from sentence_transformers import SentenceTransformer, CrossEncoder
+    from sentence_transformers import SentenceTransformer
     from sklearn.metrics.pairwise import cosine_similarity
 except ImportError:
     SentenceTransformer = None
-    CrossEncoder = None
+    cosine_similarity = None
 
 log = logging.getLogger(__name__)
 
@@ -140,12 +140,7 @@ class FinancialRetriever:
             log.info("Loading SentenceTransformer model for dense retrieval...")
             _MODEL_CACHE['encoder'] = SentenceTransformer('all-MiniLM-L6-v2')
             
-        if 'reranker' not in _MODEL_CACHE and CrossEncoder is not None:
-            log.info("Loading CrossEncoder for reranking...")
-            _MODEL_CACHE['reranker'] = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
-            
         self.encoder = _MODEL_CACHE.get('encoder')
-        self.reranker = _MODEL_CACHE.get('reranker')
         
         if cache_key in _GLOBAL_INDEX_CACHE:
             self.index = _GLOBAL_INDEX_CACHE[cache_key]
@@ -412,25 +407,10 @@ class FinancialRetriever:
                 importance_score=float(final_score)
             ))
                 
-        # Stage 1: Sort by Hybrid Score and select top candidates for fast re-ranking
+        # Direct PageIndex-style Hybrid Ranking (Dense Semantic Vector + Sparse BM25)
+        # Eliminates expensive CrossEncoder passes for instant (~30ms) candidate selection
         results.sort(key=lambda x: x.importance_score, reverse=True)
-        rerank_k = min(len(results), max(top_k + 2, 7))
-        candidates = results[:rerank_k]
-        
-        # Stage 2: Cross-Encoder Re-ranking (High Precision)
-        if candidates and hasattr(self, 'reranker') and self.reranker is not None:
-            # Truncate candidate text to first 512 characters to minimize CrossEncoder forward-pass latency
-            pairs = [[question, chunk.text[:512]] for chunk in candidates]
-            try:
-                rerank_scores = self.reranker.predict(pairs)
-                for chunk, r_score in zip(candidates, rerank_scores):
-                    chunk.importance_score = float(r_score) + (chunk.importance_score * 0.1)
-                
-                candidates.sort(key=lambda x: x.importance_score, reverse=True)
-            except Exception as e:
-                log.error(f"CrossEncoder reranking failed: {e}")
-                
-        top_candidates = candidates[:top_k]
+        top_candidates = results[:top_k]
         
         # Stage 3: Evidence Expansion (fetch adjacent chunks to capture cross-page tables)
         expanded_results = []
