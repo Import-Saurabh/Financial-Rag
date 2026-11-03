@@ -1,6 +1,6 @@
 ---
 type: "Concept"
-sources: ["summaries/2026_Annual_Report_2026_part11.md"]
+sources: ["summaries/2026_Aug_2026_Transcript.md", "summaries/2026_Annual_Report_2026_part11.md"]
 description: "How a company manages its capital structure, debt-equity mix, and shareholder value objectives."
 ---
 
@@ -42,3 +42,6 @@ The disclosures in [[summaries/2026_Annual_Report_2026_part11]] show the capital
 - [[concepts/earnings-per-share]]
 - [[concepts/leases]]
 - [[concepts/consolidated-financial-statements]]
+
+
+See also: [[summaries/2026_Aug_2026_Transcript]]

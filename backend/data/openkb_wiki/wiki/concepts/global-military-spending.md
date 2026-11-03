@@ -1,6 +1,6 @@
 ---
 type: "Concept"
-sources: ["summaries/2026_Annual_Report_2026_part3.md", "summaries/2026_Annual_Report_2026_part2.md", "summaries/2026_Annual_Report_2026_part1.md"]
+sources: ["summaries/2026_Aug_2026_Transcript.md", "summaries/2026_Annual_Report_2026_part3.md", "summaries/2026_Annual_Report_2026_part2.md", "summaries/2026_Annual_Report_2026_part1.md"]
 description: "Global defence expenditure trends, drivers and their implications for defence firms such as Apollo Micro Systems."
 ---
 
@@ -83,3 +83,5 @@ This concept is derived from the Management Discussion and Analysis section of [
 See also: [[summaries/2026_Annual_Report_2026_part2]]
 
 See also: [[summaries/2026_Annual_Report_2026_part3]]
+
+See also: [[summaries/2026_Aug_2026_Transcript]]

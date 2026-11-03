@@ -1,6 +1,6 @@
 ---
 type: "Concept"
-sources: ["summaries/2026_Annual_Report_2026_part11.md"]
+sources: ["summaries/2026_Aug_2026_Transcript.md", "summaries/2026_Annual_Report_2026_part11.md"]
 description: "How the Apollo Micro Systems group identifies, measures and manages market, credit and liquidity risks."
 ---
 
@@ -78,3 +78,6 @@ Financial risk management is closely tied to [[concepts/capital-management]]. As
 - [[concepts/financial-ratios]]
 - [[concepts/credit-rating]]
 - [[entities/apollo_micro_systems_limited]]
+
+
+See also: [[summaries/2026_Aug_2026_Transcript]]

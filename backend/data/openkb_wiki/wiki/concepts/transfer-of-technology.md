@@ -1,6 +1,6 @@
 ---
 type: "Concept"
-sources: ["summaries/2026_Annual_Report_2026_part4.md", "summaries/2026_Annual_Report_2026_part3.md", "summaries/2026_Annual_Report_2026_part2.md", "summaries/2026_Annual_Report_2026_part1.md"]
+sources: ["summaries/2026_Aug_2026_Transcript.md", "summaries/2026_Annual_Report_2026_part4.md", "summaries/2026_Annual_Report_2026_part3.md", "summaries/2026_Annual_Report_2026_part2.md", "summaries/2026_Annual_Report_2026_part1.md"]
 description: "How defence technology transfer becomes production through industrialisation capability."
 ---
 
@@ -89,3 +89,5 @@ The competitive consequence is that ToT receipt is becoming commoditised, while 
 See also: [[summaries/2026_Annual_Report_2026_part3]]
 
 See also: [[summaries/2026_Annual_Report_2026_part4]]
+
+See also: [[summaries/2026_Aug_2026_Transcript]]

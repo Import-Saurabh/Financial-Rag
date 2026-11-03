@@ -1,5 +1,5 @@
 ---
-sources: ["summaries/2026_Annual_Report_2026_part8.md", "summaries/2026_Annual_Report_2026_part7.md", "summaries/2026_Annual_Report_2026_part6.md", "summaries/2026_Annual_Report_2026_part5.md"]
+sources: ["summaries/2026_Aug_2026_Transcript.md", "summaries/2026_Annual_Report_2026_part8.md", "summaries/2026_Annual_Report_2026_part7.md", "summaries/2026_Annual_Report_2026_part6.md", "summaries/2026_Annual_Report_2026_part5.md"]
 type: "Organization"
 description: "Indian stock exchange where Apollo Micro Systems is listed; fined the company ₹88,500."
 ---
@@ -34,3 +34,5 @@ See also: [[summaries/2026_Annual_Report_2026_part6]]
 See also: [[summaries/2026_Annual_Report_2026_part7]]
 
 See also: [[summaries/2026_Annual_Report_2026_part8]]
+
+See also: [[summaries/2026_Aug_2026_Transcript]]

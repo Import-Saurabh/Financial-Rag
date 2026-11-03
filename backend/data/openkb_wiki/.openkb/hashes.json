@@ -110,5 +110,13 @@
     "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2026_Annual_Report_2026_chunks/2026_Annual_Report_2026_part11.pdf",
     "raw_path": "raw/2026_Annual_Report_2026_part11.pdf",
     "source_path": "wiki/sources/2026_Annual_Report_2026_part11.md"
+  },
+  "47c002e83ed209411a5824873274a6b851d6de7c3581d139798f3d2c395309ee": {
+    "name": "2026_Aug_2026_Transcript.pdf",
+    "doc_name": "2026_Aug_2026_Transcript",
+    "type": "pdf",
+    "path": "C:/Users/hp/AppData/Local/Temp/finrag_ingest/2026_Aug_2026_Transcript.pdf",
+    "raw_path": "raw/2026_Aug_2026_Transcript.pdf",
+    "source_path": "wiki/sources/2026_Aug_2026_Transcript.md"
   }
 }

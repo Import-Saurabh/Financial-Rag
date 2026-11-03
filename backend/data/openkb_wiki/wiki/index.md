@@ -1,6 +1,7 @@
 # Knowledge Base Index
 
 ## Documents
+- [[summaries/2026_Aug_2026_Transcript]] (short) — Q1 FY27 earnings call: record INR360.7 cr revenue, INR5,143 cr order book, 80% growth guidance
 - [[summaries/2026_Annual_Report_2026_part11]] (short) — Consolidated financial statement notes: employee benefits, leases, EPS, risk, and IDL acquisition.
 - [[summaries/2026_Annual_Report_2026_part10]] (short) — Consolidated financial statement notes of Apollo Micro Systems Limited for FY 2025-26.
 - [[summaries/2026_Annual_Report_2026_part9]] (short) — Auditor's report and consolidated financial statements of Apollo Micro Systems for FY2025-26, including key audit matters and accounting policies.
@@ -17,6 +18,9 @@
 - [[summaries/2025_Financial_Year_2025_from_bse_part1]] (pageindex) — This document is the 2024-25 Annual Report and Notice of the 28th Annual General Meeting for Apollo Micro Systems Limited, detailing the company's financial performance, strategic expansion in the defence and aerospace sectors, corporate governance, and statutory reports.
 
 ## Concepts
+- [[concepts/order-book-and-revenue-visibility]] — How order backlog and intake translate into revenue visibility, execution timing and growth guidance.
+- [[concepts/clean-energy-and-fuel-cells]] — MTAR's clean energy vertical: fuel cell hot boxes, capacity phases, and diversifying products.
+- [[concepts/civil-nuclear-power]] — India's PHWR/fast-breeder reactor build-out and the supplier opportunity it creates for precision manufacturers
 - [[concepts/capital-management]] — How a company manages its capital structure, debt-equity mix, and shareholder value objectives.
 - [[concepts/msmed-supplier-disclosures]] — Disclosures under the MSMED Act, 2006 on amounts due to registered micro and small suppliers.
 - [[concepts/financial-risk-management]] — How the Apollo Micro Systems group identifies, measures and manages market, credit and liquidity risks.
@@ -24,14 +28,14 @@
 - [[concepts/segment-reporting]] — How an entity discloses operating segments under Ind AS 108, including single-segment determination and revenue disaggregation.
 - [[concepts/provisions-and-contingent-liabilities]] — Accounting for provisions, contingent liabilities and contingent assets, and related disclosures under Ind AS 37.
 - [[concepts/goodwill]] — Accounting for goodwill in business combinations, including provisional IDL Explosives goodwill.
-- [[concepts/capital-work-in-progress]] — Capital expenditure on assets under construction, not yet ready for use, transferred to PPE once capitalised.
+- [[concepts/capital-work-in-progress]] — Capital expenditure on assets not yet ready for use, its movement, ageing, audit and real-world capitalisation cases.
 - [[concepts/consolidated-financial-statements]] — Financial statements of a parent and its subsidiaries presented as a single economic entity under Ind AS.
 - [[concepts/financial-ratios]] — Liquidity, solvency, profitability and efficiency ratios computed from financial statements.
 - [[concepts/earnings-per-share]] — Earnings per share — basic and diluted EPS computation, disclosure, and interpretation for Apollo Micro Systems.
 - [[concepts/employee-benefits]] — Employee benefits at Apollo Micro Systems: expense, provisions, gratuity plan and compensated absences.
 - [[concepts/leases]] — Accounting for leases under Ind AS 116, with Apollo Micro Systems' ROU assets and lease liabilities disclosures.
 - [[concepts/deferred-tax]] — Accounting for deferred tax assets and liabilities from temporary differences under Ind AS 12.
-- [[concepts/property-plant-and-equipment]] — Tangible assets held for use, measured at cost less depreciation and impairment under Ind AS 16.
+- [[concepts/property-plant-and-equipment]] — Tangible fixed assets used in operations, measured at cost less depreciation and impairment under Ind AS 16.
 - [[concepts/financial-instruments]] — Recognition, classification, measurement, impairment, and risk disclosure of financial instruments, with FY26 standalone and consolidated data.
 - [[concepts/revenue-recognition]] — How Ind AS 115 governs when and how much revenue is recognised by Apollo Micro Systems Limited and its Group.
 - [[concepts/audit-trail-rule-11g]] — Rule 11(g) audit-trail reporting, its requirements and Apollo Micro Systems' FY 2025-26 compliance.
@@ -54,9 +58,9 @@
 - [[concepts/underwater-warfare]] — Underwater warfare — naval mines, torpedoes, ASW weapons and subsea electronics developed for the Indian Navy.
 - [[concepts/counter-drone-systems]] — Layered detect-to-defeat defence against hostile drones and unmanned aerial threats.
 - [[concepts/defence-energetics]] — High explosives, propellants, warheads and fuzes that give weapon platforms their lethal effect.
-- [[concepts/tier_1_defense_oem_integration]] — How tier-1 subsystem and electronics suppliers graduate into prime defense OEMs and platform integrators.
+- [[concepts/tier_1_defense_oem_integration]] — How subsystem and precision suppliers integrate into defense OEMs and platform programmes.
 - [[concepts/defense_indigenization]] — India's strategic push to design, develop and manufacture defense systems domestically.
-- [[concepts/defense-program-supply-chains]] — The network of primes, development partners, and subsystem suppliers delivering India's defense programs
+- [[concepts/defense-program-supply-chains]] — How primes, DRDO, DPSUs and private subsystem and precision suppliers jointly deliver defense programs.
 - [[concepts/defense-exports-and-global-market-entry]] — How India's defense suppliers turn indigenous capability into global export revenue.
 - [[concepts/corporate-social-responsibility]] — Apollo Micro Systems' Section 135 CSR obligations, governance, spending and set-off disclosures
 - [[concepts/corporate-governance-and-compliance]] — Governance framework, statutory compliance, audit oversight and reporting of Apollo Micro Systems Limited
@@ -64,6 +68,14 @@
 - [[concepts/concepts-defense_indigenization]] — Analysis of India's defence indigenization and self-reliance initiatives in FY 2024-25.
 
 ## Entities
+- [[entities/lca-tejas]] (product) — India's indigenous light combat aircraft; MTAR supplies actuator assemblies for the Mark-1A variant.
+- [[entities/mahi-banswara]] (other) — Four-reactor 700 MW nuclear project of NTPC-NPCIL seen as a major MTAR opportunity via EPC vendors.
+- [[entities/pfbr]] (other) — India's Prototype Fast Breeder Reactor, which achieved criticality in 2026 with MTAR-supplied critical assemblies.
+- [[entities/npcil]] (organization) — India's state-owned nuclear power operator; anchor customer for MTAR's civil nuclear orders
+- [[entities/priyanka-agarwal]] (person) — Company Secretary and Compliance Officer of MTAR Technologies who filed the Q1 FY27 earnings call transcript with BSE and NSE.
+- [[entities/srilekha-jasthi]] (person) — Head of Strategy and Investor Relations at MTAR Technologies, on the Q1 FY27 earnings call panel.
+- [[entities/gunneswara-rao]] (person) — Chief Financial Officer of MTAR Technologies, presenter of Q1 FY27 financials and balance-sheet strategy.
+- [[entities/srinivas-reddy]] (person) — Managing Director and Promoter of MTAR Technologies who led the Q1 FY27 earnings call on 30 July 2026.
 - [[entities/venkata_subbarao_gupta_batchu]] (person) — Director and key management personnel of Apollo Micro Systems Limited, a related party with loan balances disclosed.
 - [[entities/satyanarayana_batchu]] (person) — Director and Key Management Personnel of Apollo Micro Systems Limited per FY 2025-26 related party disclosures.
 - [[entities/revx_capital_fund_ii]] (organization) — Debenture holder that subscribed to Apollo Micro Systems' 15% non-convertible debentures, fully redeemed by March 2026.

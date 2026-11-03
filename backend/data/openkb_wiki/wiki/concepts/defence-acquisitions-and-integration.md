@@ -1,6 +1,6 @@
 ---
 type: "Concept"
-sources: ["summaries/2026_Annual_Report_2026_part6.md", "summaries/2026_Annual_Report_2026_part4.md", "summaries/2026_Annual_Report_2026_part3.md"]
+sources: ["summaries/2026_Aug_2026_Transcript.md", "summaries/2026_Annual_Report_2026_part6.md", "summaries/2026_Annual_Report_2026_part4.md", "summaries/2026_Annual_Report_2026_part3.md"]
 description: "How defence firms acquire and integrate complementary capabilities to become prime contractors."
 ---
 
@@ -93,3 +93,5 @@ Flagship integrated products include the [[entities/mini_torpedo]] and the [[ent
 Drawn primarily from [[summaries/2026_Annual_Report_2026_part3]].
 
 See also: [[summaries/2026_Annual_Report_2026_part4]], [[summaries/2026_Annual_Report_2026_part6]]
+
+See also: [[summaries/2026_Aug_2026_Transcript]]

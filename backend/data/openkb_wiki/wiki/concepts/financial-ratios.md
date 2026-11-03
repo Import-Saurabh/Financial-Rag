@@ -1,6 +1,6 @@
 ---
 type: "Concept"
-sources: ["summaries/2026_Annual_Report_2026_part11.md", "summaries/2026_Annual_Report_2026_part8.md"]
+sources: ["summaries/2026_Aug_2026_Transcript.md", "summaries/2026_Annual_Report_2026_part11.md", "summaries/2026_Annual_Report_2026_part8.md"]
 description: "Liquidity, solvency, profitability and efficiency ratios computed from financial statements."
 ---
 
@@ -89,3 +89,5 @@ Ratio analysis draws directly on the underlying notes:
 - Returns to shareholders are also expressed through per-share metrics — see [[concepts/earnings-per-share]].
 
 Ratio analysis forms part of the broader [[concepts/financial-ratios]] disclosure framework and supports corporate governance and compliance reporting — see [[concepts/corporate-governance-and-compliance]]. Related statutory disclosures in the same notes include supplier payment metrics such as those covered under [[concepts/msmed-supplier-disclosures]].
+
+See also: [[summaries/2026_Aug_2026_Transcript]]

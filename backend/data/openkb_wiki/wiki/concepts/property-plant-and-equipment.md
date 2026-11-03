@@ -1,17 +1,19 @@
 ---
 type: "Concept"
-sources: ["summaries/2026_Annual_Report_2026_part10.md", "summaries/2026_Annual_Report_2026_part9.md", "summaries/2026_Annual_Report_2026_part8.md", "summaries/2026_Annual_Report_2026_part7.md"]
-description: "Tangible assets held for use, measured at cost less depreciation and impairment under Ind AS 16."
+sources: ["summaries/2026_Aug_2026_Transcript.md", "summaries/2026_Annual_Report_2026_part10.md", "summaries/2026_Annual_Report_2026_part9.md", "summaries/2026_Annual_Report_2026_part8.md", "summaries/2026_Annual_Report_2026_part7.md"]
+description: "Tangible fixed assets used in operations, measured at cost less depreciation and impairment under Ind AS 16."
 ---
 
 # Property, Plant and Equipment
 
 **Property, Plant and Equipment (PPE)** are tangible items held by an entity for use in the production or supply of goods or services, for rental to others, or for administrative purposes, and that are expected to be used during more than one period. Under Ind AS 16, they are recognised at cost less accumulated depreciation and accumulated impairment losses.
 
+PPE is the balance sheet expression of a manufacturer's capacity: the size, composition and commissioning timing of the gross block determines the revenue ceiling, the depreciation charge that sits in the cost base, and the collateral available to lenders. Across the documents in this wiki, PPE is observed in two complementary ways — as a set of accounting policies and disclosure requirements (principally from the Apollo Micro Systems Limited annual report), and as a live capital expenditure programme that converts order-book visibility into installed capacity (principally from the [[entities/mtar-technologies]] earnings call).
+
 ## Measurement Basis
 
 - **Initial recognition at cost**: purchase price including import duties and non-refundable purchase taxes, plus directly attributable costs of bringing the asset to working condition and location for intended use (including eligible borrowing costs under Ind AS 23 and expected decommissioning costs).
-- **Subsequent measurement**: cost less accumulated depreciation and accumulated impairment losses. The Company does not revalue PPE.
+- **Subsequent measurement**: cost less accumulated depreciation and accumulated impairment losses. The entities covered here do not revalue PPE.
 - **Freehold land** is carried at historical cost less impairment and is not depreciated.
 - **Componentisation**: where significant parts of an item have different useful lives, they are accounted for as separate major components.
 - **Spare parts and stand-by equipment** are classified as PPE when they meet the Ind AS 16 definition.
@@ -19,6 +21,8 @@ description: "Tangible assets held for use, measured at cost less depreciation a
 - **Decommissioning/restoration costs** are included in initial cost where applicable.
 
 These accounting policies (Ind AS 16 recognition and measurement) are applied consistently across the Group in the consolidated financial statements.
+
+The capitalisation boundary — what qualifies as an asset versus what is a period cost — is the single most judgemental area in PPE accounting, and it is precisely the boundary that management and auditors debate when capital work-in-progress accumulates (see below).
 
 ## Depreciation
 
@@ -44,6 +48,8 @@ At the consolidated level, total **depreciation and amortisation expense for FY 
 
 The consolidated depreciation charge on PPE for FY 2025-26 by class was: buildings ₹76.45 lakhs, plant and machinery ₹172.79 lakhs, testing tools and instruments ₹1,455.31 lakhs, computers ₹28.73 lakhs, office equipment ₹14.59 lakhs, furniture and fixtures ₹9.49 lakhs, and vehicles ₹63.88 lakhs.
 
+Because depreciation is a fixed-cost allocation, the ratio of depreciation to revenue falls sharply when a large new block is commissioned into a high-growth revenue base — a mechanical contributor to operating leverage distinct from pricing or mix, and a reason why gross block additions are watched as a leading indicator of future margin structure.
+
 ## Capital Work-in-Progress (CWIP) and Capital Advances
 
 - CWIP comprises tangible assets under construction or development not yet ready for intended use, carried at cost including directly attributable acquisition/construction costs, eligible borrowing costs under Ind AS 23, and other directly attributable expenses.
@@ -51,7 +57,7 @@ The consolidated depreciation charge on PPE for FY 2025-26 by class was: buildin
 - Advances paid towards acquisition of PPE outstanding at the reporting date are disclosed as **capital advances** under other non-current assets (₹1,682.57 lakhs at 31 March 2026; ₹830.87 lakhs at 31 March 2025, on a consolidated basis).
 - CWIP ageing schedules disclose the maturity profile of amounts capitalised.
 
-Capital work-in-progress is treated as a [[concepts/capital-work-in-progress]] matter in its own right and is a recurring focus of audit attention.
+Capital work-in-progress is treated as a [[concepts/capital-work-in-progress]] matter in its own right and is a recurring focus of audit attention. The **capitalisation event** — the point at which CWIP is transferred to PPE and depreciation begins — is also a disclosure and earnings event that management can time within the limits of technical readiness; in the MTAR case below, a sizeable block moved from capital work-in-progress into fixed assets in a single quarter.
 
 ## Impairment
 
@@ -134,6 +140,25 @@ Management applied judgement to assess whether certain specific costs of **₹7,
 - Consolidated finance costs for FY 2025-26 were ₹4,732.37 lakhs (FY 2024-25: ₹3,421.58 lakhs), including interest on working capital loans of ₹3,101.83 lakhs and interest on debentures of ₹744.78 lakhs.
 - Consolidated employee benefits expense was ₹3,718.01 lakhs, including gratuity and other retirement obligations disclosed under [[concepts/employee-benefits]].
 
+## Capacity Build-Out in Practice: The MTAR Technologies Capex Programme
+
+The Q1 FY27 earnings call of [[entities/mtar-technologies]] (see [[summaries/2026_Aug_2026_Transcript]]) provides a live, forward-looking counterpart to the historical PPE disclosures above: what a precision-engineering company does with its balance sheet when order visibility arrives faster than installed capacity.
+
+**Programme size and phasing.** Total planned capex is approximately **₹500 crore across FY27 and FY28**, allocated roughly **70% to clean energy and 30% to the other verticals** (nuclear, aerospace and defence, oil and gas, data centre infrastructure), with the CFO noting that clean-energy assets can be *fungible* into other sectors. The spend is explicitly not confined to one financial year and spills into the first one or two quarters of FY28. In Q1 FY27 itself, cash capex of only **₹30–35 crore** was incurred, while about **₹80 crore** was *capitalised* — a conversion of previously accumulated capital work-in-progress into property, plant and equipment, not new cash outlay. This is precisely the CWIP-to-PPE transfer described in the accounting section above, and it marks the start of the associated depreciation charge.
+
+**What is being built.** The programme is a portfolio of dedicated, customer-specific facilities rather than a single general-purpose plant:
+
+- **Fuel cell capacity**, added in three phases — Phase 1 already commissioned, Phase 2 commissioning by September–October 2026, and Phase 3 a *multifold* expansion commissioning by **March 2027**, with volume ramp-up from April 2027. The Phase 3 scale is undisclosed under an NDA. The facility design supports multiple products under one roof, for scale and operational efficiency.
+- **A dedicated data centre infrastructure facility**, built against a first order of about ₹45 crore that management expects to execute by February–March 2027, with the customer indicating a requirement of up to eight such sets per year.
+- **The oil and gas facility**, becoming operational by **October 2026**, with first articles already delivered to one customer.
+- **Multiple sub-units inside the existing dedicated aerospace facility**, plus a NADCAP-approved special processes facility, built to support volume ramp-ups on already-qualified aerospace products.
+
+**Operational readiness, not just bricks.** Management stressed that expansion is not limited to adding physical capacity: manpower training and automation initiatives are being run *ahead of* capacity coming on stream, because an asset that is commissioned without trained operators and stable processes does not generate the revenue the business case assumed. This is the practical bridge between the accounting definition of "available for use" and the commercial definition of a productive asset.
+
+**Asset turnover as the discipline.** The stated test of the programme is asset productivity — a target of at least **4–5x asset turnover overall and around 6x on incremental capex**. That framing turns PPE from a disclosure item into a capital-allocation constraint: a ₹500 crore gross block must eventually support revenue of a magnitude that justifies the depreciation and the financing cost embedded in it.
+
+**Funding and security.** The programme is to be funded by **a combination of internal accruals and debt**, with inorganic working-capital solutions rejected where they would erode margins. On the balance sheet at 30 June 2026, gross debt was **₹423.6 crore against ₹379 crore of investments** (as of July 2026), implying effective net debt of only ₹20–30 crore. Interest cost for the quarter was ₹16 crore, expected to trend down quarter-on-quarter — an outcome helped by the sharp working-capital reduction (59 days versus 172 days for FY26) discussed in working capital management. As with the Apollo group, the new PPE will be charged to secure the term borrowings that finance it, so the gross block simultaneously supports revenue and collateralises lenders' claims.
+
 ## Related Topics
 
 - [[concepts/capital-work-in-progress]] — assets under construction and development not yet ready for use, carried at cost until transfer to PPE.
@@ -152,18 +177,25 @@ Management applied judgement to assess whether certain specific costs of **₹7,
 - [[concepts/provisions-and-contingent-liabilities]] — capital commitments and guarantees relating to the construction of new facilities.
 - [[concepts/segment-reporting]] — the Group reports a single operating segment.
 - [[concepts/employee-benefits]] — gratuity and other employee obligations disclosed adjacent to the PPE notes.
+- [[concepts/capital-management]] — capital expenditure competes with working capital and debt for the same funding envelope.
+- working capital management — the cash released from working capital funds part of the capex programme.
+- [[concepts/order-book-and-revenue-visibility]] — the demand signal that justifies committing capital to new capacity.
+- [[concepts/civil-nuclear-power]] and [[concepts/clean-energy-and-fuel-cells]] — the verticals absorbing most of the MTAR capex.
 - [[summaries/2026_Annual_Report_2026_part7]] — source document containing the core standalone PPE schedules.
 - [[summaries/2026_Annual_Report_2026_part8]] — source document containing the PPE-related notes on depreciation, deferred tax, leases, CWIP ageing, title deeds, and commitments.
 - [[summaries/2026_Annual_Report_2026_part9]] — source document containing the consolidated balance sheet, CWIP key audit matter, and consolidated depreciation and cash-flow figures.
 - [[summaries/2026_Annual_Report_2026_part10]] — source document containing the consolidated PPE movement, CWIP ageing, right-of-use assets, intangible assets, goodwill, borrowings and other note disclosures.
+- [[summaries/2026_Aug_2026_Transcript]] — source document describing the MTAR FY27–FY28 capex programme, CWIP capitalisation and asset-turnover targets.
 
 ## Entities Referenced
 
-- [[entities/apollo_micro_systems_limited]] — reporting entity (Holding Company) and owner of the PPE.
+- [[entities/apollo_micro_systems_limited]] — reporting entity (Holding Company) and owner of the PPE described in the annual-report disclosures above.
+- [[entities/mtar-technologies]] — precision-engineering company undertaking a ~₹500 crore multi-year capacity build-out across fuel cells, data centres, oil and gas and aerospace.
 - [[entities/idl_explosives]] — step-down subsidiary acquired during FY 2025-26, driving the large increase in consolidated goodwill.
 - [[entities/ananya_sip_rf_technologies_private_limited]], [[entities/apollo_defence_industries_private_limited]], [[entities/apollo_strategic_technologies_private_limited]] — subsidiaries consolidated into the Group PPE and related balances.
 - [[entities/tsiic]] — allotted land to the Company for which title deed execution is pending.
-- [[entities/state_bank_of_india]], [[entities/hdfc_bank]], [[entities/bandhan_bank]], [[entities/indian_overseas_bank]], [[entities/bajaj_finance_limited]] — lenders whose borrowings are secured on PPE.
+- [[entities/state_bank_of_india]], [[entities/hdfc_bank]], [[entities/bandhan_bank]], [[entities/indian_overseas_bank]], [[entities/bajaj_finance_limited]] — lenders whose borrowings are secured on PPE and, in the MTAR case, whose term debt finances new capacity.
 - [[entities/revx_capital_fund_ii]] — holder of the non-convertible debentures repaid during FY 2025-26.
 - [[entities/origa_markets_private_limited]] — lessor of leased buildings and equipment recognised as right-of-use assets.
 - [[entities/s_t_mohite_and_co]] — statutory auditor that reported on the consolidated financial statements.
+- [[entities/srinivas-reddy]], [[entities/gunneswara-rao]] and [[entities/srilekha-jasthi]] — MTAR's Managing Director, Chief Financial Officer and Head of Strategy & IR, who detailed the capex plan and its funding.

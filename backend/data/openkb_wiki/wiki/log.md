@@ -34,3 +34,5 @@
 
 ## [2026-09-27 17:07:59] ingest | 2026_Annual_Report_2026_part11.pdf
 
+## [2026-11-01 20:32:09] ingest | 2026_Aug_2026_Transcript.pdf
+

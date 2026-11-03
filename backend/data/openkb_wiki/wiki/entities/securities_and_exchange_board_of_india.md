@@ -1,5 +1,5 @@
 ---
-sources: ["summaries/2026_Annual_Report_2026_part8.md", "summaries/2026_Annual_Report_2026_part6.md", "summaries/2026_Annual_Report_2026_part5.md"]
+sources: ["summaries/2026_Aug_2026_Transcript.md", "summaries/2026_Annual_Report_2026_part8.md", "summaries/2026_Annual_Report_2026_part6.md", "summaries/2026_Annual_Report_2026_part5.md"]
 type: "Organization"
 description: "India's securities market regulator, referenced throughout Apollo Micro Systems' compliance disclosures."
 ---
@@ -38,3 +38,5 @@ SEBI's framework underpins several recurring themes in the wiki, including [[con
 See also: [[summaries/2026_Annual_Report_2026_part6]]
 
 See also: [[summaries/2026_Annual_Report_2026_part8]]
+
+See also: [[summaries/2026_Aug_2026_Transcript]]

@@ -1,6 +1,6 @@
 ---
 type: "Concept"
-sources: ["summaries/2026_Annual_Report_2026_part11.md", "summaries/2026_Annual_Report_2026_part10.md", "summaries/2026_Annual_Report_2026_part9.md", "summaries/2026_Annual_Report_2026_part8.md", "summaries/2026_Annual_Report_2026_part7.md"]
+sources: ["summaries/2026_Aug_2026_Transcript.md", "summaries/2026_Annual_Report_2026_part11.md", "summaries/2026_Annual_Report_2026_part10.md", "summaries/2026_Annual_Report_2026_part9.md", "summaries/2026_Annual_Report_2026_part8.md", "summaries/2026_Annual_Report_2026_part7.md"]
 description: "How Ind AS 115 governs when and how much revenue is recognised by Apollo Micro Systems Limited and its Group."
 ---
 
@@ -140,3 +140,5 @@ Revenue recognition is central to the credibility of reported results for long-c
 - [[concepts/deferred-tax]]
 - [[concepts/earnings-per-share]]
 - [[entities/apollo_micro_systems_limited]]
+
+See also: [[summaries/2026_Aug_2026_Transcript]]
