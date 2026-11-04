@@ -1,0 +1,18 @@
+{
+  "admin": {
+    "username": "admin",
+    "name": "Nifty Senior Admin",
+    "email": "admin@niftyrag.local",
+    "role": "admin",
+    "password_hash": "fe5a9a0b30d56d3661af862a8daf187f$d25bedd227c44c49a3c5f51eb29f7bcb8dde3def9cc58cd3b941cbc3e493abd0",
+    "created_at": 1793860471.8129802
+  },
+  "user": {
+    "username": "user",
+    "name": "Research Analyst",
+    "email": "analyst@niftyrag.local",
+    "role": "user",
+    "password_hash": "d338a31a63ceb59dae7a4e161543aee1$d2e2fa92fee3865ba788d82bc606e15fbdabda500f18592e55d264f775ccc54a",
+    "created_at": 1793860471.8899567
+  }
+}
