@@ -1,0 +1,79 @@
+{
+  "events": [
+    {
+      "id": "EVT-HAL-001",
+      "symbol": "HAL",
+      "company_name": "Hindustan Aeronautics Limited",
+      "event_type": "Earnings Concall & Analyst Meet",
+      "fiscal_period": "Q2 FY25",
+      "scheduled_date": "2026-11-18",
+      "scheduled_time": "16:00 IST",
+      "meeting_status": "Scheduled",
+      "announcement_date": "2026-11-04",
+      "published_status": "Awaiting Meeting",
+      "report_type": "concall",
+      "dial_in_info": "Universal Dial-In: +91 22 6280 1384 / +91 22 7115 8285",
+      "notes": "Management discussion on defense order pipeline, Tejas Mk1A delivery schedules, and export prospects."
+    },
+    {
+      "id": "EVT-HAL-002",
+      "symbol": "HAL",
+      "company_name": "Hindustan Aeronautics Limited",
+      "event_type": "Annual General Meeting & FY24 Annual Report",
+      "fiscal_period": "FY24",
+      "scheduled_date": "2026-08-28",
+      "scheduled_time": "15:00 IST",
+      "meeting_status": "Conducted",
+      "announcement_date": "2026-08-01",
+      "published_status": "Annual Report Published",
+      "report_type": "annual_report",
+      "dial_in_info": "BSE Filing Ref: 541154",
+      "notes": "Annual report filed with BSE/NSE. All-time high turnover of ₹29,810 Cr."
+    },
+    {
+      "id": "EVT-APOLLO-001",
+      "symbol": "APOLLO",
+      "company_name": "Apollo Micro Systems Limited",
+      "event_type": "Q2 FY25 Management Concall",
+      "fiscal_period": "Q2 FY25",
+      "scheduled_date": "2026-11-22",
+      "scheduled_time": "15:30 IST",
+      "meeting_status": "Scheduled",
+      "announcement_date": "2026-11-03",
+      "published_status": "Awaiting Meeting",
+      "report_type": "concall",
+      "dial_in_info": "DiamondPass: Chorus Call India +91 22 7195 0000",
+      "notes": "Discussion on naval homing electronics, underwater defense systems, and new capacity expansion."
+    },
+    {
+      "id": "EVT-APOLLO-002",
+      "symbol": "APOLLO",
+      "company_name": "Apollo Micro Systems Limited",
+      "event_type": "Q1 FY25 Concall Transcript",
+      "fiscal_period": "Q1 FY25",
+      "scheduled_date": "2026-08-14",
+      "scheduled_time": "14:00 IST",
+      "meeting_status": "Conducted",
+      "announcement_date": "2026-08-05",
+      "published_status": "Transcript Published",
+      "report_type": "concall",
+      "dial_in_info": "Transcript archived in OpenKB wiki",
+      "notes": "Concall conducted and transcript published. Strong order book of ₹800+ Cr highlighted."
+    },
+    {
+      "id": "EVT-BEL-001",
+      "symbol": "BEL",
+      "company_name": "Bharat Electronics Limited",
+      "event_type": "Investor & Analyst Meet",
+      "fiscal_period": "Q2 FY25",
+      "scheduled_date": "2026-11-25",
+      "scheduled_time": "16:30 IST",
+      "meeting_status": "Scheduled",
+      "announcement_date": "2026-11-02",
+      "published_status": "Awaiting Meeting",
+      "report_type": "concall",
+      "dial_in_info": "Dial-in: +91 22 6280 1144",
+      "notes": "Focus on radar systems, electronic warfare upgrades, and defense export targets."
+    }
+  ]
+}
