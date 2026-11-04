@@ -6,7 +6,7 @@ from pathlib import Path
 # Load .env file automatically
 # ─────────────────────────────────────────────
 def _load_dotenv():
-    env_path = Path(__file__).resolve().parent.parent / ".env"
+    env_path = next((p for p in [Path(__file__).resolve().parent.parent.parent / ".env", Path(__file__).resolve().parent.parent / ".env"] if p.exists()), Path(__file__).resolve().parent.parent / ".env")
     if not env_path.exists():
         return
     with open(env_path, encoding="utf-8") as f:
