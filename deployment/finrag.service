@@ -1,0 +1,24 @@
+[Unit]
+Description=Financial RAG FastAPI & WhatsApp Webhook Server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/Financial-Rag
+EnvironmentFile=/home/ubuntu/Financial-Rag/.env
+ExecStart=/home/ubuntu/Financial-Rag/.venv/bin/python -m uvicorn server:app --app-dir backend --host 127.0.0.1 --port 5000 --workers 1
+
+# Restart on failure or crash
+Restart=always
+RestartSec=5s
+
+# Resource limits & safety
+LimitNOFILE=65536
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=finrag
+
+[Install]
+WantedBy=multi-user.target
