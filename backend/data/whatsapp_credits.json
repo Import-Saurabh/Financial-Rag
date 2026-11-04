@@ -1,0 +1,13 @@
+{
+  "919876543210": {
+    "phone": "919876543210",
+    "daily_limit": 15000,
+    "tokens_used_today": 0,
+    "total_tokens_all_time": 0,
+    "queries_today": 0,
+    "total_queries_all_time": 0,
+    "last_active_date": "2026-11-05",
+    "is_whitelisted": true,
+    "first_seen": "2026-11-05T06:35:37.781947+00:00"
+  }
+}
