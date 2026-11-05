@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-dark: #050508;
+    --card-dark: #0c0d14;
+    --card-border: rgba(255, 102, 0, 0.15);
+    --orange-glow: rgba(255, 102, 0, 0.25);
+    --primary-orange: #ff6600;
+  }
+
+  body {
+    background-color: #050508;
+    color: #f3f4f6;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+/* Fincept Corporation Style Custom Glows & Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090a10;
+}
+::-webkit-scrollbar-thumb {
+  background: #272732;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ff6600;
+}
+
+.glow-orange {
+  box-shadow: 0 0 25px -5px rgba(255, 102, 0, 0.35);
+}
+
+.glow-orange-sm {
+  box-shadow: 0 0 12px -2px rgba(255, 102, 0, 0.25);
+}
+
+.border-orange-glow {
+  border-color: rgba(255, 102, 0, 0.3);
+}
+
+.border-orange-glow:hover {
+  border-color: rgba(255, 102, 0, 0.7);
+  box-shadow: 0 0 15px -3px rgba(255, 102, 0, 0.3);
+}
+
+.glass-panel {
+  background: rgba(12, 13, 20, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-orange {
+  background: rgba(15, 12, 10, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 102, 0, 0.2);
+}
+
+/* Pulsing active indicators */
+@keyframes pulse-orange {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.05); }
+}
+
+.animate-pulse-orange {
+  animation: pulse-orange 2s infinite ease-in-out;
+}
