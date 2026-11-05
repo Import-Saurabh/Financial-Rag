@@ -68,6 +68,15 @@ async def process_whatsapp_message(from_number: str, message_id: str, message_bo
         await whatsapp_client.send_text_message(from_number, rate_error or "Rate limit exceeded.")
         return
 
+    # 3b. Token Quota / Credit System (Groq free-tier guardrail)
+    from whatsapp.credits import get_credit_manager
+    credit_mgr = get_credit_manager()
+    has_credits, denial_msg, _ = credit_mgr.check_quota(from_number, estimated_tokens=400)
+    if not has_credits:
+        log.warning(f"[whatsapp] Token quota reached for {from_number}")
+        await whatsapp_client.send_text_message(from_number, denial_msg or "Daily quota reached.")
+        return
+
     # 4. Input Sanitization & Injection Check
     cleaned_query, is_suspicious = sanitize_input(message_body)
     if not cleaned_query:
@@ -79,16 +88,45 @@ async def process_whatsapp_message(from_number: str, message_id: str, message_bo
     lower_query = cleaned_query.lower().strip()
     if lower_query in ("hi", "hello", "hey", "help", "/start", "menu"):
         help_text = (
-            "👋 *Welcome to your Personal Financial Research Assistant!*\n\n"
-            "You can ask me questions about Indian equities, concalls, and quarterly results, such as:\n"
-            "• _What happened in Apollo Microsystems' latest concall?_\n"
-            "• _Explain HAL's latest quarterly results._\n"
-            "• _What guidance did management give for the coming financial year?_\n"
-            "• _Compare the latest concall with the previous one._\n"
-            "• _What are the major risks mentioned?_\n\n"
-            "Simply send your question here."
+            "👋 *Welcome to FINCEPT Financial Research Assistant!*\n\n"
+            "You can query Indian equities or manage your personal corporate filing watchlist:\n\n"
+            "📈 *Equity Research:*\n"
+            "• _HAL order book outlook and FY25 guidance_\n"
+            "• _Apollo Micro Systems latest concall commentary_\n"
+            "• _Compare HAL and BEL export platform order pipelines_\n\n"
+            "📋 *Watchlist & Concall Alerts:*\n"
+            "• `watchlist` — View tracked stocks & upcoming meeting schedules\n"
+            "• `track HAL` — Receive alerts for HAL management concalls & filings\n"
+            "• `concall schedule` — View all announced corporate meetings\n"
+            "• `untrack HAL` — Remove from watchlist\n\n"
+            "Simply send your question or command here."
         )
         await whatsapp_client.send_text_message(from_number, help_text)
+        return
+
+    # 5b. Stock Watchlist & Concall Tracking Command Handler
+    from whatsapp.watchlist import get_watchlist_manager
+    wl_mgr = get_watchlist_manager()
+    watchlist_intent = wl_mgr.detect_watchlist_intent(cleaned_query)
+
+    if watchlist_intent:
+        cmd, target_sym = watchlist_intent
+        log.info(f"[whatsapp] Executing watchlist command '{cmd}' for {from_number} (symbol={target_sym})")
+        if cmd == "view":
+            reply = wl_mgr.format_watchlist_status(from_number)
+        elif cmd == "schedule":
+            reply = wl_mgr.format_all_schedules()
+        elif cmd == "add" and target_sym:
+            ok, msg = wl_mgr.add_to_watchlist(from_number, target_sym)
+            reply = msg
+        elif cmd == "remove" and target_sym:
+            ok, msg = wl_mgr.remove_from_watchlist(from_number, target_sym)
+            reply = msg
+        else:
+            reply = wl_mgr.format_watchlist_status(from_number)
+
+        await whatsapp_client.send_text_message(from_number, reply)
+        credit_mgr.record_usage(from_number, 50, query=f"watchlist:{cmd}")
         return
 
     # 6. Execute RAG Query via Financial RAG Server Core
@@ -121,6 +159,10 @@ async def process_whatsapp_message(from_number: str, message_id: str, message_bo
     elapsed = round(asyncio.get_event_loop().time() - t0, 2)
     log.info(f"[whatsapp] Dispatching reply to {from_number} ({len(final_answer)} chars, {elapsed}s)")
     await whatsapp_client.send_text_message(from_number, final_answer)
+
+    # 8b. Record tokens used towards daily free quota
+    tokens_consumed = max(100, (len(cleaned_query) + len(final_answer)) // 4)
+    credit_mgr.record_usage(from_number, tokens_consumed, query=cleaned_query)
 
 
 @router.post("")
