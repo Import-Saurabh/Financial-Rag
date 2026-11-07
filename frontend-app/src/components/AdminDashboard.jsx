@@ -18,7 +18,9 @@ import {
   Bell,
   Clock,
   Radio,
-  ExternalLink
+  ExternalLink,
+  CheckSquare,
+  Search
 } from 'lucide-react';
 
 export default function AdminDashboard({ currentUser }) {
@@ -26,9 +28,11 @@ export default function AdminDashboard({ currentUser }) {
   const [adminSection, setAdminSection] = useState('catalog'); // 'catalog', 'credits', 'watchlists'
 
   // Documents state
+  const [allDocs, setAllDocs] = useState([]);
   const [ingestedDocs, setIngestedDocs] = useState([]);
   const [pendingDocs, setPendingDocs] = useState([]);
-  const [docFilterTab, setDocFilterTab] = useState('pending'); // 'pending' or 'ingested'
+  const [docFilterTab, setDocFilterTab] = useState('all'); // 'all', 'pending', 'ingested'
+  const [docSearch, setDocSearch] = useState('');
   const [selectedPendingDoc, setSelectedPendingDoc] = useState(null);
   const [ingestingPending, setIngestingPending] = useState(false);
   const [pendingIngestMsg, setPendingIngestMsg] = useState(null);
@@ -44,6 +48,7 @@ export default function AdminDashboard({ currentUser }) {
 
   // Watchlists & Corporate Calendar
   const [watchlists, setWatchlists] = useState([]);
+  const [webWatchlists, setWebWatchlists] = useState({});
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [broadcasting, setBroadcasting] = useState(false);
   const [broadcastMsg, setBroadcastMsg] = useState(null);
@@ -61,10 +66,11 @@ export default function AdminDashboard({ currentUser }) {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch documents (ingested & pending)
+      // 1. Fetch documents (all, ingested & pending)
       const docRes = await fetch('/api/admin/documents');
       if (docRes.ok) {
         const dData = await docRes.json();
+        setAllDocs(dData.all_documents || []);
         setIngestedDocs(dData.ingested || []);
         setPendingDocs(dData.pending || []);
         if (dData.pending && dData.pending.length > 0 && !selectedPendingDoc) {
@@ -91,6 +97,7 @@ export default function AdminDashboard({ currentUser }) {
       if (wlRes.ok) {
         const wlData = await wlRes.json();
         setWatchlists(wlData.watchlists || []);
+        setWebWatchlists(wlData.web_watchlists || {});
         setCalendarEvents(wlData.calendar || []);
       }
     } catch (err) {
@@ -463,43 +470,164 @@ export default function AdminDashboard({ currentUser }) {
             </div>
           )}
 
-          {/* Sub-tabs: Pending vs Ingested */}
-          <div className="flex items-center gap-2 border-b border-white/5 pb-2">
-            <button
-              onClick={() => setDocFilterTab('pending')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                docFilterTab === 'pending'
-                  ? 'bg-amber-500/15 border border-amber-500/40 text-amber-300'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Clock className="w-3.5 h-3.5" />
-              Not Ingested / Pending Items ({pendingDocs.length})
-            </button>
+          {/* Sub-tabs: All vs Pending vs Ingested + Search Filter */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
+            <div className="flex items-center gap-2 overflow-x-auto">
+              <button
+                onClick={() => setDocFilterTab('all')}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  docFilterTab === 'all'
+                    ? 'bg-[#ff6600]/20 border border-[#ff6600]/50 text-[#ff6600] shadow-sm glow-orange-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                All Available API Docs ({allDocs.length})
+              </button>
 
-            <button
-              onClick={() => setDocFilterTab('ingested')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                docFilterTab === 'ingested'
-                  ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-300'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <CheckCircle className="w-3.5 h-3.5" />
-              Live Ingested Items ({ingestedDocs.length})
-            </button>
+              <button
+                onClick={() => setDocFilterTab('pending')}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  docFilterTab === 'pending'
+                    ? 'bg-amber-500/15 border border-amber-500/40 text-amber-300 shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                Pending Ingestion ({pendingDocs.length})
+              </button>
+
+              <button
+                onClick={() => setDocFilterTab('ingested')}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  docFilterTab === 'ingested'
+                    ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                Live Ingested Items ({ingestedDocs.length})
+              </button>
+            </div>
+
+            {/* Quick Search */}
+            <div className="relative w-full sm:w-64">
+              <input
+                type="text"
+                value={docSearch}
+                onChange={(e) => setDocSearch(e.target.value)}
+                placeholder="Search documents by name or symbol..."
+                className="w-full pl-8 pr-3 py-1.5 bg-[#050508] border border-white/10 rounded-lg text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-[#ff6600]/50"
+              />
+              <Search className="w-3.5 h-3.5 text-gray-500 absolute left-2.5 top-2" />
+            </div>
           </div>
 
-          {/* Pending Documents Table */}
+          {/* TAB 1: ALL AVAILABLE API DOCUMENTS */}
+          {docFilterTab === 'all' && (
+            <div className="p-6 rounded-2xl bg-[#0c0d14] border border-orange-500/20 shadow-xl space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                    <Database className="w-4 h-4 text-[#ff6600]" />
+                    Every Document Available in OpenKB API ({allDocs.length})
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Click any document or use the right tick box to open and inspect the full document in another tab.
+                  </p>
+                </div>
+                <span className="text-xs text-[#ff6600] font-mono">
+                  Multi-Source Catalog
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-gray-300">
+                  <thead className="bg-[#050508] text-gray-400 uppercase font-mono text-[10px] border-b border-white/5">
+                    <tr>
+                      <th className="py-3 px-3">Document Title</th>
+                      <th className="py-3 px-3">Symbol</th>
+                      <th className="py-3 px-3">Category</th>
+                      <th className="py-3 px-3">Size</th>
+                      <th className="py-3 px-3">Ingestion Status</th>
+                      <th className="py-3 px-3 text-right">View in Tab</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {allDocs
+                      .filter(d => 
+                        !docSearch || 
+                        d.name.toLowerCase().includes(docSearch.toLowerCase()) || 
+                        d.symbol.toLowerCase().includes(docSearch.toLowerCase())
+                      )
+                      .map((doc, idx) => {
+                        const openDocUrl = doc.view_url || `/api/documents/view?name=${encodeURIComponent(doc.file_name || doc.name)}`;
+                        return (
+                          <tr 
+                            key={idx} 
+                            onClick={() => window.open(openDocUrl, '_blank')}
+                            className="hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                          >
+                            <td className="py-3 px-3 font-medium text-white flex items-center gap-2">
+                              <FileText className={`w-3.5 h-3.5 flex-shrink-0 ${doc.ingested ? 'text-[#ff6600]' : 'text-amber-400'}`} />
+                              <span className="truncate max-w-sm group-hover:text-[#ff6600] transition-colors">{doc.name}</span>
+                            </td>
+                            <td className="py-3 px-3 font-mono font-bold text-[#ff6600]">
+                              {doc.symbol}
+                            </td>
+                            <td className="py-3 px-3 text-gray-400">
+                              {doc.doc_type}
+                            </td>
+                            <td className="py-3 px-3 font-mono text-gray-400">
+                              {doc.size_kb} KB
+                            </td>
+                            <td className="py-3 px-3">
+                              {doc.ingested ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                  <CheckCircle className="w-2.5 h-2.5" />
+                                  Live & Indexed
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                                  <Clock className="w-2.5 h-2.5" />
+                                  Pending Ingest
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(openDocUrl, '_blank');
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/15 hover:bg-orange-500/30 border border-orange-500/35 hover:border-[#ff6600] text-[#ff6600] hover:text-white text-xs font-semibold transition-all group-hover:bg-[#ff6600] group-hover:text-white shadow-sm glow-orange-sm cursor-pointer"
+                                title="Open document in new tab"
+                              >
+                                <CheckSquare className="w-3.5 h-3.5" />
+                                <span>Open</span>
+                                <ExternalLink className="w-3 h-3 opacity-80" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: PENDING DOCUMENTS TABLE */}
           {docFilterTab === 'pending' && (
             <div className="p-6 rounded-2xl bg-[#0c0d14] border border-amber-500/20 shadow-xl space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-white tracking-tight">
+                  <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-400" />
                     Available Raw Documents Waiting for Ingestion ({pendingDocs.length})
                   </h3>
-                  <p className="text-xs text-gray-400">
-                    Click any item to select it, then click "Ingest Selected Document" above.
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Click radio to select for ingestion, or click document / right tick box to open in another tab.
                   </p>
                 </div>
               </div>
@@ -514,54 +642,82 @@ export default function AdminDashboard({ currentUser }) {
                       <th className="py-3 px-3">Detected Category</th>
                       <th className="py-3 px-3">Size</th>
                       <th className="py-3 px-3">Status</th>
+                      <th className="py-3 px-3 text-right">View in Tab</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {pendingDocs.map((doc, idx) => {
-                      const isSelected = selectedPendingDoc?.file_name === doc.file_name;
-                      return (
-                        <tr 
-                          key={idx} 
-                          onClick={() => setSelectedPendingDoc(doc)}
-                          className={`cursor-pointer transition-colors ${
-                            isSelected ? 'bg-amber-500/15 border-l-2 border-amber-400' : 'hover:bg-white/[0.02]'
-                          }`}
-                        >
-                          <td className="py-3 px-3">
-                            <input
-                              type="radio"
-                              name="pending_selection"
-                              checked={isSelected}
-                              onChange={() => setSelectedPendingDoc(doc)}
-                              className="text-[#ff6600] focus:ring-0 cursor-pointer"
-                            />
-                          </td>
-                          <td className="py-3 px-3 font-medium text-white flex items-center gap-2">
-                            <FileText className="w-3.5 h-3.5 text-amber-400" />
-                            <span className="truncate max-w-sm">{doc.name}</span>
-                          </td>
-                          <td className="py-3 px-3 font-mono font-bold text-[#ff6600]">
-                            {doc.symbol}
-                          </td>
-                          <td className="py-3 px-3 text-gray-400">
-                            {doc.doc_type}
-                          </td>
-                          <td className="py-3 px-3 font-mono text-gray-400">
-                            {doc.size_kb} KB
-                          </td>
-                          <td className="py-3 px-3">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30">
-                              <Clock className="w-2.5 h-2.5" />
-                              Pending Ingestion
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {pendingDocs
+                      .filter(d => 
+                        !docSearch || 
+                        d.name.toLowerCase().includes(docSearch.toLowerCase()) || 
+                        d.symbol.toLowerCase().includes(docSearch.toLowerCase())
+                      )
+                      .map((doc, idx) => {
+                        const isSelected = selectedPendingDoc?.file_name === doc.file_name;
+                        const openDocUrl = doc.view_url || `/api/documents/view?name=${encodeURIComponent(doc.file_name || doc.name)}`;
+                        return (
+                          <tr 
+                            key={idx} 
+                            onClick={() => setSelectedPendingDoc(doc)}
+                            className={`cursor-pointer transition-colors ${
+                              isSelected ? 'bg-amber-500/15 border-l-2 border-amber-400' : 'hover:bg-white/[0.04]'
+                            }`}
+                          >
+                            <td className="py-3 px-3">
+                              <input
+                                type="radio"
+                                name="pending_selection"
+                                checked={isSelected}
+                                onChange={() => setSelectedPendingDoc(doc)}
+                                className="text-[#ff6600] focus:ring-0 cursor-pointer"
+                              />
+                            </td>
+                            <td 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(openDocUrl, '_blank');
+                              }}
+                              className="py-3 px-3 font-medium text-white flex items-center gap-2 hover:text-[#ff6600] transition-colors"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                              <span className="truncate max-w-sm">{doc.name}</span>
+                            </td>
+                            <td className="py-3 px-3 font-mono font-bold text-[#ff6600]">
+                              {doc.symbol}
+                            </td>
+                            <td className="py-3 px-3 text-gray-400">
+                              {doc.doc_type}
+                            </td>
+                            <td className="py-3 px-3 font-mono text-gray-400">
+                              {doc.size_kb} KB
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                                <Clock className="w-2.5 h-2.5" />
+                                Pending Ingestion
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(openDocUrl, '_blank');
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/15 hover:bg-orange-500/30 border border-orange-500/35 hover:border-[#ff6600] text-[#ff6600] hover:text-white text-xs font-semibold transition-all shadow-sm glow-orange-sm cursor-pointer"
+                                title="Open document in other tab"
+                              >
+                                <CheckSquare className="w-3.5 h-3.5" />
+                                <span>Open</span>
+                                <ExternalLink className="w-3 h-3 opacity-80" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
 
                     {pendingDocs.length === 0 && (
                       <tr>
-                        <td colSpan="6" className="py-8 text-center text-gray-400">
+                        <td colSpan="7" className="py-8 text-center text-gray-400">
                           🎉 All available documents have already been ingested into OpenKB PageIndex!
                         </td>
                       </tr>
@@ -572,16 +728,17 @@ export default function AdminDashboard({ currentUser }) {
             </div>
           )}
 
-          {/* Ingested Documents Table */}
+          {/* TAB 3: INGESTED DOCUMENTS TABLE */}
           {docFilterTab === 'ingested' && (
             <div className="p-6 rounded-2xl bg-[#0c0d14] border border-white/10 shadow-xl space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-white tracking-tight">
+                  <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
                     Active Knowledge Base in OpenKB ({ingestedDocs.length})
                   </h3>
-                  <p className="text-xs text-gray-400">
-                    Live documents indexed with dense vectors and keyword tables.
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Live documents indexed with dense vectors and keyword tables. Click document or right tick box to view.
                   </p>
                 </div>
                 <span className="text-xs text-[#ff6600] font-mono">
@@ -593,37 +750,65 @@ export default function AdminDashboard({ currentUser }) {
                 <table className="w-full text-left text-xs text-gray-300">
                   <thead className="bg-[#050508] text-gray-400 uppercase font-mono text-[10px] border-b border-white/5">
                     <tr>
-                      <th className="py-3 px-3">Document</th>
+                      <th className="py-3 px-3">Document Title</th>
                       <th className="py-3 px-3">Symbol</th>
                       <th className="py-3 px-3">Category</th>
                       <th className="py-3 px-3">Size</th>
                       <th className="py-3 px-3">Status</th>
+                      <th className="py-3 px-3 text-right">View in Tab</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {ingestedDocs.map((doc, idx) => (
-                      <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="py-3 px-3 font-medium text-white flex items-center gap-2">
-                          <FileText className="w-3.5 h-3.5 text-[#ff6600]" />
-                          <span className="truncate max-w-sm">{doc.name}</span>
-                        </td>
-                        <td className="py-3 px-3 font-mono font-bold text-[#ff6600]">
-                          {doc.symbol}
-                        </td>
-                        <td className="py-3 px-3 text-gray-400">
-                          {doc.doc_type}
-                        </td>
-                        <td className="py-3 px-3 font-mono text-gray-400">
-                          {doc.size_kb} KB
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            <CheckCircle className="w-2.5 h-2.5" />
-                            Live & Indexed
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {ingestedDocs
+                      .filter(d => 
+                        !docSearch || 
+                        d.name.toLowerCase().includes(docSearch.toLowerCase()) || 
+                        d.symbol.toLowerCase().includes(docSearch.toLowerCase())
+                      )
+                      .map((doc, idx) => {
+                        const openDocUrl = doc.view_url || `/api/documents/view?name=${encodeURIComponent(doc.file_name || doc.name)}`;
+                        return (
+                          <tr 
+                            key={idx} 
+                            onClick={() => window.open(openDocUrl, '_blank')}
+                            className="hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                          >
+                            <td className="py-3 px-3 font-medium text-white flex items-center gap-2">
+                              <FileText className="w-3.5 h-3.5 text-[#ff6600] flex-shrink-0" />
+                              <span className="truncate max-w-sm group-hover:text-[#ff6600] transition-colors">{doc.name}</span>
+                            </td>
+                            <td className="py-3 px-3 font-mono font-bold text-[#ff6600]">
+                              {doc.symbol}
+                            </td>
+                            <td className="py-3 px-3 text-gray-400">
+                              {doc.doc_type}
+                            </td>
+                            <td className="py-3 px-3 font-mono text-gray-400">
+                              {doc.size_kb} KB
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                <CheckCircle className="w-2.5 h-2.5" />
+                                Live & Indexed
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(openDocUrl, '_blank');
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/15 hover:bg-orange-500/30 border border-orange-500/35 hover:border-[#ff6600] text-[#ff6600] hover:text-white text-xs font-semibold transition-all group-hover:bg-[#ff6600] group-hover:text-white shadow-sm glow-orange-sm cursor-pointer"
+                                title="Open document in other tab"
+                              >
+                                <CheckSquare className="w-3.5 h-3.5" />
+                                <span>Open</span>
+                                <ExternalLink className="w-3 h-3 opacity-80" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>
@@ -855,6 +1040,72 @@ export default function AdminDashboard({ currentUser }) {
                     <tr>
                       <td colSpan="3" className="py-8 text-center text-gray-500">
                         No WhatsApp users have created a watchlist yet. Users can send `track HAL` on WhatsApp to start tracking.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+
+          {/* Web Users Watchlists Table */}
+          <div className="p-6 rounded-2xl bg-[#0c0d14] border border-white/10 shadow-xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/5">
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#ff6600]" />
+                  Institutional Web User Watchlists ({Object.keys(webWatchlists).length})
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Web terminal accounts tracking corporate earnings concalls and annual reports.
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-gray-300">
+                <thead className="bg-[#050508] text-gray-400 uppercase font-mono text-[10px] border-b border-white/5">
+                  <tr>
+                    <th className="py-3 px-3">Username</th>
+                    <th className="py-3 px-3">Tracked Equity Watchlist</th>
+                    <th className="py-3 px-3">Sync Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {Object.entries(webWatchlists).map(([uname, syms], idx) => (
+                    <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="py-3 px-3 font-mono font-semibold text-white flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-orange-500/20 text-[#ff6600] flex items-center justify-center text-[10px] font-bold">
+                          {uname[0]?.toUpperCase()}
+                        </span>
+                        {uname}
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {syms?.map((sym, sIdx) => (
+                            <span
+                              key={sIdx}
+                              className="px-2 py-0.5 rounded-md bg-orange-500/15 text-[#ff6600] border border-orange-500/30 font-mono text-xs font-bold"
+                            >
+                              {sym}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-mono">
+                          <CheckCircle className="w-3 h-3" />
+                          Cloud Synced
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {Object.keys(webWatchlists).length === 0 && (
+                    <tr>
+                      <td colSpan="3" className="py-8 text-center text-gray-500">
+                        No web users have added stocks to their watchlist yet.
                       </td>
                     </tr>
                   )}

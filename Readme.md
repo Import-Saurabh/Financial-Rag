@@ -44,7 +44,7 @@ Standard Vector RAG embeds documents into arbitrary text chunks and retrieves th
 ## 🛠️ Tech Stack
 
 ```
-Interface & Serving:        FastAPI, Streamlit, Uvicorn, JSON Lines / SSE
+Interface & Serving:        FastAPI, Modern React (Vite), Uvicorn, JSON Lines / SSE
 Agent & Orchestration:      LangGraph (ReAct Loop), LangChain Core, ChatGroq, DeepSeek V3 / R1 Fallback
 Retrieval & Cross-Encoding: SentenceTransformers (all-MiniLM-L6-v2), PyTorch Cross-Encoder (ms-marco-MiniLM-L-6-v2), BM25
 Tool Protocol:              Model Context Protocol (FastMCP) with stdio & SSE Transports (Port 8100)
@@ -60,7 +60,7 @@ Codebase Knowledge Graph:   Graphifyy AST Analysis (1,836 nodes, 2,497 edges, 16
 
 ```mermaid
 flowchart TD
-    User([User Query]) --> UI["Streamlit UI / CLI Client"]
+    User([User Query]) --> UI["React Frontend / Web Client"]
     UI --> API["FastAPI Server :8000"]
 
     subgraph Agentic_Tier ["Agentic Orchestrator"]
@@ -180,11 +180,12 @@ python backend/server.py
 ```
 *Backend runs at `http://localhost:8000` (OpenAPI docs at `http://localhost:8000/docs`).*
 
-**Terminal 2: Start Streamlit Frontend**
+**Terminal 2: Start React Frontend (Dev Server)**
 ```bash
-streamlit run frontend/app.py
+cd frontend-app
+npm run dev
 ```
-*Frontend interface opens at `http://localhost:8501`.*
+*Frontend interface opens at `http://localhost:5173` (or directly at `http://localhost:5000` when built).*
 
 **Terminal 3 (Optional): Start MCP Server over SSE**
 ```bash

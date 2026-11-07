@@ -1,0 +1,11 @@
+{
+  "admin": [
+    "HAL",
+    "APOLLO",
+    "MTAR"
+  ],
+  "user": [
+    "HAL",
+    "APOLLO"
+  ]
+}

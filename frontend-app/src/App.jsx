@@ -4,16 +4,23 @@ import ChatView from './components/ChatView';
 import AdminDashboard from './components/AdminDashboard';
 import AuthModal from './components/AuthModal';
 import SourceDrawer from './components/SourceDrawer';
+import WatchlistModal from './components/WatchlistModal';
 
-const STORAGE_CHATS_KEY = 'nifty_rag_chats_v1';
 const STORAGE_USER_KEY = 'nifty_user';
 const STORAGE_TOKEN_KEY = 'nifty_auth_token';
+
+// Helper to get user-scoped chat storage key
+const getChatStorageKey = (user) => {
+  const username = user?.username ? user.username.toLowerCase().trim() : 'guest';
+  return `nifty_rag_chats_v2_${username}`;
+};
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeView, setActiveView] = useState('chat'); // 'chat' or 'admin'
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isWatchlistOpen, setIsWatchlistOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState('auto');
   const [selectedSource, setSelectedSource] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -24,52 +31,98 @@ export default function App() {
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
 
-  // Initialize chats and user from localStorage on mount
-  useEffect(() => {
-    // 1. User
-    const savedUser = localStorage.getItem(STORAGE_USER_KEY);
-    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
-    if (savedUser && token) {
+  // Load chats for a specific user (from server and scoped localStorage)
+  const loadUserChats = async (user) => {
+    const storageKey = getChatStorageKey(user);
+    let loadedChats = [];
+
+    // 1. Try local storage first for instant render
+    const local = localStorage.getItem(storageKey);
+    if (local) {
       try {
-        setCurrentUser(JSON.parse(savedUser));
+        const parsed = JSON.parse(local);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          loadedChats = parsed;
+        }
+      } catch (e) {
+        console.error('Failed to parse local chats:', e);
+      }
+    }
+
+    // 2. If user is logged in, sync with server
+    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+    if (user && token) {
+      try {
+        const res = await fetch('/api/user/chats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.chats) && data.chats.length > 0) {
+            loadedChats = data.chats;
+            localStorage.setItem(storageKey, JSON.stringify(data.chats));
+          }
+        }
+      } catch (err) {
+        console.warn('Could not sync chats from server:', err);
+      }
+    }
+
+    // 3. Fallback to default fresh chat if empty
+    if (loadedChats.length === 0) {
+      const defaultChat = {
+        id: 'chat_' + Date.now(),
+        title: 'New chat',
+        messages: [],
+        createdAt: Date.now()
+      };
+      loadedChats = [defaultChat];
+      localStorage.setItem(storageKey, JSON.stringify(loadedChats));
+    }
+
+    setChats(loadedChats);
+    setActiveChatId(loadedChats[0].id);
+  };
+
+  // Initialize user and their chats on mount
+  useEffect(() => {
+    const savedUserStr = localStorage.getItem(STORAGE_USER_KEY);
+    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+    let initialUser = null;
+
+    if (savedUserStr && token) {
+      try {
+        initialUser = JSON.parse(savedUserStr);
+        setCurrentUser(initialUser);
       } catch (e) {
         localStorage.removeItem(STORAGE_USER_KEY);
       }
     }
 
-    // 2. Chats
-    const savedChats = localStorage.getItem(STORAGE_CHATS_KEY);
-    if (savedChats) {
-      try {
-        const parsed = JSON.parse(savedChats);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setChats(parsed);
-          setActiveChatId(parsed[0].id);
-          return;
-        }
-      } catch (e) {
-        console.error('Failed to parse saved chats:', e);
-      }
-    }
-
-    // Default initial chat session
-    const defaultChat = {
-      id: 'chat_' + Date.now(),
-      title: 'New chat',
-      messages: [],
-      createdAt: Date.now()
-    };
-    setChats([defaultChat]);
-    setActiveChatId(defaultChat.id);
+    loadUserChats(initialUser);
   }, []);
 
-  // Save chats whenever chats array updates
+  // Save chats whenever chats update (to user-scoped localStorage and server)
   const saveChats = (newChats) => {
     setChats(newChats);
+    const storageKey = getChatStorageKey(currentUser);
     try {
-      localStorage.setItem(STORAGE_CHATS_KEY, JSON.stringify(newChats));
+      localStorage.setItem(storageKey, JSON.stringify(newChats));
     } catch (e) {
       console.error('Failed to save chats to storage:', e);
+    }
+
+    // Sync to server if authenticated
+    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+    if (currentUser && token) {
+      fetch('/api/user/chats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ chats: newChats })
+      }).catch(err => console.warn('Server chat sync failed:', err));
     }
   };
 
@@ -109,6 +162,15 @@ export default function App() {
       if (activeChatId === chatId) {
         setActiveChatId(remaining[0].id);
       }
+    }
+
+    // Also delete on server
+    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+    if (currentUser && token) {
+      fetch(`/api/user/chats/${chatId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(e => console.warn('Delete chat failed on server:', e));
     }
   };
 
@@ -198,10 +260,12 @@ export default function App() {
     localStorage.removeItem(STORAGE_USER_KEY);
     setCurrentUser(null);
     setActiveView('chat');
+    loadUserChats(null); // Switch to clean guest chats
   };
 
   const handleAuthSuccess = (user) => {
     setCurrentUser(user);
+    loadUserChats(user); // Load this specific user's chat history
     if (user.role === 'admin') {
       setActiveView('admin');
     } else {
@@ -212,6 +276,13 @@ export default function App() {
   const handleSelectSource = (src) => {
     setSelectedSource(src);
     setIsDrawerOpen(true);
+  };
+
+  const handleQueryStock = (symbol, query) => {
+    handleNewChat();
+    setTimeout(() => {
+      handleSendMessage(query);
+    }, 150);
   };
 
   return (
@@ -232,6 +303,7 @@ export default function App() {
         setActiveView={setActiveView}
         onOpenAuth={() => setIsAuthOpen(true)}
         onLogout={handleLogout}
+        onOpenWatchlist={() => setIsWatchlistOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -251,6 +323,7 @@ export default function App() {
             setSelectedProvider={setSelectedProvider}
             onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
             onNewChat={handleNewChat}
+            onOpenWatchlist={() => setIsWatchlistOpen(true)}
           />
         )}
       </div>
@@ -260,6 +333,18 @@ export default function App() {
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         onAuthSuccess={handleAuthSuccess}
+      />
+
+      {/* Personal Corporate Concall & Filing Watchlist Modal */}
+      <WatchlistModal
+        isOpen={isWatchlistOpen}
+        onClose={() => setIsWatchlistOpen(false)}
+        currentUser={currentUser}
+        onQueryStock={handleQueryStock}
+        onOpenAuth={() => {
+          setIsWatchlistOpen(false);
+          setIsAuthOpen(true);
+        }}
       />
 
       {/* Source Grounding Document Page Viewer (Slide-out Left Side Drawer) */}

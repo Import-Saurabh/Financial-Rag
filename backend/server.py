@@ -636,6 +636,15 @@ async def openai_chat_completions(req: ChatCompletionRequest):
 # ---------------------------------------------------------
 from auth import login_user, register_user, verify_auth_token
 from whatsapp.credits import get_credit_manager
+from user_data import (
+    get_user_chats,
+    save_user_chats,
+    delete_user_chat,
+    get_user_watchlist_enriched,
+    add_to_user_watchlist,
+    remove_from_user_watchlist,
+    get_all_web_watchlists,
+)
 
 class LoginRequest(BaseModel):
     username: str
@@ -679,6 +688,58 @@ async def api_me(authorization: Optional[str] = Header(None)):
         raise HTTPException(status_code=401, detail="Invalid or expired session token")
     return {"user": user}
 
+# ---------------------------------------------------------
+# User-Specific Chat History Endpoints
+# ---------------------------------------------------------
+class ChatSaveRequest(BaseModel):
+    chats: List[Dict[str, Any]]
+
+class WatchlistAddRequest(BaseModel):
+    symbol: str
+
+@app.get("/api/user/chats")
+async def api_get_user_chats(authorization: Optional[str] = Header(None)):
+    user = _get_user_from_header(authorization)
+    username = user["username"] if user else "anonymous"
+    return {"chats": get_user_chats(username), "username": username}
+
+@app.post("/api/user/chats")
+async def api_save_user_chats(req: ChatSaveRequest, authorization: Optional[str] = Header(None)):
+    user = _get_user_from_header(authorization)
+    username = user["username"] if user else "anonymous"
+    ok = save_user_chats(username, req.chats)
+    return {"status": "ok" if ok else "error", "username": username}
+
+@app.delete("/api/user/chats/{chat_id}")
+async def api_delete_user_chat(chat_id: str, authorization: Optional[str] = Header(None)):
+    user = _get_user_from_header(authorization)
+    username = user["username"] if user else "anonymous"
+    ok = delete_user_chat(username, chat_id)
+    return {"status": "ok" if ok else "error"}
+
+# ---------------------------------------------------------
+# User-Specific Stock Watchlist Endpoints
+# ---------------------------------------------------------
+@app.get("/api/user/watchlist")
+async def api_get_user_watchlist(authorization: Optional[str] = Header(None)):
+    user = _get_user_from_header(authorization)
+    username = user["username"] if user else "user"
+    return {"watchlist": get_user_watchlist_enriched(username), "username": username}
+
+@app.post("/api/user/watchlist")
+async def api_add_user_watchlist(req: WatchlistAddRequest, authorization: Optional[str] = Header(None)):
+    user = _get_user_from_header(authorization)
+    username = user["username"] if user else "user"
+    add_to_user_watchlist(username, req.symbol)
+    return {"status": "ok", "watchlist": get_user_watchlist_enriched(username)}
+
+@app.delete("/api/user/watchlist/{symbol}")
+async def api_remove_user_watchlist(symbol: str, authorization: Optional[str] = Header(None)):
+    user = _get_user_from_header(authorization)
+    username = user["username"] if user else "user"
+    remove_from_user_watchlist(username, symbol)
+    return {"status": "ok", "watchlist": get_user_watchlist_enriched(username)}
+
 # Backwards compatible /api/login for legacy clients
 @app.post("/api/login")
 async def admin_login(creds: dict):
@@ -697,16 +758,35 @@ async def admin_login(creds: dict):
 # Admin Document Management & Ingestion Endpoints
 # ---------------------------------------------------------
 @app.get("/api/admin/documents")
-@app.get("/api/admin/documents")
 @app.get("/api/documents")
 def list_documents():
-    """List all ingested documents and pending (not yet ingested) raw files."""
+    """List all documents in knowledge base: master catalog, ingested, and pending raw files."""
     import glob
     wiki_path = os.path.join(os.path.dirname(__file__), "data", "openkb_wiki", "wiki", "summaries")
+    sources_path = os.path.join(os.path.dirname(__file__), "data", "openkb_wiki", "wiki", "sources")
     raw_path = os.path.join(os.path.dirname(__file__), "data", "openkb_wiki", "raw")
     os.makedirs(wiki_path, exist_ok=True)
+    os.makedirs(sources_path, exist_ok=True)
     os.makedirs(raw_path, exist_ok=True)
     
+    # Helper to detect symbol from filename or content
+    def detect_sym(filename: str, fpath: str = "") -> str:
+        bn = filename.upper()
+        if "HAL" in bn: return "HAL"
+        if "APOLLO" in bn: return "APOLLO"
+        if "BEL" in bn: return "BEL"
+        if "MTAR" in bn: return "MTAR"
+        if "RELIANCE" in bn: return "RELIANCE"
+        if fpath and os.path.exists(fpath):
+            try:
+                with open(fpath, "r", encoding="utf-8", errors="ignore") as rf:
+                    head = rf.read(600)
+                    m = _re.search(r'\[SYMBOL:\s*([A-Za-z0-9_-]+)\]', head)
+                    if m: return m.group(1).upper()
+            except Exception:
+                pass
+        return "GENERAL"
+
     # 1. Ingested items in wiki/summaries
     files = glob.glob(os.path.join(wiki_path, "*.md"))
     ingested_list = []
@@ -720,22 +800,7 @@ def list_documents():
         mtime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(os.path.getmtime(f)))
         is_concall = "transcript" in basename.lower() or "concall" in basename.lower()
         doc_type = "Concall Transcript" if is_concall else "Annual Report"
-        
-        sym = "Unknown"
-        try:
-            with open(f, "r", encoding="utf-8") as rf:
-                first_lines = rf.read(500)
-                m = _re.search(r'\[SYMBOL:\s*([A-Za-z0-9_-]+)\]', first_lines)
-                if m:
-                    sym = m.group(1).upper()
-                elif "HAL" in basename.upper():
-                    sym = "HAL"
-                elif "APOLLO" in basename.upper():
-                    sym = "APOLLO"
-                elif "BEL" in basename.upper():
-                    sym = "BEL"
-        except Exception:
-            pass
+        sym = detect_sym(basename, f)
             
         ingested_list.append({
             "name": basename.replace(".md", ".pdf"),
@@ -746,51 +811,66 @@ def list_documents():
             "last_modified": mtime,
             "status": "ingested",
             "ingested": True,
+            "view_url": f"/api/documents/view?name={basename}"
         })
 
-    # 2. Not Ingested (Pending) items in raw/
+    # 2. Raw files in raw/
     raw_files = glob.glob(os.path.join(raw_path, "*.*"))
     pending_list = []
+    raw_master_list = []
     
     for rf in sorted(raw_files, key=os.path.getmtime, reverse=True):
         raw_basename = os.path.basename(rf)
         raw_stem = os.path.splitext(raw_basename)[0]
+        size_kb = round(os.path.getsize(rf) / 1024, 1)
+        mtime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(os.path.getmtime(rf)))
+        is_concall = "transcript" in raw_basename.lower() or "concall" in raw_basename.lower()
+        doc_type = "Concall Transcript" if is_concall else "Annual Report"
+        sym = detect_sym(raw_basename, rf)
+        is_already_ingested = raw_stem.lower() in ingested_stems
         
-        # If not already present in summaries, it is pending
-        if raw_stem.lower() not in ingested_stems:
-            size_kb = round(os.path.getsize(rf) / 1024, 1)
-            mtime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(os.path.getmtime(rf)))
-            is_concall = "transcript" in raw_basename.lower() or "concall" in raw_basename.lower()
-            doc_type = "Concall Transcript" if is_concall else "Annual Report"
-            
-            sym = "GENERAL"
-            if "HAL" in raw_basename.upper():
-                sym = "HAL"
-            elif "APOLLO" in raw_basename.upper():
-                sym = "APOLLO"
-            elif "BEL" in raw_basename.upper():
-                sym = "BEL"
-                
-            pending_list.append({
-                "name": raw_basename,
-                "file_name": raw_basename,
-                "symbol": sym,
-                "doc_type": doc_type,
-                "size_kb": size_kb,
-                "last_modified": mtime,
-                "status": "pending",
-                "ingested": False,
-            })
-        
+        raw_item = {
+            "name": raw_basename,
+            "file_name": raw_basename,
+            "symbol": sym,
+            "doc_type": doc_type,
+            "size_kb": size_kb,
+            "last_modified": mtime,
+            "status": "ingested" if is_already_ingested else "pending",
+            "ingested": is_already_ingested,
+            "view_url": f"/api/documents/view?name={raw_basename}"
+        }
+        raw_master_list.append(raw_item)
+        if not is_already_ingested:
+            pending_list.append(raw_item)
+
+    # 3. Complete master list of every document available across system
+    all_docs = []
+    seen_stems = set()
+    # Add ingested first
+    for item in ingested_list:
+        st = os.path.splitext(item["file_name"])[0].lower()
+        seen_stems.add(st)
+        all_docs.append(item)
+    # Add raw items not already in all_docs
+    for item in raw_master_list:
+        st = os.path.splitext(item["file_name"])[0].lower()
+        if st not in seen_stems:
+            seen_stems.add(st)
+            all_docs.append(item)
+
     return {
+        "all_documents": all_docs,
         "ingested": ingested_list,
         "pending": pending_list,
-        "documents": ingested_list,
+        "raw_files": raw_master_list,
+        "documents": all_docs,
+        "total_all": len(all_docs),
         "total_ingested": len(ingested_list),
         "total_pending": len(pending_list),
-        "total": len(ingested_list) + len(pending_list),
-        "concalls": [d for d in ingested_list if d["doc_type"] == "Concall Transcript"],
-        "annual_reports": [d for d in ingested_list if d["doc_type"] == "Annual Report"]
+        "total": len(all_docs),
+        "concalls": [d for d in all_docs if d["doc_type"] == "Concall Transcript"],
+        "annual_reports": [d for d in all_docs if d["doc_type"] == "Annual Report"]
     }
 
 class IngestItemRequest(BaseModel):
@@ -856,6 +936,187 @@ async def ingest_document_item(req: IngestItemRequest):
     }
 
 # ---------------------------------------------------------
+# ---------------------------------------------------------
+# Standalone Document Viewer in New Tab
+# ---------------------------------------------------------
+@app.get("/api/documents/view")
+def view_document_in_tab(name: str):
+    """
+    Renders or serves any document available in the knowledge base, summaries,
+    or raw folders directly in a clean browser tab.
+    If PDF, returns inline FileResponse.
+    If Markdown / Text / JSON, renders a modern dark-themed HTML viewer.
+    """
+    from fastapi.responses import HTMLResponse, FileResponse
+    import glob
+    import html
+    
+    clean_name = os.path.basename(name.strip())
+    wiki_dir = os.path.join(os.path.dirname(__file__), "data", "openkb_wiki")
+    
+    search_paths = [
+        os.path.join(wiki_dir, "raw", clean_name),
+        os.path.join(wiki_dir, "wiki", "summaries", clean_name),
+        os.path.join(wiki_dir, "wiki", "sources", clean_name),
+    ]
+    
+    stem = os.path.splitext(clean_name)[0]
+    search_paths.extend([
+        os.path.join(wiki_dir, "raw", stem + ".pdf"),
+        os.path.join(wiki_dir, "raw", stem + ".md"),
+        os.path.join(wiki_dir, "wiki", "summaries", stem + ".md"),
+        os.path.join(wiki_dir, "wiki", "sources", stem + ".md"),
+        os.path.join(wiki_dir, "wiki", "sources", stem + ".json"),
+    ])
+    
+    target_file = None
+    for p in search_paths:
+        if os.path.exists(p) and os.path.isfile(p):
+            target_file = p
+            break
+            
+    if not target_file:
+        for folder in ["raw", "wiki/summaries", "wiki/sources"]:
+            candidates = glob.glob(os.path.join(wiki_dir, folder, f"*{stem}*"))
+            if candidates:
+                target_file = candidates[0]
+                break
+
+    if not target_file or not os.path.exists(target_file):
+        raise HTTPException(status_code=404, detail=f"Document '{name}' not found in OpenKB repository")
+        
+    ext = os.path.splitext(target_file)[1].lower()
+    
+    if ext == ".pdf":
+        return FileResponse(
+            target_file,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'inline; filename="{os.path.basename(target_file)}"'}
+        )
+        
+    with open(target_file, "r", encoding="utf-8", errors="replace") as f:
+        raw_content = f.read()
+        
+    escaped_content = html.escape(raw_content)
+    file_title = os.path.basename(target_file)
+    file_size_kb = round(os.path.getsize(target_file) / 1024, 1)
+    
+    html_page = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{file_title} &bull; Nifty Financial Rag Document Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff6600'><path d='M13 2L3 14h9l-1 8 10-12h-9l1-8z'/></svg>">
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      background: #050508;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      padding: 0;
+      margin: 0;
+      line-height: 1.6;
+    }}
+    .header {{
+      position: sticky;
+      top: 0;
+      background: #08090e;
+      border-bottom: 1px solid rgba(255, 102, 0, 0.25);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }}
+    .brand {{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }}
+    .badge {{
+      background: rgba(255, 102, 0, 0.15);
+      border: 1px solid rgba(255, 102, 0, 0.4);
+      color: #ff6600;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      text-transform: uppercase;
+    }}
+    .title {{
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      font-family: monospace;
+    }}
+    .meta {{
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }}
+    .btn {{
+      background: #ff6600;
+      color: #ffffff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s;
+    }}
+    .btn:hover {{
+      background: #e65c00;
+    }}
+    .container {{
+      max-width: 1100px;
+      margin: 28px auto;
+      padding: 0 20px 64px 20px;
+    }}
+    .doc-box {{
+      background: #0c0d14;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 28px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }}
+    pre {{
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: "JetBrains Mono", Consolas, Menlo, Monaco, monospace;
+      font-size: 13px;
+      color: #f1f5f9;
+      line-height: 1.7;
+    }}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <span class="badge">&bull; Verified Regulatory Document</span>
+      <div>
+        <div class="title">{file_title}</div>
+        <div class="meta">{file_size_kb} KB &bull; Grounded OpenKB Filing Archive</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn" onclick="navigator.clipboard.writeText(document.querySelector('pre').innerText); this.innerText='Copied!'; setTimeout(()=>this.innerText='Copy Content', 2000);">Copy Content</button>
+    </div>
+  </div>
+  <div class="container">
+    <div class="doc-box">
+      <pre>{escaped_content}</pre>
+    </div>
+  </div>
+</body>
+</html>"""
+    return HTMLResponse(content=html_page)
+
+
 # Admin WhatsApp Watchlists & Corporate Calendar Endpoints
 # ---------------------------------------------------------
 @app.get("/api/documents/content")
@@ -950,6 +1211,7 @@ async def get_admin_watchlists():
     calendar = wm.load_calendar_events()
     return {
         "watchlists": watchlists,
+        "web_watchlists": get_all_web_watchlists(),
         "total_users": len(watchlists),
         "calendar": calendar
     }
@@ -1131,14 +1393,9 @@ async def admin_stats():
 # ---------------------------------------------------------
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 frontend_app_dist = os.path.join(project_root, "frontend-app", "dist")
-legacy_frontend = os.path.join(project_root, "frontend")
-
 if os.path.exists(frontend_app_dist):
     app.mount("/", StaticFiles(directory=frontend_app_dist, html=True), name="frontend-app")
     log.info(f"[server] Serving modern React frontend from {frontend_app_dist}")
-elif os.path.exists(legacy_frontend):
-    app.mount("/", StaticFiles(directory=legacy_frontend, html=True), name="frontend-legacy")
-    log.info(f"[server] Serving legacy frontend from {legacy_frontend}")
 
 
 if __name__ == "__main__":

@@ -13,7 +13,8 @@ import {
   Zap, 
   Check, 
   X,
-  Search
+  Search,
+  TrendingUp
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -29,7 +30,8 @@ export default function Sidebar({
   activeView,
   setActiveView,
   onOpenAuth,
-  onLogout
+  onLogout,
+  onOpenWatchlist
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
@@ -107,7 +109,7 @@ export default function Sidebar({
         </div>
 
         {/* New Chat Button */}
-        <div className="p-3">
+        <div className="p-3 pb-2 space-y-2">
           <button
             onClick={onNewChat}
             className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-[#0c0d14] hover:bg-[#151722] border border-orange-500/20 hover:border-orange-500/50 text-white text-xs font-semibold transition-all shadow-sm group"
@@ -117,6 +119,19 @@ export default function Sidebar({
               New chat
             </span>
             <span className="text-[10px] text-gray-500 font-mono">Ctrl+N</span>
+          </button>
+
+          <button
+            onClick={onOpenWatchlist}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-[#0c0d14] hover:bg-[#151722] border border-white/5 hover:border-orange-500/30 text-gray-300 hover:text-white text-xs font-semibold transition-all group"
+          >
+            <span className="flex items-center gap-2">
+              <TrendingUp className="w-3.5 h-3.5 text-[#ff6600] group-hover:scale-110 transition-transform" />
+              Stock Watchlist
+            </span>
+            <span className="px-1.5 py-0.5 rounded bg-orange-500/10 text-[#ff6600] font-mono text-[10px] font-bold">
+              Concalls
+            </span>
           </button>
         </div>
 

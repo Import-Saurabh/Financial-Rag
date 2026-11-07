@@ -67,7 +67,6 @@ fi
 # 6. Configure Systemd Service
 echo "⚙️ Configuring Systemd Service Units..."
 sudo cp "${APP_DIR}/deployment/finrag.service" /etc/systemd/system/
-sudo cp "${APP_DIR}/deployment/finrag-streamlit.service" /etc/systemd/system/ || true
 
 sudo systemctl daemon-reload
 sudo systemctl enable finrag.service

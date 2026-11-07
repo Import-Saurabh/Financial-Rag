@@ -14,7 +14,8 @@ import {
   Zap,
   PanelLeft,
   Cpu,
-  Plus
+  Plus,
+  TrendingUp
 } from 'lucide-react';
 
 export default function ChatView({ 
@@ -26,7 +27,8 @@ export default function ChatView({
   selectedProvider, 
   setSelectedProvider,
   onToggleSidebar,
-  onNewChat
+  onNewChat,
+  onOpenWatchlist
 }) {
   const [inputQuery, setInputQuery] = useState('');
   const [copiedId, setCopiedId] = useState(null);
@@ -150,13 +152,24 @@ export default function ChatView({
           </div>
         </div>
 
-        <button
-          onClick={onNewChat}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">New chat</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onOpenWatchlist}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-[#ff6600] text-xs font-semibold transition-all shadow-sm glow-orange-sm"
+            title="Open Stock Watchlist"
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Watchlist</span>
+          </button>
+
+          <button
+            onClick={onNewChat}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">New chat</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Messages Area (ChatGPT Centered Layout) */}
