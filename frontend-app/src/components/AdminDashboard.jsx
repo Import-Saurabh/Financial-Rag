@@ -63,6 +63,15 @@ export default function AdminDashboard({ currentUser }) {
   const [editLimitVal, setEditLimitVal] = useState(10000);
   const [editWhitelistVal, setEditWhitelistVal] = useState(false);
 
+  // Live Regulatory Alerts state (NSE + BSE)
+  const [liveAlerts, setLiveAlerts] = useState([]);
+  const [alertsLoading, setAlertsLoading] = useState(false);
+  const [alertsExchange, setAlertsExchange] = useState('ALL'); // 'ALL', 'NSE', 'BSE'
+  const [alertsCategory, setAlertsCategory] = useState('');
+  const [alertsSearch, setAlertsSearch] = useState('');
+  const [broadcastingAlertId, setBroadcastingAlertId] = useState(null);
+  const [alertActionMsg, setAlertActionMsg] = useState(null);
+
   const fetchAllData = async () => {
     setLoading(true);
     try {
@@ -100,6 +109,9 @@ export default function AdminDashboard({ currentUser }) {
         setWebWatchlists(wlData.web_watchlists || {});
         setCalendarEvents(wlData.calendar || []);
       }
+
+      // 5. Fetch Live Regulatory Alerts (NSE + BSE)
+      fetchLiveAlerts();
     } catch (err) {
       console.error('Failed to load admin data:', err);
     } finally {
@@ -225,6 +237,74 @@ export default function AdminDashboard({ currentUser }) {
     }
   };
 
+  const fetchLiveAlerts = async (exchange = alertsExchange, cat = alertsCategory, force = false) => {
+    setAlertsLoading(true);
+    try {
+      let url = `/api/alerts/live?exchange=${exchange}&limit=100`;
+      if (cat) url += `&category=${cat}`;
+      if (force) url += `&force_refresh=true`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setLiveAlerts(data.alerts || []);
+      }
+    } catch (err) {
+      console.error('Failed to load live alerts:', err);
+    } finally {
+      setAlertsLoading(false);
+    }
+  };
+
+  const handleBroadcastLiveAlert = async (alert) => {
+    setBroadcastingAlertId(alert.id);
+    setAlertActionMsg(null);
+    try {
+      const res = await fetch('/api/alerts/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          alert: alert,
+          target_symbol: alert.symbol
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Broadcast failed');
+      setAlertActionMsg({
+        type: 'success',
+        text: `Regulatory alert for ${data.symbol} broadcasted to ${data.notified_count} WhatsApp users!`
+      });
+    } catch (err) {
+      setAlertActionMsg({ type: 'error', text: err.message });
+    } finally {
+      setBroadcastingAlertId(null);
+    }
+  };
+
+  const handleSyncAlertToCalendar = async (alert) => {
+    try {
+      const res = await fetch('/api/alerts/sync-calendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alert })
+      });
+      const data = await res.json();
+      if (data.synced) {
+        setAlertActionMsg({
+          type: 'success',
+          text: `Added ${alert.symbol} (${alert.category}) to central Corporate Calendar!`
+        });
+        fetchAllData();
+      } else {
+        setAlertActionMsg({
+          type: 'info',
+          text: `Event already logged or is not a scheduled board meeting.`
+        });
+      }
+    } catch (err) {
+      setAlertActionMsg({ type: 'error', text: err.message });
+    }
+  };
+
   const handleBroadcastAlert = async (event) => {
     setBroadcasting(true);
     setBroadcastMsg(null);
@@ -327,6 +407,30 @@ export default function AdminDashboard({ currentUser }) {
           <span className="px-1.5 py-0.2 rounded-full bg-black/40 text-orange-200 text-[10px] font-bold">
             {watchlists.length} Users
           </span>
+        </button>
+
+        <button
+          onClick={() => {
+            setAdminSection('live-alerts');
+            fetchLiveAlerts(alertsExchange, alertsCategory);
+          }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+            adminSection === 'live-alerts'
+              ? 'bg-[#ff6600] text-white shadow-md glow-orange-sm'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Radio className="w-3.5 h-3.5" />
+          Live Regulatory Feeds (NSE + BSE)
+          <span className="flex h-2 w-2 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          {liveAlerts.length > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-black/40 text-orange-200 text-[10px] font-bold">
+              {liveAlerts.length} Live
+            </span>
+          )}
         </button>
 
         <button

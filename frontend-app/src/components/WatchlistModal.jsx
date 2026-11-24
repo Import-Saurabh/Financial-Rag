@@ -13,7 +13,10 @@ import {
   Sparkles,
   ExternalLink,
   ShieldCheck,
-  Search
+  Search,
+  Radio,
+  CheckSquare,
+  RefreshCw
 } from 'lucide-react';
 
 export default function WatchlistModal({ 
@@ -27,6 +30,9 @@ export default function WatchlistModal({
   const [newSymbol, setNewSymbol] = useState('');
   const [loading, setLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState(null);
+  const [activeTab, setActiveTab] = useState('stocks'); // 'stocks' or 'alerts'
+  const [userAlerts, setUserAlerts] = useState([]);
+  const [alertsLoading, setAlertsLoading] = useState(false);
 
   const fetchWatchlist = async () => {
     setLoading(true);
@@ -45,9 +51,27 @@ export default function WatchlistModal({
     }
   };
 
+  const fetchUserAlerts = async () => {
+    setAlertsLoading(true);
+    try {
+      const token = localStorage.getItem('nifty_auth_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch('/api/alerts/watchlist', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setUserAlerts(data.alerts || []);
+      }
+    } catch (err) {
+      console.error('Failed to load user alerts:', err);
+    } finally {
+      setAlertsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       fetchWatchlist();
+      fetchUserAlerts();
       setActionMsg(null);
     }
   }, [isOpen, currentUser]);
@@ -134,7 +158,43 @@ export default function WatchlistModal({
           </button>
         </div>
 
-        {/* Action / Add Bar */}
+        {/* Sub-navigation Tabs */}
+        <div className="flex items-center gap-2 px-5 pt-3 border-b border-white/5 bg-[#0c0d14]/40">
+          <button
+            onClick={() => setActiveTab('stocks')}
+            className={`flex items-center gap-2 pb-2.5 px-3 text-xs font-semibold border-b-2 transition-all ${
+              activeTab === 'stocks'
+                ? 'border-[#ff6600] text-[#ff6600]'
+                : 'border-transparent text-gray-400 hover:text-white'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            Tracked Equities ({watchlist.length})
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('alerts');
+              fetchUserAlerts();
+            }}
+            className={`flex items-center gap-2 pb-2.5 px-3 text-xs font-semibold border-b-2 transition-all ${
+              activeTab === 'alerts'
+                ? 'border-[#ff6600] text-[#ff6600]'
+                : 'border-transparent text-gray-400 hover:text-white'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5" />
+            Live Exchange Disclosures (NSE + BSE)
+            {userAlerts.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
+                {userAlerts.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Action / Add Bar (Only in stocks tab) */}
+        {activeTab === 'stocks' && (
         <div className="p-4 border-b border-white/5 bg-[#050508]/50">
           <form onSubmit={handleAddStock} className="flex gap-2">
             <div className="relative flex-1">
@@ -167,10 +227,118 @@ export default function WatchlistModal({
             </div>
           )}
         </div>
+        )}
 
-        {/* Watchlist Items */}
+        {/* Watchlist Items or Live Alerts */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
-          {watchlist.length === 0 ? (
+          {activeTab === 'alerts' ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                <span className="text-xs text-gray-400">
+                  Real-time regulatory disclosures filed by companies in your watchlist:
+                </span>
+                <button
+                  onClick={fetchUserAlerts}
+                  disabled={alertsLoading}
+                  className="flex items-center gap-1.5 text-xs text-[#ff6600] hover:text-orange-400 transition-colors"
+                >
+                  <RefreshCw className={`w-3 h-3 ${alertsLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </div>
+
+              {userAlerts.length === 0 && !alertsLoading && (
+                <div className="text-center py-12 text-gray-500 text-xs space-y-2">
+                  <Radio className="w-8 h-8 mx-auto text-gray-600 opacity-50" />
+                  <p>No new exchange disclosures filed today for your tracked stocks.</p>
+                  <p className="text-[11px] text-gray-600">
+                    NSE & BSE RSS feeds are monitored 24/7. When companies schedule concalls, file earnings, or submit annual reports, alerts will appear here and ping your WhatsApp.
+                  </p>
+                </div>
+              )}
+
+              {userAlerts.map((alert) => {
+                const docUrl = alert.attachment_url || alert.link;
+                const isDual = (alert.exchanges || []).length > 1;
+                const isNSE = alert.exchange === 'NSE' || (alert.exchanges || []).includes('NSE');
+
+                return (
+                  <div
+                    key={alert.id || alert.guid}
+                    className="p-4 rounded-xl bg-[#0c0d14] border border-white/5 hover:border-orange-500/30 transition-all space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {isDual ? (
+                          <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 font-mono text-[10px] font-bold">
+                            DUAL: NSE+BSE
+                          </span>
+                        ) : isNSE ? (
+                          <span className="px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 font-mono text-[10px] font-bold">
+                            NSE INDIA
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-mono text-[10px] font-bold">
+                            BSE INDIA
+                          </span>
+                        )}
+
+                        <span className="font-mono font-bold text-xs text-[#ff6600] bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
+                          {alert.symbol}
+                        </span>
+
+                        <span className="px-2 py-0.5 rounded bg-white/5 text-gray-400 text-[10px]">
+                          {alert.category}
+                        </span>
+
+                        <span className="text-[10px] text-gray-500 font-mono ml-auto">
+                          {alert.pub_date}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {docUrl && (
+                          <a
+                            href={docUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/30 text-[#ff6600] text-[11px] font-semibold transition-all"
+                            title="Open filing document in new tab"
+                          >
+                            <CheckSquare className="w-3 h-3" />
+                            <span>View Filing</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            onQueryStock(alert.symbol, `Analyze this official ${alert.category} filing for ${alert.symbol}: ${alert.title}. ${alert.description || ''}`);
+                            onClose();
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-[11px] font-semibold transition-all"
+                          title="Ask RAG to summarize and analyze this disclosure"
+                        >
+                          <Sparkles className="w-3 h-3 text-[#ff6600]" />
+                          <span>Ask RAG</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <h4 className="text-xs font-semibold text-white">
+                      {alert.title}
+                    </h4>
+
+                    {alert.description && alert.description !== alert.title && (
+                      <p className="text-[11px] text-gray-400 line-clamp-2">
+                        {alert.description}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : watchlist.length === 0 ? (
             <div className="text-center py-12 text-gray-500 text-xs">
               <TrendingUp className="w-8 h-8 mx-auto text-gray-600 mb-2 opacity-50" />
               No stocks in your watchlist yet. Add symbols like <code className="text-[#ff6600]">HAL</code> or <code className="text-[#ff6600]">APOLLO</code> above.

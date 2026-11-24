@@ -149,6 +149,9 @@ python backend/mcp_server.py --sse
 
 ## 🚀 Setup & Execution Guide
 
+> [!TIP]
+> For a comprehensive, step-by-step setup guide with full cross-platform commands, troubleshooting, default RBAC credentials, and verification tests, see the **[Full Setup Guide (SETUP_GUIDE.md)](SETUP_GUIDE.md)**.
+
 ### 1. Environment Configuration
 ```bash
 # Clone the repository
@@ -169,7 +172,8 @@ Configure your API keys in `.env` (or set environment variables):
 ```env
 GROQ_API_KEY=your_groq_api_key_here
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
-SCHEMA_BRIDGE_URL=https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws
+FINRAG_API_BASE=https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1.on.aws
+FINRAG_PORT=5000
 ```
 
 ### 3. Launching Services
@@ -178,7 +182,7 @@ SCHEMA_BRIDGE_URL=https://zhwbvtkibdyhjy42gubo3qbsxq0pifuv.lambda-url.ap-south-1
 ```bash
 python backend/server.py
 ```
-*Backend runs at `http://localhost:8000` (OpenAPI docs at `http://localhost:8000/docs`).*
+*Backend runs at `http://localhost:5000` (OpenAPI docs at `http://localhost:5000/docs`).*
 
 **Terminal 2: Start React Frontend (Dev Server)**
 ```bash
@@ -204,9 +208,11 @@ python backend/mcp_server.py --sse
 
 ---
 
-## 📚 Architectural Documentation
+## 📚 Architectural & Setup Documentation
 
-For granular technical specifications, please consult:
+For granular technical specifications and deployment instructions, please consult:
+- **[Complete Setup & Execution Guide](SETUP_GUIDE.md):** Step-by-step local setup, environments, credentials, and testing.
 - **[High-Level Design (HLD)](docs/HLD.md):** Architectural philosophies, latency budgets, and system topologies.
 - **[Low-Level Design (LLD)](docs/LLD.md):** Class diagrams, mathematical formulas, method signatures, and data contracts.
 - **[System & Knowledge Graph Deep Dive](docs/SYSTEM_AND_KNOWLEDGE_GRAPH_DEEP_DIVE.md):** Graph statistics (1,836 nodes, 165 communities), God Node breakdown, and OpenKB wiki topology.
+- **[Production Cloud Deployment Guide](deployment/DEPLOYMENT_GUIDE.md):** Oracle Cloud (OCI Always Free) setup with Caddy auto-SSL and WhatsApp webhook.

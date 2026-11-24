@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from typing import Optional, List, Dict, Any, Union
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,6 +46,7 @@ except ImportError:
 
 # ── Make sure project root is on path ────────────────────────────────────────
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from utils.logger import get_logger
@@ -1268,6 +1269,119 @@ async def broadcast_concall_alert(payload: dict):
         "notified_count": len(notified_users),
         "notified_users": notified_users
     }
+
+
+# -----------------------------------------------------------------------------
+# Unified BSE & NSE Regulatory Alerts API Endpoints
+# -----------------------------------------------------------------------------
+class AlertBroadcastRequest(BaseModel):
+    alert: Dict[str, Any]
+    target_symbol: Optional[str] = None
+
+
+@app.get("/api/alerts/live")
+async def api_get_live_alerts(
+    exchange: str = Query("ALL", regex="^(ALL|NSE|BSE)$"),
+    category: Optional[str] = None,
+    symbol: Optional[str] = None,
+    limit: int = Query(50, ge=1, le=200),
+    force_refresh: bool = False
+):
+    """
+    Returns real-time deduplicated regulatory alerts aggregated across
+    all official NSE and BSE RSS feeds.
+    """
+    from alerts.unified_alerts import get_unified_alerts_manager
+    mgr = get_unified_alerts_manager()
+    alerts = mgr.get_live_alerts(
+        exchange=exchange,
+        category=category,
+        symbol=symbol,
+        limit=limit,
+        force_refresh=force_refresh
+    )
+    return {
+        "status": "ok",
+        "alerts": alerts,
+        "total": len(alerts),
+        "exchange": exchange,
+        "category": category,
+        "symbol": symbol,
+        "timestamp": time.time()
+    }
+
+
+@app.get("/api/alerts/watchlist")
+async def api_get_watchlist_alerts(
+    authorization: Optional[str] = Header(None),
+    limit: int = Query(30, ge=1, le=100)
+):
+    """
+    Returns real-time regulatory alerts filtered by the authenticated user's tracked equities.
+    """
+    from alerts.unified_alerts import get_unified_alerts_manager
+    user = _get_user_from_header(authorization)
+    username = user["username"] if user else "user"
+    mgr = get_unified_alerts_manager()
+    alerts = mgr.get_alerts_for_user(username, limit=limit)
+    return {
+        "status": "ok",
+        "username": username,
+        "alerts": alerts,
+        "total": len(alerts)
+    }
+
+
+@app.post("/api/alerts/broadcast")
+async def api_broadcast_regulatory_alert(req: AlertBroadcastRequest):
+    """
+    Broadcasts an incoming regulatory disclosure directly to WhatsApp users
+    tracking that stock.
+    """
+    from alerts.unified_alerts import get_unified_alerts_manager
+    from whatsapp.watchlist import get_watchlist_manager
+    from whatsapp.meta_api import MetaWhatsAppClient
+
+    mgr = get_unified_alerts_manager()
+    alert = req.alert
+    symbol = (req.target_symbol or alert.get("symbol", "")).upper().strip()
+
+    if not symbol or symbol in ("GENERAL", "UNKNOWN"):
+        raise HTTPException(status_code=400, detail="Valid stock symbol is required to broadcast alert")
+
+    wm = get_watchlist_manager()
+    watchlists = wm.list_all_watchlists()
+    msg = mgr.format_whatsapp_notification(alert)
+
+    client = MetaWhatsAppClient()
+    notified_users = []
+
+    for u in watchlists:
+        phone = u.get("phone")
+        symbols = u.get("symbols", [])
+        if symbol in symbols and phone:
+            await client.send_text_message(phone, msg)
+            notified_users.append(phone)
+
+    return {
+        "status": "success",
+        "symbol": symbol,
+        "notified_count": len(notified_users),
+        "notified_users": notified_users,
+        "message_preview": msg
+    }
+
+
+@app.post("/api/alerts/sync-calendar")
+async def api_sync_alert_to_calendar(payload: Dict[str, Any]):
+    """
+    Auto-syncs an announcement or earnings filing into the Corporate Calendar.
+    """
+    from alerts.unified_alerts import get_unified_alerts_manager
+    mgr = get_unified_alerts_manager()
+    alert = payload.get("alert", payload)
+    synced = mgr.sync_to_corporate_calendar(alert)
+    return {"status": "ok", "synced": synced}
 
 
 from fastapi import UploadFile, File, Form
